@@ -9,6 +9,9 @@
 #include <cmath>
 #include <cstring>
 
+// FIXME jsut for now need juce component reference for unique ptr
+#include <juce_gui_basics/juce_gui_basics.h>
+
 // Eject the core symbols for the plugin
 #include <clap/helpers/plugin.hh>
 #include <clap/helpers/plugin.hxx>
@@ -48,8 +51,8 @@ ClapSawDemo::~ClapSawDemo()
 
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
 clap_plugin_descriptor ClapSawDemo::desc = {CLAP_VERSION,
-                                            "org.surge-synth-team.clap-saw-demo",
-                                            "Clap Saw Demo Synth",
+                                            "org.surge-synth-team.clap-juicy",
+                                            "Clap Juicy Demo Synth",
                                             "Surge Synth Team",
                                             "https://surge-synth-team.org",
                                             "",

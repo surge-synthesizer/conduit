@@ -43,6 +43,11 @@
 #include "saw-voice.h"
 #include <memory>
 
+namespace juce
+{
+class Component;
+}
+
 namespace sst::clap_saw_demo
 {
 
@@ -245,7 +250,6 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
      * `clap-saw-demo-editor.cpp` along with the VSTGUI implementation. You can consult the
      * extensive comments in the clap gui extension for semantics and rules.
      */
-#if HAS_GUI
     bool implementsGui() const noexcept override { return true; }
     bool guiIsApiSupported(const char *api, bool isFloating) noexcept override;
 
@@ -253,12 +257,16 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
     void guiDestroy() noexcept override;
     bool guiSetParent(const clap_window *window) noexcept override;
 
-    bool guiSetScale(double scale) noexcept override;
+    bool guiSetScale(double scale) noexcept override { return true; }
     bool guiCanResize() const noexcept override { return true; }
     bool guiAdjustSize(uint32_t *width, uint32_t *height) noexcept override;
     bool guiSetSize(uint32_t width, uint32_t height) noexcept override;
     bool guiGetSize(uint32_t *width, uint32_t *height) noexcept override;
-#endif
+
+    bool guiShow() noexcept override;
+
+    std::unique_ptr<juce::Component> editor;
+    bool guiParentAttached{false};
 
     // Setting this atomic to true will force a push of all current engine
     // params to ui using the queue mechanism
@@ -342,7 +350,6 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
     UIToSynth_Queue_t fromUiQ;
 
   private:
-    ClapSawDemoEditor *editor{nullptr};
 
     // These items are ONLY read and written on the audio thread, so they
     // are safe to be non-atomic doubles. We keep a map to locate them
