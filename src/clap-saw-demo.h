@@ -46,6 +46,7 @@
 namespace juce
 {
 class Component;
+class ScopedJuceInitialiser_GUI;
 }
 
 namespace sst::clap_saw_demo
@@ -265,6 +266,7 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
 
     bool guiShow() noexcept override;
 
+    std::unique_ptr<juce::ScopedJuceInitialiser_GUI> guiInitializer; // todo deal with lifecycle
     std::unique_ptr<juce::Component> editor;
     bool guiParentAttached{false};
 
