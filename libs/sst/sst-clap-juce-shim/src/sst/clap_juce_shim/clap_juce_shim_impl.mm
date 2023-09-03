@@ -12,20 +12,18 @@ namespace sst::clap_juce_shim
 {
 bool guiCocoaAttach(const clap_window_t *window, juce::Component *comp)
 {
-    auto parentWindowOrView = window->cocoa;
-    JUCE_AUTORELEASEPOOL
+    auto nsv = (NSView *)window->cocoa;
+    @autoreleasepool
     {
-        NSView* parentView = [(NSView*) parentWindowOrView retain];
+        NSView* container = [(NSView*) nsv retain];
 
         const auto defaultFlags =  0;
-        comp->addToDesktop (defaultFlags, parentView);
-
+        comp->addToDesktop (defaultFlags, container);
         comp->setVisible (true);
         comp->toFront (false);
 
-        [[parentView window] setAcceptsMouseMovedEvents: YES];
+        [[nsv window] setAcceptsMouseMovedEvents: YES];
     }
     return true;
-
 }
 }

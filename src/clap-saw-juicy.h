@@ -10,6 +10,8 @@
 #ifndef CLAP_SAW_DEMO_H
 #define CLAP_SAW_DEMO_H
 #include <iostream>
+#include <unordered_map>
+#include <vector>
 #include "debug-helpers.h"
 #include "sst/clap_juce_shim/clap_juce_shim.h"
 
@@ -86,6 +88,9 @@ struct ClapJuicy : public clap::helpers::Plugin<clap::helpers::MisbehaviourHandl
      * The actual synth has a very simple model to update parameter values. It
      * contains a map from these IDs to a double * which the constructor sets up
      * as references to members.
+     *
+     * One difference from CSD is rather than put all the config in paramsInfo
+     * we set it up here as a data structure
      */
     enum paramIds : uint32_t
     {
@@ -104,6 +109,26 @@ struct ClapJuicy : public clap::helpers::Plugin<clap::helpers::MisbehaviourHandl
         pmFilterMode = 14255
     };
     static constexpr int nParams = 10;
+    struct ParamDescription
+    {
+        ParamDescription() {}
+        ParamDescription(paramIds id, const std::string &name, const std::string &moduleName,
+                         clap_param_info_flags flags, float minValue, float maxValue,
+                         float defaultValue)
+            : id(id), name(name), moduleName(moduleName), flags(flags), minValue(minValue),
+              maxValue(maxValue), defaultValue(defaultValue)
+        {
+        }
+        paramIds id{0};
+        std::string name;
+        std::string moduleName;
+        clap_param_info_flags flags{0};
+        float minValue{0};
+        float maxValue{0};
+        float defaultValue{0};
+    };
+    std::vector<ParamDescription> paramDescriptions;
+    std::unordered_map<paramIds, ParamDescription> paramDescriptionMap;
 
     bool implementsParams() const noexcept override { return true; }
     bool isValidParamId(clap_id paramId) const noexcept override

@@ -6,23 +6,108 @@
 #include "sst/jucegui/style/StyleSheet.h"
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
+#include "sst/jucegui/components/Knob.h"
+#include "sst/jucegui/data/Continuous.h"
 
 
 namespace jcmp = sst::jucegui::components;
+namespace jdat = sst::jucegui::data;
 
-struct Jomp : public jcmp::WindowPanel
+struct DataToQueueParam : jdat::ContinunousModulatable
 {
+    // TODO - this plus begin/end
+    // FIX - this can be queues only
+    sst::clap_juicy::ClapJuicy &csd;
+    sst::clap_juicy::ClapJuicy::paramIds pid;
+    sst::clap_juicy::ClapJuicy::ParamDescription pDesc{};
+
+    DataToQueueParam(sst::clap_juicy::ClapJuicy &p, sst::clap_juicy::ClapJuicy::paramIds pid)
+    : csd(p), pid(pid)
+    {
+        pDesc = csd.paramDescriptionMap[pid];
+    }
+    std::string getLabel() const override { return pDesc.name; }
+
+    float f{0.f};
+    float getValue() const override { return f; }
+    void setValueFromGUI(const float &fi) override {
+        f = fi;
+        csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapJuicy::FromUI::MType::ADJUST_VALUE,
+                                    sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread,
+                                    f});
+    }
+    void setValueFromModel(const float &fi) override { f = fi; }
+    float getDefaultValue() const override { return pDesc.defaultValue; }
+    float getMin() const override { return pDesc.minValue; }
+    float getMax() const override { return pDesc.maxValue; }
+
+
+    float getModulationValuePM1() const override { return 0; }
+    void setModulationValuePM1(const float &f) override {}
+    bool isModulationBipolar() const override { return false; }
+};
+
+struct JuicyEditor;
+
+struct JuicyOscPanel : public juce::Component
+{
+    // FIX - this can be the queues only
+    sst::clap_juicy::ClapJuicy &csd;
+
+    JuicyOscPanel(sst::clap_juicy::ClapJuicy &p, JuicyEditor &e) : csd(p) {
+        oscUnisonSpread = std::make_unique<jcmp::Knob>();
+        addAndMakeVisible(*oscUnisonSpread);
+
+        oscUnisonSource = std::make_unique<DataToQueueParam>(csd,
+                                                             sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread);
+        oscUnisonSpread->setSource(oscUnisonSource.get());
+
+        oscUnisonSpread->onBeginEdit = [w = juce::Component::SafePointer(this)]()
+        {
+            w->csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapJuicy::FromUI::MType::BEGIN_EDIT,
+                                        sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread,
+                                        1});
+            std::cout << "onDragStart" << std::endl;
+        };
+        oscUnisonSpread->onEndEdit = [w = juce::Component::SafePointer(this)]()
+        {
+            w->csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapJuicy::FromUI::MType::END_EDIT,
+                                        sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread,
+                                        1});
+            std::cout << "onDragEnd" << std::endl;
+        };
+
+        registerDataSources(e);
+    }
+
+    ~JuicyOscPanel()
+    {
+        oscUnisonSpread->setSource(nullptr);
+    }
+
+    void resized() override {
+        oscUnisonSpread->setBounds({10,10,60,60});
+    }
+
+    void registerDataSources(JuicyEditor &e);
+    std::unique_ptr<jcmp::Knob> oscUnisonSpread;
+    std::unique_ptr<DataToQueueParam> oscUnisonSource;
+};
+
+struct JuicyEditor : public jcmp::WindowPanel
+{
+    // FIX - this can be the queues only
     sst::clap_juicy::ClapJuicy &csd;
 
     struct IdleTimer : juce::Timer
     {
-        Jomp &jomp;
-        IdleTimer(Jomp &j) : jomp(j) {}
+        JuicyEditor &jomp;
+        IdleTimer(JuicyEditor &j) : jomp(j) {}
         void timerCallback() override { jomp.onIdle(); }
     };
     std::unique_ptr<IdleTimer> idleTimer;
 
-    Jomp(sst::clap_juicy::ClapJuicy &p) : csd(p) {
+    JuicyEditor(sst::clap_juicy::ClapJuicy &p) : csd(p) {
         sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
         const auto &base = sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(sst::jucegui::style::StyleSheet::DARK);
         base->setColour(jcmp::WindowPanel::Styles::styleClass, jcmp::WindowPanel::Styles::backgroundgradstart, juce::Colour(60,60,70));
@@ -30,43 +115,14 @@ struct Jomp : public jcmp::WindowPanel
         base->setColour(jcmp::BaseStyles::styleClass, jcmp::BaseStyles::regionBorder, juce::Colour(90,90,100));
         setStyle(base);
 
+        oscPanel = std::make_unique<jcmp::NamedPanel>("Oscillator");
+        addAndMakeVisible(*oscPanel);
 
-        morphPanel = std::make_unique<jcmp::NamedPanel>("Morph");
-        addAndMakeVisible(*morphPanel);
+        auto oct = std::make_unique<JuicyOscPanel>(csd, *this);
+        oscPanel->setContentAreaComponent(std::move(oct));
 
-        tabPanel = std::make_unique<jcmp::NamedPanel>("Tabs");
-        tabPanel->isTabbed = true;
-        tabPanel->tabNames = {"Scale 1", "Scale 2", "Scale 3", "Scale 4"};
-        tabPanel->resetTabState();
-        addAndMakeVisible(*tabPanel);
-#if 0
-        unisonSpread = std::make_unique<juce::Slider>("Unison");
-        unisonSpread->setRange(0, 100);
-        unisonSpread->setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
-
-        unisonSpread->onDragStart = [w = juce::Component::SafePointer(this)]()
-        {
-            w->csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapJuicy::FromUI::MType::BEGIN_EDIT,
-                                        sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread,
-            1});
-            std::cout << "onDragStart" << std::endl;
-        };
-        unisonSpread->onDragEnd = [w = juce::Component::SafePointer(this)]()
-        {
-            w->csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapJuicy::FromUI::MType::END_EDIT,
-                                        sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread,
-                                        1});
-            std::cout << "onDragEnd" << std::endl;
-        };
-        unisonSpread->onValueChange = [w = juce::Component::SafePointer(this)]()
-        {
-            std::cout << "onValueChange " << w->unisonSpread->getValue() << std::endl;
-            w->csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapJuicy::FromUI::MType::ADJUST_VALUE,
-                                        sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread,
-                                        w->unisonSpread->getValue()});
-        };
-        addAndMakeVisible(*unisonSpread);
-#endif
+        vcfPanel = std::make_unique<jcmp::NamedPanel>("Filter");
+        addAndMakeVisible(*vcfPanel);
 
         setSize(500, 400);
 
@@ -74,7 +130,7 @@ struct Jomp : public jcmp::WindowPanel
         idleTimer->startTimerHz(60);
     }
 
-    ~Jomp()
+    ~JuicyEditor()
     {
         idleTimer->stopTimer();
     }
@@ -84,12 +140,15 @@ struct Jomp : public jcmp::WindowPanel
     void resized() override
     {
         auto mpWidth = 250;
-        morphPanel->setBounds(getLocalBounds().withWidth(mpWidth));
-        tabPanel->setBounds(getLocalBounds().withTrimmedLeft(mpWidth));
+        oscPanel->setBounds(getLocalBounds().withWidth(mpWidth));
+        vcfPanel->setBounds(getLocalBounds().withTrimmedLeft(mpWidth));
     }
 
-    std::unique_ptr<jcmp::NamedPanel> tabPanel;
-    std::unique_ptr<jcmp::NamedPanel> morphPanel;
+    std::unique_ptr<jcmp::NamedPanel> vcfPanel;
+    std::unique_ptr<jcmp::NamedPanel> oscPanel;
+
+    std::unordered_map<uint32_t,
+        std::pair<juce::Component *, jdat::ContinunousModulatable *>> dataTargets;
 
     void onIdle()
     {
@@ -98,9 +157,11 @@ struct Jomp : public jcmp::WindowPanel
         {
             if (r.type == sst::clap_juicy::ClapJuicy::ToUI::MType::PARAM_VALUE)
             {
-                if (r.id == sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread)
+                auto p = dataTargets.find(r.id);
+                if (p != dataTargets.end())
                 {
-                    // unisonSpread->setValue(r.value, juce::dontSendNotification);
+                    p->second.second->setValueFromModel(r.value);
+                    p->second.first->repaint();
                 }
             }
             else
@@ -111,11 +172,18 @@ struct Jomp : public jcmp::WindowPanel
     }
 };
 
+void JuicyOscPanel::registerDataSources(JuicyEditor &e)
+{
+    // FIXME clean this up on dtor
+    e.dataTargets[sst::clap_juicy::ClapJuicy::pmUnisonSpread] =
+    {oscUnisonSpread.get(), oscUnisonSource.get()};
+}
+
 namespace sst::clap_juicy
 {
 std::unique_ptr<juce::Component> ClapJuicy::createEditor()
 {
     refreshUIValues = true;
-    return std::make_unique<Jomp>(*this);
+    return std::make_unique<JuicyEditor>(*this);
 }
 }

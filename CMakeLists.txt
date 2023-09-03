@@ -4,17 +4,12 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "Build for 10.1")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-if(NOT CMAKE_BUILD_TYPE)
-    message(STATUS "CMAKE_BUILD_TYPE Type Unspecified; picking Release")
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
-endif()
-
 project(clap-saw-juicy VERSION 0.9.0 LANGUAGES C CXX OBJC OBJCXX)
-
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
-
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 # use asan as an option (currently mac only)
 option(USE_SANITIZER "Build and link with ASAN" FALSE)

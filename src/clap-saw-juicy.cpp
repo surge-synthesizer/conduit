@@ -28,24 +28,54 @@ ClapJuicy::ClapJuicy(const clap_host *host)
                             clap::helpers::CheckingLevel::Maximal>(&desc, host)
 {
     _DBGCOUT << "Constructing ClapJuicy" << std::endl;
+
+    auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
+    auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE | CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID |
+                   CLAP_PARAM_IS_MODULATABLE_PER_KEY;
+    auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
+
     paramToValue[pmUnisonCount] = &unisonCount;
+    paramDescriptions.emplace_back(pmUnisonCount, "Unison Count", "Oscillator", steppedFlag, 1, 7,
+                                   3);
     paramToValue[pmUnisonSpread] = &unisonSpread;
+    paramDescriptions.emplace_back(pmUnisonSpread, "Unison Spread in Cents", "Oscillator", modFlag, 0, 100, 10);
     paramToValue[pmOscDetune] = &oscDetune;
+    paramDescriptions.emplace_back(pmOscDetune, "Detune in Cents", "Oscillator", modFlag, -200, 200, 0);
+
     paramToValue[pmAmpAttack] = &ampAttack;
+    paramDescriptions.emplace_back(pmAmpAttack, "Amplitude Attack (s)", "Amplitude Envelope Generator", autoFlag, 0, 1, 0.01);
+
     paramToValue[pmAmpRelease] = &ampRelease;
+    paramDescriptions.emplace_back(pmAmpRelease, "Amplitude Release (s)", "Amplitude Envelope Generator", autoFlag, 0, 1, 0.01);
+
     paramToValue[pmAmpIsGate] = &ampIsGate;
+    paramDescriptions.emplace_back(pmAmpIsGate, "Deactivate Amp Envelope", "Amplitude Envelope Generator", steppedFlag, 0, 1, 0);
+
     paramToValue[pmCutoff] = &cutoff;
+    paramDescriptions.emplace_back(pmCutoff, "Cutoff in Keys", "Filter", modFlag, 1, 127, 69);
+
     paramToValue[pmResonance] = &resonance;
+    paramDescriptions.emplace_back(pmResonance, "Resonance", "Filter", modFlag, 0, 1, sqrt(2.f) * 0.5);
+
     paramToValue[pmPreFilterVCA] = &preFilterVCA;
+    paramDescriptions.emplace_back(pmPreFilterVCA, "PreFilter VCA", "Filter", modFlag, 0, 1, 1);
+
     paramToValue[pmFilterMode] = &filterMode;
+    paramDescriptions.emplace_back(pmFilterMode, "Filter Type", "Filter",
+                                   steppedFlag,
+                                   SawDemoVoice::StereoSimperSVF::Mode::LP,
+                                   SawDemoVoice::StereoSimperSVF::Mode::ALL,
+                                   0
+                                   );
+
+    assert(paramDescriptions.size() == nParams);
+    for (const auto &pd : paramDescriptions)
+        paramDescriptionMap.insert({pd.id,pd});
 
     terminatedVoices.reserve(max_voices * 4);
 
-    clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(
-        [this]() {
-            return createEditor();
-        }
-    );
+    clapJuceShim =
+        std::make_unique<sst::clap_juce_shim::ClapJuceShim>([this]() { return createEditor(); });
 }
 ClapJuicy::~ClapJuicy()
 {
@@ -57,15 +87,15 @@ ClapJuicy::~ClapJuicy()
 
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
 clap_plugin_descriptor ClapJuicy::desc = {CLAP_VERSION,
-                                            "org.surge-synth-team.clap-juicy",
-                                            "Clap Juicy Demo Synth",
-                                            "Surge Synth Team",
-                                            "https://surge-synth-team.org",
-                                            "",
-                                            "",
-                                            "1.0.0",
-                                            "A simple sawtooth synth to show CLAP features.",
-                                            features};
+                                          "org.surge-synth-team.clap-juicy",
+                                          "Clap Juicy Demo Synth",
+                                          "Surge Synth Team",
+                                          "https://surge-synth-team.org",
+                                          "",
+                                          "",
+                                          "1.0.0",
+                                          "A simple sawtooth synth to show CLAP features.",
+                                          features};
 /*
  * PARAMETER SETUP SECTION
  */
@@ -74,120 +104,24 @@ bool ClapJuicy::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noe
     if (paramIndex >= nParams)
         return false;
 
-    /*
-     * Our job is to populate the clap_param_info. We set each of our parameters as AUTOMATABLE
-     * and then begin setting per-parameter features.
-     */
-    info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+    const auto &pd = paramDescriptions[paramIndex];
 
-    /*
-     * These constants activate polyphonic modulatability on a parameter. Not all the params here
-     * support that
-     */
-    auto mod = CLAP_PARAM_IS_MODULATABLE | CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID |
-               CLAP_PARAM_IS_MODULATABLE_PER_KEY;
-
-    switch (paramIndex)
-    {
-    case 0:
-        info->id = pmUnisonCount;
-        strncpy(info->name, "Unison Count", CLAP_NAME_SIZE);
-        strncpy(info->module, "Oscillator", CLAP_NAME_SIZE);
-        info->min_value = 1;
-        info->max_value = SawDemoVoice::max_uni;
-        info->default_value = 3;
-        info->flags |= CLAP_PARAM_IS_STEPPED;
-        break;
-    case 1:
-        info->id = pmUnisonSpread;
-        strncpy(info->name, "Unison Spread in Cents", CLAP_NAME_SIZE);
-        strncpy(info->module, "Oscillator", CLAP_NAME_SIZE);
-        info->min_value = 0;
-        info->max_value = 100;
-        info->default_value = 10;
-        info->flags |= mod;
-        break;
-    case 2:
-        info->id = pmOscDetune;
-        strncpy(info->name, "Oscillator Detuning (in cents)", CLAP_NAME_SIZE);
-        strncpy(info->module, "Oscillator", CLAP_NAME_SIZE);
-        info->min_value = -200;
-        info->max_value = 200;
-        info->default_value = 0;
-        info->flags |= mod;
-        break;
-    case 3:
-        info->id = pmAmpAttack;
-        strncpy(info->name, "Amplitude Attack (s)", CLAP_NAME_SIZE);
-        strncpy(info->module, "Amplitude Envelope Generator", CLAP_NAME_SIZE);
-        info->min_value = 0;
-        info->max_value = 1;
-        info->default_value = 0.01;
-        break;
-    case 4:
-        info->id = pmAmpRelease;
-        strncpy(info->name, "Amplitude Release (s)", CLAP_NAME_SIZE);
-        strncpy(info->module, "Amplitude Envelope Generator", CLAP_NAME_SIZE);
-        info->min_value = 0;
-        info->max_value = 1;
-        info->default_value = 0.2;
-        break;
-    case 5:
-        info->id = pmAmpIsGate;
-        strncpy(info->name, "Deactivate Amp Envelope", CLAP_NAME_SIZE);
-        strncpy(info->module, "Amplitude Envelope Generator", CLAP_NAME_SIZE);
-        info->min_value = 0;
-        info->max_value = 1;
-        info->default_value = 0;
-        info->flags |= CLAP_PARAM_IS_STEPPED;
-        break;
-    case 6:
-        info->id = pmPreFilterVCA;
-        strncpy(info->name, "Pre Filter VCA", CLAP_NAME_SIZE);
-        strncpy(info->module, "Filter", CLAP_NAME_SIZE);
-        info->min_value = 0;
-        info->max_value = 1;
-        info->default_value = 1;
-        info->flags |= mod;
-        break;
-    case 7:
-        info->id = pmCutoff;
-        strncpy(info->name, "Cutoff in Keys", CLAP_NAME_SIZE);
-        strncpy(info->module, "Filter", CLAP_NAME_SIZE);
-        info->min_value = 1;
-        info->max_value = 127;
-        info->default_value = 69;
-        info->flags |= mod;
-        break;
-    case 8:
-        info->id = pmResonance;
-        strncpy(info->name, "Resonance", CLAP_NAME_SIZE);
-        strncpy(info->module, "Filter", CLAP_NAME_SIZE);
-        info->min_value = 0.0;
-        info->max_value = 1.0;
-        info->default_value = 0.7;
-        info->flags |= mod;
-        break;
-    case 9:
-        info->id = pmFilterMode;
-        strncpy(info->name, "Filter Type", CLAP_NAME_SIZE);
-        strncpy(info->module, "Filter", CLAP_NAME_SIZE);
-        info->min_value = SawDemoVoice::StereoSimperSVF::Mode::LP;
-        info->max_value = SawDemoVoice::StereoSimperSVF::Mode::ALL;
-        info->default_value = 0;
-        info->flags |= CLAP_PARAM_IS_STEPPED;
-        break;
-    }
+    info->id = pd.id;
+    strncpy(info->name, pd.name.c_str(), CLAP_NAME_SIZE);
+    strncpy(info->module, pd.moduleName.c_str(), CLAP_NAME_SIZE);
+    info->min_value = pd.minValue;
+    info->max_value = pd.maxValue;
+    info->default_value = pd.defaultValue;
+    info->flags = pd.flags;
     return true;
 }
 
 bool ClapJuicy::paramsValueToText(clap_id paramId, double value, char *display,
-                                    uint32_t size) noexcept
+                                  uint32_t size) noexcept
 {
     auto pid = (paramIds)paramId;
     std::string sValue{"ERROR"};
-    auto n2s = [](auto n)
-    {
+    auto n2s = [](auto n) {
         std::ostringstream oss;
         oss << std::setprecision(6) << n;
         return oss.str();
@@ -259,7 +193,7 @@ bool ClapJuicy::paramsValueToText(clap_id paramId, double value, char *display,
  * with options on note expression and the like.
  */
 bool ClapJuicy::audioPortsInfo(uint32_t index, bool isInput,
-                                 clap_audio_port_info *info) const noexcept
+                               clap_audio_port_info *info) const noexcept
 {
     if (isInput || index != 0)
         return false;
@@ -274,7 +208,7 @@ bool ClapJuicy::audioPortsInfo(uint32_t index, bool isInput,
 }
 
 bool ClapJuicy::notePortsInfo(uint32_t index, bool isInput,
-                                clap_note_port_info *info) const noexcept
+                              clap_note_port_info *info) const noexcept
 {
     if (isInput)
     {
@@ -546,8 +480,7 @@ void ClapJuicy::handleInboundEvent(const clap_event_header_t *evt)
         auto pevt = reinterpret_cast<const clap_event_param_mod *>(evt);
 
         // This little lambda updates a modulation slot in a voice properly
-        auto applyToVoice = [&pevt](auto &v)
-        {
+        auto applyToVoice = [&pevt](auto &v) {
             if (!v.isPlaying())
                 return;
 
