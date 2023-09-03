@@ -44,7 +44,7 @@
 #include "saw-voice.h"
 #include <memory>
 
-namespace sst::clap_saw_demo
+namespace sst::clap_juicy
 {
 
 struct ClapSawDemoEditor;
@@ -319,6 +319,6 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
     std::array<SawDemoVoice, max_voices> voices;
     std::vector<std::tuple<int, int, int, int>> terminatedVoices; // that's PCK ID
 };
-} // namespace sst::clap_saw_demo
+} // namespace sst::clap_juicy
 
 #endif

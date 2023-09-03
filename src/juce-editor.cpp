@@ -5,7 +5,7 @@
 
 struct Jomp : public juce::Component
 {
-    sst::clap_saw_demo::ClapSawDemo &csd;
+    sst::clap_juicy::ClapSawDemo &csd;
 
     struct IdleTimer : juce::Timer
     {
@@ -16,30 +16,30 @@ struct Jomp : public juce::Component
     };
     std::unique_ptr<IdleTimer> idleTimer;
 
-    Jomp(sst::clap_saw_demo::ClapSawDemo &p) : csd(p) {
+    Jomp(sst::clap_juicy::ClapSawDemo &p) : csd(p) {
         unisonSpread = std::make_unique<juce::Slider>("Unison");
         unisonSpread->setRange(0, 100);
         unisonSpread->setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
 
         unisonSpread->onDragStart = [w = juce::Component::SafePointer(this)]()
         {
-            w->csd.fromUiQ.try_enqueue({sst::clap_saw_demo::ClapSawDemo::FromUI::MType::BEGIN_EDIT,
-                                        sst::clap_saw_demo::ClapSawDemo::paramIds::pmUnisonSpread,
+            w->csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapSawDemo::FromUI::MType::BEGIN_EDIT,
+                                        sst::clap_juicy::ClapSawDemo::paramIds::pmUnisonSpread,
             1});
             std::cout << "onDragStart" << std::endl;
         };
         unisonSpread->onDragEnd = [w = juce::Component::SafePointer(this)]()
         {
-            w->csd.fromUiQ.try_enqueue({sst::clap_saw_demo::ClapSawDemo::FromUI::MType::END_EDIT,
-                                        sst::clap_saw_demo::ClapSawDemo::paramIds::pmUnisonSpread,
+            w->csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapSawDemo::FromUI::MType::END_EDIT,
+                                        sst::clap_juicy::ClapSawDemo::paramIds::pmUnisonSpread,
                                         1});
             std::cout << "onDragEnd" << std::endl;
         };
         unisonSpread->onValueChange = [w = juce::Component::SafePointer(this)]()
         {
             std::cout << "onValueChange " << w->unisonSpread->getValue() << std::endl;
-            w->csd.fromUiQ.try_enqueue({sst::clap_saw_demo::ClapSawDemo::FromUI::MType::ADJUST_VALUE,
-                                        sst::clap_saw_demo::ClapSawDemo::paramIds::pmUnisonSpread,
+            w->csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapSawDemo::FromUI::MType::ADJUST_VALUE,
+                                        sst::clap_juicy::ClapSawDemo::paramIds::pmUnisonSpread,
                                         w->unisonSpread->getValue()});
         };
         addAndMakeVisible(*unisonSpread);
@@ -71,13 +71,12 @@ struct Jomp : public juce::Component
 
     void onIdle()
     {
-        sst::clap_saw_demo::ClapSawDemo::ToUI r;
+        sst::clap_juicy::ClapSawDemo::ToUI r;
         while (csd.toUiQ.try_dequeue(r))
         {
-            if (r.type == sst::clap_saw_demo::ClapSawDemo::ToUI::MType::PARAM_VALUE)
+            if (r.type == sst::clap_juicy::ClapSawDemo::ToUI::MType::PARAM_VALUE)
             {
-                std::cout << "Update on " << r.id << std::endl;
-                if (r.id == sst::clap_saw_demo::ClapSawDemo::paramIds::pmUnisonSpread)
+                if (r.id == sst::clap_juicy::ClapSawDemo::paramIds::pmUnisonSpread)
                 {
                     unisonSpread->setValue(r.value, juce::dontSendNotification);
                 }
@@ -86,7 +85,7 @@ struct Jomp : public juce::Component
     }
 };
 
-namespace sst::clap_saw_demo
+namespace sst::clap_juicy
 {
 std::unique_ptr<juce::Component> ClapSawDemo::createEditor()
 {

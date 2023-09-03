@@ -17,7 +17,7 @@
  * state management, but it is nothing surprising.
  */
 
-namespace sst::clap_saw_demo
+namespace sst::clap_juicy
 {
 float pival =
     3.14159265358979323846; // I always forget what you need for M_PI to work on all platforms
@@ -252,4 +252,4 @@ void SawDemoVoice::StereoSimperSVF::init()
         ic2eq[c] = 0.f;
     }
 }
-} // namespace sst::clap_saw_demo
+} // namespace sst::clap_juicy

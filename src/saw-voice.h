@@ -13,7 +13,7 @@
 #include <array>
 #include "debug-helpers.h"
 
-namespace sst::clap_saw_demo
+namespace sst::clap_juicy
 {
 /*
  * SawDemoVoice is a single voice with the following features
@@ -134,5 +134,5 @@ struct SawDemoVoice
     std::array<float, max_uni> panL, panR, unitShift, norm;
     std::array<double, max_uni> phase, dPhase, dPhaseInv;
 };
-} // namespace sst::clap_saw_demo
+} // namespace sst::clap_juicy
 #endif

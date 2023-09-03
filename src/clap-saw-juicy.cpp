@@ -20,7 +20,7 @@
 #include <iomanip>
 #include <locale>
 
-namespace sst::clap_saw_demo
+namespace sst::clap_juicy
 {
 
 ClapSawDemo::ClapSawDemo(const clap_host *host)
@@ -977,4 +977,4 @@ bool ClapSawDemo::registerPosixFd(int fd)
 bool ClapSawDemo::unregisterPosixFD(int fd) { return _host.posixFdSupportUnregister(fd); }
 #endif
 
-} // namespace sst::clap_saw_demo
+} // namespace sst::clap_juicy
