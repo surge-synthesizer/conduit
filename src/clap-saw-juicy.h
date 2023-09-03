@@ -11,6 +11,7 @@
 #define CLAP_SAW_DEMO_H
 #include <iostream>
 #include "debug-helpers.h"
+#include "sst/clap_juce_shim/clap_juce_shim.h"
 
 /*
  * ClapSawDemo is the core synthesizer class. It uses the clap-helpers C++ plugin extensions
@@ -42,12 +43,6 @@
 
 #include "saw-voice.h"
 #include <memory>
-
-namespace juce
-{
-class Component;
-class ScopedJuceInitialiser_GUI;
-}
 
 namespace sst::clap_saw_demo
 {
@@ -252,23 +247,10 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
      * extensive comments in the clap gui extension for semantics and rules.
      */
     bool implementsGui() const noexcept override { return true; }
-    bool guiIsApiSupported(const char *api, bool isFloating) noexcept override;
-
-    bool guiCreate(const char *api, bool isFloating) noexcept override;
-    void guiDestroy() noexcept override;
-    bool guiSetParent(const clap_window *window) noexcept override;
-
-    bool guiSetScale(double scale) noexcept override { return true; }
     bool guiCanResize() const noexcept override { return true; }
-    bool guiAdjustSize(uint32_t *width, uint32_t *height) noexcept override;
-    bool guiSetSize(uint32_t width, uint32_t height) noexcept override;
-    bool guiGetSize(uint32_t *width, uint32_t *height) noexcept override;
-
-    bool guiShow() noexcept override;
-
-    std::unique_ptr<juce::ScopedJuceInitialiser_GUI> guiInitializer; // todo deal with lifecycle
-    std::unique_ptr<juce::Component> editor;
-    bool guiParentAttached{false};
+    std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
+    ADD_SHIM_IMPLEMENTATION(clapJuceShim);
+    std::unique_ptr<juce::Component> createEditor();
 
     // Setting this atomic to true will force a push of all current engine
     // params to ui using the queue mechanism
@@ -278,33 +260,6 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
     // bound by a lambda to the editor. For a technical template reason its implemented
     // (trivially) in clap-saw-demo.cpp not demo-editor
     void editorParamsFlush();
-
-#if IS_LINUX
-    // PLEASE see the README comments on Linux. We are working on making this more rational
-    // but the VSTGUI global plus runnign a bit out of time has this implementation right now
-    // which can leak or crash in some circumstances when you delete a plugin. Expect updates
-    // soon enough.
-  public:
-    bool implementsTimerSupport() const noexcept override
-    {
-        _DBGMARK;
-        return true;
-    }
-    void onTimer(clap_id timerId) noexcept override;
-
-    bool registerTimer(uint32_t interv, clap_id *id);
-    bool unregisterTimer(clap_id id);
-
-    bool implementsPosixFdSupport() const noexcept override
-    {
-        _DBGMARK;
-        return true;
-    }
-    void onPosixFd(int fd, int flags) noexcept override;
-    bool registerPosixFd(int fd);
-    bool unregisterPosixFD(int fd);
-
-#endif
 
   public:
     static constexpr uint32_t GUI_DEFAULT_W = 390, GUI_DEFAULT_H = 530;

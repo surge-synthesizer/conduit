@@ -17,7 +17,7 @@
  * For more information on this mechanism, see include/clap/entry.h
  */
 
-#include "clap-saw-demo.h"
+#include "clap-saw-juicy.h"
 
 #include <iostream>
 #include <cmath>

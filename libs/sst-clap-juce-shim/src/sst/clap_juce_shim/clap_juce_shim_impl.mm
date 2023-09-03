@@ -8,7 +8,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 
-namespace sst::clap_saw_demo
+namespace sst::clap_juce_shim
 {
 bool guiCocoaAttach(const clap_window_t *window, juce::Component *comp)
 {

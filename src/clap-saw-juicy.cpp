@@ -4,7 +4,7 @@
  * Copright (c) 2021, Paul Walker
  */
 
-#include "clap-saw-demo.h"
+#include "clap-saw-juicy.h"
 #include <iostream>
 #include <cmath>
 #include <cstring>
@@ -40,12 +40,18 @@ ClapSawDemo::ClapSawDemo(const clap_host *host)
     paramToValue[pmFilterMode] = &filterMode;
 
     terminatedVoices.reserve(max_voices * 4);
+
+    clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(
+        [this]() {
+            return createEditor();
+        }
+    );
 }
 ClapSawDemo::~ClapSawDemo()
 {
     // I *think* this is a bitwig bug that they won't call guiDestroy if destroying a plugin
     // with an open window but
-    if (editor)
+    if (clapJuceShim)
         guiDestroy();
 }
 
@@ -519,7 +525,7 @@ void ClapSawDemo::handleInboundEvent(const clap_event_header_t *evt)
         *paramToValue[v->param_id] = v->value;
         pushParamsToVoices();
 
-        if (editor)
+        if (clapJuceShim->isEditorAttached())
         {
             auto r = ToUI();
             r.type = ToUI::PARAM_VALUE;
@@ -698,7 +704,7 @@ void ClapSawDemo::handleEventsFromUIQueue(const clap_output_events_t *ov)
     }
 
     // Similarly we need to push values to a UI on startup
-    if (refreshUIValues && editor)
+    if (refreshUIValues && clapJuceShim->isEditorAttached())
     {
         _DBGCOUT << "Pushing a refresh of UI values to the editor" << std::endl;
         refreshUIValues = false;
@@ -747,7 +753,7 @@ void ClapSawDemo::handleNoteOn(int port_index, int channel, int key, int noteid)
     dataCopyForUI.updateCount++;
     dataCopyForUI.polyphony++;
 
-    if (editor)
+    if (clapJuceShim->isEditorAttached())
     {
         auto r = ToUI();
         r.type = ToUI::MIDI_NOTE_ON;
@@ -766,7 +772,7 @@ void ClapSawDemo::handleNoteOff(int port_index, int channel, int n)
         }
     }
 
-    if (editor)
+    if (clapJuceShim->isEditorAttached())
     {
         auto r = ToUI();
         r.type = ToUI::MIDI_NOTE_OFF;
