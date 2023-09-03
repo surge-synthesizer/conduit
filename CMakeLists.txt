@@ -26,12 +26,13 @@ add_subdirectory(libs/clap EXCLUDE_FROM_ALL)
 add_subdirectory(libs/clap-helpers EXCLUDE_FROM_ALL)
 add_subdirectory(libs/readerwriterqueue EXCLUDE_FROM_ALL)
 
-add_subdirectory(libs/sst-clap-juce-shim)
+add_subdirectory(libs/sst/sst-clap-juce-shim)
 if (NOT DEFINED JUCE_PATH)
     set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 endif()
 stub_juce_library(JUCE_PATH ${JUCE_PATH})
 
+add_subdirectory(libs/sst/sst-jucegui)
 
 add_library(${PROJECT_NAME} MODULE
         src/clap-saw-juicy.cpp
@@ -39,7 +40,13 @@ add_library(${PROJECT_NAME} MODULE
         src/clap-saw-juicy-entry.cpp
         src/juce-editor.cpp
         )
-target_link_libraries(${PROJECT_NAME} clap-core clap-helpers readerwriterqueue juce::juce_gui_basics sst::clap_juce_shim)
+target_link_libraries(${PROJECT_NAME}
+        clap-core
+        clap-helpers
+        readerwriterqueue
+        juce::juce_gui_basics
+        sst::clap_juce_shim
+        sst-jucegui)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE HAS_GUI=0)
 

@@ -14,7 +14,8 @@ struct Implementor
     bool guiParentAttached{false};
 };
 }
-#define TRACE std::cout << __FILE__ << ":" << __LINE__ << " " << __func__ << std::endl;
+// #define TRACE std::cout << __FILE__ << ":" << __LINE__ << " " << __func__ << std::endl;
+#define TRACE ;
 ClapJuceShim::ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> ce) : createEditor(ce) {
     impl = std::make_unique<details::Implementor>();
 }

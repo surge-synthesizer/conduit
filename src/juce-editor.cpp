@@ -3,7 +3,14 @@
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-struct Jomp : public juce::Component
+#include "sst/jucegui/style/StyleSheet.h"
+#include "sst/jucegui/components/NamedPanel.h"
+#include "sst/jucegui/components/WindowPanel.h"
+
+
+namespace jcmp = sst::jucegui::components;
+
+struct Jomp : public jcmp::WindowPanel
 {
     sst::clap_juicy::ClapJuicy &csd;
 
@@ -16,6 +23,23 @@ struct Jomp : public juce::Component
     std::unique_ptr<IdleTimer> idleTimer;
 
     Jomp(sst::clap_juicy::ClapJuicy &p) : csd(p) {
+        sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
+        const auto &base = sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(sst::jucegui::style::StyleSheet::DARK);
+        base->setColour(jcmp::WindowPanel::Styles::styleClass, jcmp::WindowPanel::Styles::backgroundgradstart, juce::Colour(60,60,70));
+        base->setColour(jcmp::WindowPanel::Styles::styleClass, jcmp::WindowPanel::Styles::backgroundgradend, juce::Colour(20,20,30));
+        base->setColour(jcmp::BaseStyles::styleClass, jcmp::BaseStyles::regionBorder, juce::Colour(90,90,100));
+        setStyle(base);
+
+
+        morphPanel = std::make_unique<jcmp::NamedPanel>("Morph");
+        addAndMakeVisible(*morphPanel);
+
+        tabPanel = std::make_unique<jcmp::NamedPanel>("Tabs");
+        tabPanel->isTabbed = true;
+        tabPanel->tabNames = {"Scale 1", "Scale 2", "Scale 3", "Scale 4"};
+        tabPanel->resetTabState();
+        addAndMakeVisible(*tabPanel);
+#if 0
         unisonSpread = std::make_unique<juce::Slider>("Unison");
         unisonSpread->setRange(0, 100);
         unisonSpread->setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
@@ -42,6 +66,7 @@ struct Jomp : public juce::Component
                                         w->unisonSpread->getValue()});
         };
         addAndMakeVisible(*unisonSpread);
+#endif
 
         setSize(500, 400);
 
@@ -56,17 +81,15 @@ struct Jomp : public juce::Component
 
     std::unique_ptr<juce::Slider> unisonSpread;
 
-    void resized()
+    void resized() override
     {
-        if (unisonSpread)
-        unisonSpread->setBounds(juce::Rectangle<int>(10,10,40,300));
+        auto mpWidth = 250;
+        morphPanel->setBounds(getLocalBounds().withWidth(mpWidth));
+        tabPanel->setBounds(getLocalBounds().withTrimmedLeft(mpWidth));
     }
-    void paint(juce::Graphics &g) {
-        g.fillAll(juce::Colours::red);
-        g.setColour(juce::Colours::black);
-        g.setFont(30);
-        g.drawText("Hi from JUCE", getLocalBounds(), juce::Justification::centred);
-    }
+
+    std::unique_ptr<jcmp::NamedPanel> tabPanel;
+    std::unique_ptr<jcmp::NamedPanel> morphPanel;
 
     void onIdle()
     {
@@ -77,7 +100,7 @@ struct Jomp : public juce::Component
             {
                 if (r.id == sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread)
                 {
-                    unisonSpread->setValue(r.value, juce::dontSendNotification);
+                    // unisonSpread->setValue(r.value, juce::dontSendNotification);
                 }
             }
             else
