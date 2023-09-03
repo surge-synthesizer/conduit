@@ -13,3 +13,9 @@
 [submodule "libs/sst/sst-jucegui"]
 	path = libs/sst/sst-jucegui
 	url = https://github.com/surge-synthesizer/sst-jucegui
+[submodule "libs/sst/sst-basic-blocks"]
+	path = libs/sst/sst-basic-blocks
+	url = https://github.com/surge-synthesizer/sst-basic-blocks
+[submodule "libs/fmt"]
+	path = libs/fmt
+	url = https://github.com/fmtlib/fmt.git

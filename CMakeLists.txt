@@ -20,6 +20,7 @@ option(COPY_AFTER_BUILD "Copy the clap to ~/Library on MACOS, ~/.clap on linux" 
 add_subdirectory(libs/clap EXCLUDE_FROM_ALL)
 add_subdirectory(libs/clap-helpers EXCLUDE_FROM_ALL)
 add_subdirectory(libs/readerwriterqueue EXCLUDE_FROM_ALL)
+add_subdirectory(libs/fmt EXCLUDE_FROM_ALL)
 
 add_subdirectory(libs/sst/sst-clap-juce-shim)
 if (NOT DEFINED JUCE_PATH)
@@ -28,6 +29,7 @@ endif()
 stub_juce_library(JUCE_PATH ${JUCE_PATH})
 
 add_subdirectory(libs/sst/sst-jucegui)
+add_subdirectory(libs/sst/sst-basic-blocks)
 
 add_library(${PROJECT_NAME} MODULE
         src/clap-saw-juicy.cpp
@@ -39,8 +41,10 @@ target_link_libraries(${PROJECT_NAME}
         clap-core
         clap-helpers
         readerwriterqueue
+        fmt
         juce::juce_gui_basics
         sst::clap_juce_shim
+        sst-basic-blocks
         sst-jucegui)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE HAS_GUI=0)

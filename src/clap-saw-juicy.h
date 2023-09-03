@@ -45,6 +45,7 @@
 
 #include "saw-voice.h"
 #include <memory>
+#include "sst/basic-blocks/params/ParamMetadata.h"
 
 namespace sst::clap_juicy
 {
@@ -109,26 +110,9 @@ struct ClapJuicy : public clap::helpers::Plugin<clap::helpers::MisbehaviourHandl
         pmFilterMode = 14255
     };
     static constexpr int nParams = 10;
-    struct ParamDescription
-    {
-        ParamDescription() {}
-        ParamDescription(paramIds id, const std::string &name, const std::string &moduleName,
-                         clap_param_info_flags flags, float minValue, float maxValue,
-                         float defaultValue)
-            : id(id), name(name), moduleName(moduleName), flags(flags), minValue(minValue),
-              maxValue(maxValue), defaultValue(defaultValue)
-        {
-        }
-        paramIds id{0};
-        std::string name;
-        std::string moduleName;
-        clap_param_info_flags flags{0};
-        float minValue{0};
-        float maxValue{0};
-        float defaultValue{0};
-    };
-    std::vector<ParamDescription> paramDescriptions;
-    std::unordered_map<paramIds, ParamDescription> paramDescriptionMap;
+    using ParamDesc = sst::basic_blocks::params::ParamMetaData;
+    std::vector<ParamDesc> paramDescriptions;
+    std::unordered_map<uint32_t, ParamDesc> paramDescriptionMap;
 
     bool implementsParams() const noexcept override { return true; }
     bool isValidParamId(clap_id paramId) const noexcept override

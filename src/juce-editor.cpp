@@ -19,7 +19,7 @@ struct DataToQueueParam : jdat::ContinunousModulatable
     // FIX - this can be queues only
     sst::clap_juicy::ClapJuicy &csd;
     sst::clap_juicy::ClapJuicy::paramIds pid;
-    sst::clap_juicy::ClapJuicy::ParamDescription pDesc{};
+    sst::clap_juicy::ClapJuicy::ParamDesc pDesc{};
 
     DataToQueueParam(sst::clap_juicy::ClapJuicy &p, sst::clap_juicy::ClapJuicy::paramIds pid)
     : csd(p), pid(pid)
@@ -37,9 +37,9 @@ struct DataToQueueParam : jdat::ContinunousModulatable
                                     f});
     }
     void setValueFromModel(const float &fi) override { f = fi; }
-    float getDefaultValue() const override { return pDesc.defaultValue; }
-    float getMin() const override { return pDesc.minValue; }
-    float getMax() const override { return pDesc.maxValue; }
+    float getDefaultValue() const override { return pDesc.defaultVal; }
+    float getMin() const override { return pDesc.minVal; }
+    float getMax() const override { return pDesc.maxVal; }
 
 
     float getModulationValuePM1() const override { return 0; }

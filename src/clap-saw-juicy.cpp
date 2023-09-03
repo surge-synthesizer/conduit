@@ -35,42 +35,121 @@ ClapJuicy::ClapJuicy(const clap_host *host)
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
 
     paramToValue[pmUnisonCount] = &unisonCount;
-    paramDescriptions.emplace_back(pmUnisonCount, "Unison Count", "Oscillator", steppedFlag, 1, 7,
-                                   3);
+    paramDescriptions.push_back(ParamDesc()
+                                    .asInt()
+                                    .withID(pmUnisonCount)
+                                    .withName("Unison Count")
+                                    .withGroupName("Oscillator")
+                                    .withRange(1, SawDemoVoice::max_uni)
+                                    .withDefault(3)
+                                    .withFlags(steppedFlag)
+                                    .withLinearScaleFormatting("voices"));
+
     paramToValue[pmUnisonSpread] = &unisonSpread;
-    paramDescriptions.emplace_back(pmUnisonSpread, "Unison Spread in Cents", "Oscillator", modFlag, 0, 100, 10);
+    paramDescriptions.push_back(ParamDesc()
+                                .asFloat()
+                                .withID(pmUnisonSpread)
+                                .withName("Unison Spread")
+                                .withGroupName("Oscillator")
+                                .withLinearScaleFormatting("cents")
+                                .withRange(0,100)
+                                .withDefault(10)
+                                .withFlags(modFlag)
+                                );
+
     paramToValue[pmOscDetune] = &oscDetune;
-    paramDescriptions.emplace_back(pmOscDetune, "Detune in Cents", "Oscillator", modFlag, -200, 200, 0);
+    paramDescriptions.push_back(ParamDesc()
+                                    .asFloat()
+                                    .withID(pmOscDetune)
+                                    .withName("Unison Detune")
+                                    .withGroupName("Oscillator")
+                                    .withLinearScaleFormatting("cents")
+                                    .withRange(-200,200)
+                                    .withDefault(0)
+                                    .withFlags(modFlag)
+                                    );
 
     paramToValue[pmAmpAttack] = &ampAttack;
-    paramDescriptions.emplace_back(pmAmpAttack, "Amplitude Attack (s)", "Amplitude Envelope Generator", autoFlag, 0, 1, 0.01);
+    paramDescriptions.push_back(ParamDesc()
+                                    .asFloat()
+                                    .withID(pmAmpAttack)
+                                    .withName("Amplitude Attack")
+                                    .withGroupName("AEG")
+                                    .withLinearScaleFormatting("seconds")
+                                    .withRange(0, 1)
+                                    .withDefault(0.05)
+                                    .withFlags(autoFlag));
 
     paramToValue[pmAmpRelease] = &ampRelease;
-    paramDescriptions.emplace_back(pmAmpRelease, "Amplitude Release (s)", "Amplitude Envelope Generator", autoFlag, 0, 1, 0.01);
+    paramDescriptions.push_back(ParamDesc()
+                                    .asFloat()
+                                    .withID(pmAmpRelease)
+                                    .withName("Amplitude Release")
+                                    .withGroupName("AEG")
+                                    .withLinearScaleFormatting("seconds")
+                                    .withRange(0, 1)
+                                    .withDefault(0.05)
+                                    .withFlags(autoFlag));
 
     paramToValue[pmAmpIsGate] = &ampIsGate;
-    paramDescriptions.emplace_back(pmAmpIsGate, "Deactivate Amp Envelope", "Amplitude Envelope Generator", steppedFlag, 0, 1, 0);
+    paramDescriptions.push_back(ParamDesc()
+                                    .asBool()
+                                    .withID(pmAmpRelease)
+                                    .withName("Bypass Amp Envelope")
+                                    .withGroupName("AEG")
+                                    .withFlags(steppedFlag));
 
     paramToValue[pmCutoff] = &cutoff;
-    paramDescriptions.emplace_back(pmCutoff, "Cutoff in Keys", "Filter", modFlag, 1, 127, 69);
+    paramDescriptions.push_back(ParamDesc()
+                                    .asFloat()
+                                    .withID(pmCutoff)
+                                    .withName("Cutoff")
+                                    .withGroupName("Filter")
+                                    .withRange(1, 127)
+                                    .withDefault(69)
+                                    .withSemitoneZeroAtMIDIZeroFormatting()
+                                    .withFlags(modFlag));
 
     paramToValue[pmResonance] = &resonance;
-    paramDescriptions.emplace_back(pmResonance, "Resonance", "Filter", modFlag, 0, 1, sqrt(2.f) * 0.5);
+    paramDescriptions.push_back(ParamDesc()
+                                    .asFloat()
+                                    .withID(pmResonance)
+                                    .withName("Resonance")
+                                    .withGroupName("Filter")
+                                    .withRange(0, 1)
+                                    .withDefault(sqrt(2) / 2)
+                                    .withLinearScaleFormatting("")
+                                    .withFlags(modFlag));
 
     paramToValue[pmPreFilterVCA] = &preFilterVCA;
-    paramDescriptions.emplace_back(pmPreFilterVCA, "PreFilter VCA", "Filter", modFlag, 0, 1, 1);
+    paramDescriptions.push_back(ParamDesc()
+                                    .asFloat()
+                                    .withID(pmPreFilterVCA)
+                                    .withName("PreFilter VCA")
+                                    .withGroupName("Filter")
+                                    .withRange(0, 1)
+                                    .withDefault(1)
+                                    .withLinearScaleFormatting("")
+                                    .withFlags(modFlag));
 
     paramToValue[pmFilterMode] = &filterMode;
-    paramDescriptions.emplace_back(pmFilterMode, "Filter Type", "Filter",
-                                   steppedFlag,
+    // TODO
+    paramDescriptions.push_back(ParamDesc()
+                                    .asBool()
+                                    .withID(pmFilterMode)
+                                    .withName("Filter Type")
+                                    .withGroupName("Filter")
+                                .withFlags(steppedFlag)
+                                );
+    /*
+    paramDescriptions.emplace_back(pmFilterMode, "Filter Type", "Filter", steppedFlag,
                                    SawDemoVoice::StereoSimperSVF::Mode::LP,
-                                   SawDemoVoice::StereoSimperSVF::Mode::ALL,
-                                   0
-                                   );
-
+                                   SawDemoVoice::StereoSimperSVF::Mode::ALL, 0);
+*/
     assert(paramDescriptions.size() == nParams);
     for (const auto &pd : paramDescriptions)
-        paramDescriptionMap.insert({pd.id,pd});
+        paramDescriptionMap.insert({pd.id, pd});
+    assert(paramDescriptionMap.size() == nParams);
 
     terminatedVoices.reserve(max_voices * 4);
 
@@ -106,85 +185,26 @@ bool ClapJuicy::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noe
 
     const auto &pd = paramDescriptions[paramIndex];
 
-    info->id = pd.id;
-    strncpy(info->name, pd.name.c_str(), CLAP_NAME_SIZE);
-    strncpy(info->module, pd.moduleName.c_str(), CLAP_NAME_SIZE);
-    info->min_value = pd.minValue;
-    info->max_value = pd.maxValue;
-    info->default_value = pd.defaultValue;
-    info->flags = pd.flags;
+    pd.toClapParamInfo(info);
     return true;
 }
 
 bool ClapJuicy::paramsValueToText(clap_id paramId, double value, char *display,
                                   uint32_t size) noexcept
 {
-    auto pid = (paramIds)paramId;
-    std::string sValue{"ERROR"};
-    auto n2s = [](auto n) {
-        std::ostringstream oss;
-        oss << std::setprecision(6) << n;
-        return oss.str();
-    };
-    switch (pid)
-    {
-    case pmResonance:
-    case pmPreFilterVCA:
-        sValue = n2s(value);
-        break;
-    case pmAmpRelease:
-    case pmAmpAttack:
-        sValue = n2s(scaleTimeParamToSeconds(value)) + " s";
-        break;
-    case pmUnisonCount:
-    {
-        int vc = static_cast<int>(value);
-        sValue = n2s(vc) + (vc == 1 ? " voice" : " voices");
-        break;
-    }
-    case pmUnisonSpread:
-    case pmOscDetune:
-        sValue = n2s(value) + " cents";
-        break;
-    case pmAmpIsGate:
-        sValue = value > 0.5 ? "AEG Bypassed" : "AEG On";
-        break;
-    case pmCutoff:
-    {
-        auto co = 440 * pow(2.0, (value - 69) / 12);
-        sValue = n2s(co) + " Hz";
-        break;
-    }
-    case pmFilterMode:
-    {
-        auto fm = (SawDemoVoice::StereoSimperSVF::Mode) static_cast<int>(value);
-        switch (fm)
-        {
-        case SawDemoVoice::StereoSimperSVF::LP:
-            sValue = "LowPass";
-            break;
-        case SawDemoVoice::StereoSimperSVF::BP:
-            sValue = "BandPass";
-            break;
-        case SawDemoVoice::StereoSimperSVF::HP:
-            sValue = "HighPass";
-            break;
-        case SawDemoVoice::StereoSimperSVF::NOTCH:
-            sValue = "Notch";
-            break;
-        case SawDemoVoice::StereoSimperSVF::PEAK:
-            sValue = "Peak";
-            break;
-        case SawDemoVoice::StereoSimperSVF::ALL:
-            sValue = "AllPass";
-            break;
-        }
-        break;
-    }
-    }
+    auto pos = paramDescriptionMap.find(paramId);
+    if (pos == paramDescriptionMap.end())
+        strncpy(display, "ERROR", size);
 
-    strncpy(display, sValue.c_str(), CLAP_NAME_SIZE);
-    return true;
+    const auto &pd = pos->second;
+    auto sValue = pd.valueToString(value);
+
+    if (sValue.has_value())
+    {
+        strncpy(display, sValue->c_str(), CLAP_NAME_SIZE);
+        return true;
+    }
+    return false;
 }
 
 /*
