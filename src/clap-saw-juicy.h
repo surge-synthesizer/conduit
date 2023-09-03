@@ -139,6 +139,10 @@ struct ClapJuicy : public clap::helpers::Plugin<clap::helpers::MisbehaviourHandl
     bool paramsValueToText(clap_id paramId, double value, char *display,
                            uint32_t size) noexcept override;
 
+  protected:
+    bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept override;
+
+  public:
     // Convert 0-1 linear into 0-4s exponential
     float scaleTimeParamToSeconds(float param);
 

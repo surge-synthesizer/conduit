@@ -185,7 +185,7 @@ bool ClapJuicy::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noe
 
     const auto &pd = paramDescriptions[paramIndex];
 
-    pd.toClapParamInfo(info);
+    pd.toClapParamInfo<CLAP_NAME_SIZE>(info);
     return true;
 }
 
@@ -194,7 +194,7 @@ bool ClapJuicy::paramsValueToText(clap_id paramId, double value, char *display,
 {
     auto pos = paramDescriptionMap.find(paramId);
     if (pos == paramDescriptionMap.end())
-        strncpy(display, "ERROR", size);
+        return false;
 
     const auto &pd = pos->second;
     auto sValue = pd.valueToString(value);
@@ -207,6 +207,24 @@ bool ClapJuicy::paramsValueToText(clap_id paramId, double value, char *display,
     return false;
 }
 
+
+bool ClapJuicy::paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept
+{
+    auto pos = paramDescriptionMap.find(paramId);
+    if (pos == paramDescriptionMap.end())
+        return false;
+
+    const auto &pd = pos->second;
+
+    std::string emsg;
+    auto res = pd.valueFromString(display, emsg);
+    if (res.has_value())
+    {
+        *value = *res;
+        return true;
+    }
+    return false;
+}
 /*
  * Stereo out, Midi in, in a pretty obvious way.
  * The only trick is the idi in also has NOTE_DIALECT_CLAP which provides us
@@ -914,20 +932,5 @@ void ClapJuicy::editorParamsFlush()
     if (_host.canUseParams())
         _host.paramsRequestFlush();
 }
-
-#if IS_LINUX
-bool ClapJuicy::registerTimer(uint32_t interv, clap_id *id)
-{
-    auto res = _host.timerSupportRegister(interv, id);
-    return res;
-}
-bool ClapJuicy::unregisterTimer(clap_id id) { return _host.timerSupportUnregister(id); }
-bool ClapJuicy::registerPosixFd(int fd)
-{
-    return _host.posixFdSupportRegister(fd, CLAP_POSIX_FD_READ | CLAP_POSIX_FD_WRITE |
-                                                CLAP_POSIX_FD_ERROR);
-}
-bool ClapJuicy::unregisterPosixFD(int fd) { return _host.posixFdSupportUnregister(fd); }
-#endif
 
 } // namespace sst::clap_juicy
