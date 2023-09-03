@@ -50,38 +50,16 @@ bool ClapJuceShim::guiIsApiSupported(const char *api, bool isFloating) noexcept
 
 bool ClapJuceShim::guiCreate(const char *api, bool isFloating) noexcept
 {
-    impl->guiInitializer = std::make_unique<juce::ScopedJuceInitialiser_GUI>();
-
     TRACE;
+    impl->guiInitializer = std::make_unique<juce::ScopedJuceInitialiser_GUI>();
     juce::ignoreUnused(api);
 
     // Should never happen
     if (isFloating)
         return false;
 
-    TRACE;
     const juce::MessageManagerLock mmLock;
     impl->editor = createEditor();
-
-    TRACE;
-
-    if (impl->editor == nullptr)
-        return false;
-
-    TRACE;
-    if (impl->editor != nullptr)
-    {
-        // FIXME : add lsitener
-        // impl->editor->addComponentListener(this);
-    }
-    else
-    {
-        // if hasimpl->editor() returns true then createimpl->editorIfNeeded has to return a valid impl->editor
-        jassertfalse;
-    }
-
-    TRACE;
-
     return impl->editor != nullptr;
 }
 

@@ -1,5 +1,5 @@
 /*
- * ClapSawDemo
+ * ClapJuicy
  * https://github.com/surge-synthesizer/clap-saw-demo
  *
  * Copyright 2022 Paul Walker and others as listed in the git history
@@ -14,7 +14,7 @@
 #include "sst/clap_juce_shim/clap_juce_shim.h"
 
 /*
- * ClapSawDemo is the core synthesizer class. It uses the clap-helpers C++ plugin extensions
+ * ClapJuicy is the core synthesizer class. It uses the clap-helpers C++ plugin extensions
  * to present the CLAP C API as a C++ object model.
  *
  * The core features here are
@@ -47,14 +47,12 @@
 namespace sst::clap_juicy
 {
 
-struct ClapSawDemoEditor;
-
-struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
+struct ClapJuicy : public clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
                                                   clap::helpers::CheckingLevel::Maximal>
 {
     static constexpr int max_voices = 64;
-    ClapSawDemo(const clap_host *host);
-    ~ClapSawDemo();
+    ClapJuicy(const clap_host *host);
+    ~ClapJuicy();
 
     /*
      * This static (defined in the cpp file) allows us to present a name, feature set,
@@ -229,7 +227,7 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
      *   implementation could make that a proxy or a bool), which we test for null
      *   when the editor is open
      * - A lock-free queue from the engine to the UI for things like parameter
-     *   updates. This queue is written in `ClapSawDemo::process` if editor is
+     *   updates. This queue is written in `ClapJuicy::process` if editor is
      *   non-null and is read in the `::idle` loop of the editor on the UI thread
      * - A lock-free queue from the UI to the engine for things like begin and end
      *   gestures and value changes. This is written on the UI thread and read in
@@ -242,7 +240,7 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
      * - A single std::function<void()> which the editor can use to ask the host to do
      *   a parameter flush.
      *
-     * These functions are members of ClapSawDemo but we implement them in
+     * These functions are members of ClapJuicy but we implement them in
      * `clap-saw-demo-editor.cpp` along with the VSTGUI implementation. You can consult the
      * extensive comments in the clap gui extension for semantics and rules.
      */

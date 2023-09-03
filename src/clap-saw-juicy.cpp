@@ -1,5 +1,5 @@
 /*
- * ClapSawDemo is Free and Open Source released under the MIT license
+ * ClapJuicy is Free and Open Source released under the MIT license
  *
  * Copright (c) 2021, Paul Walker
  */
@@ -23,11 +23,11 @@
 namespace sst::clap_juicy
 {
 
-ClapSawDemo::ClapSawDemo(const clap_host *host)
+ClapJuicy::ClapJuicy(const clap_host *host)
     : clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
                             clap::helpers::CheckingLevel::Maximal>(&desc, host)
 {
-    _DBGCOUT << "Constructing ClapSawDemo" << std::endl;
+    _DBGCOUT << "Constructing ClapJuicy" << std::endl;
     paramToValue[pmUnisonCount] = &unisonCount;
     paramToValue[pmUnisonSpread] = &unisonSpread;
     paramToValue[pmOscDetune] = &oscDetune;
@@ -47,7 +47,7 @@ ClapSawDemo::ClapSawDemo(const clap_host *host)
         }
     );
 }
-ClapSawDemo::~ClapSawDemo()
+ClapJuicy::~ClapJuicy()
 {
     // I *think* this is a bitwig bug that they won't call guiDestroy if destroying a plugin
     // with an open window but
@@ -56,7 +56,7 @@ ClapSawDemo::~ClapSawDemo()
 }
 
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
-clap_plugin_descriptor ClapSawDemo::desc = {CLAP_VERSION,
+clap_plugin_descriptor ClapJuicy::desc = {CLAP_VERSION,
                                             "org.surge-synth-team.clap-juicy",
                                             "Clap Juicy Demo Synth",
                                             "Surge Synth Team",
@@ -69,7 +69,7 @@ clap_plugin_descriptor ClapSawDemo::desc = {CLAP_VERSION,
 /*
  * PARAMETER SETUP SECTION
  */
-bool ClapSawDemo::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept
+bool ClapJuicy::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept
 {
     if (paramIndex >= nParams)
         return false;
@@ -181,7 +181,7 @@ bool ClapSawDemo::paramsInfo(uint32_t paramIndex, clap_param_info *info) const n
     return true;
 }
 
-bool ClapSawDemo::paramsValueToText(clap_id paramId, double value, char *display,
+bool ClapJuicy::paramsValueToText(clap_id paramId, double value, char *display,
                                     uint32_t size) noexcept
 {
     auto pid = (paramIds)paramId;
@@ -258,7 +258,7 @@ bool ClapSawDemo::paramsValueToText(clap_id paramId, double value, char *display
  * The only trick is the idi in also has NOTE_DIALECT_CLAP which provides us
  * with options on note expression and the like.
  */
-bool ClapSawDemo::audioPortsInfo(uint32_t index, bool isInput,
+bool ClapJuicy::audioPortsInfo(uint32_t index, bool isInput,
                                  clap_audio_port_info *info) const noexcept
 {
     if (isInput || index != 0)
@@ -273,7 +273,7 @@ bool ClapSawDemo::audioPortsInfo(uint32_t index, bool isInput,
     return true;
 }
 
-bool ClapSawDemo::notePortsInfo(uint32_t index, bool isInput,
+bool ClapJuicy::notePortsInfo(uint32_t index, bool isInput,
                                 clap_note_port_info *info) const noexcept
 {
     if (isInput)
@@ -292,7 +292,7 @@ bool ClapSawDemo::notePortsInfo(uint32_t index, bool isInput,
  * generates audio if appropriate, writes outbound events, and informs the host
  * to continue operating.
  *
- * In the ClapSawDemo, our process loop has 3 basic stages
+ * In the ClapJuicy, our process loop has 3 basic stages
  *
  * 1. See if the UI has sent us any events on the thread-safe UI Queue (
  *    see the discussion in the clap header file for this structure), apply them
@@ -304,7 +304,7 @@ bool ClapSawDemo::notePortsInfo(uint32_t index, bool isInput,
  * 3. Detect any voices which have terminated in the block (their state has become 'NEWLY_OFF'),
  *    update them to 'OFF' and send a CLAP NOTE_END event to terminate any polyphonic modulators.
  */
-clap_process_status ClapSawDemo::process(const clap_process *process) noexcept
+clap_process_status ClapJuicy::process(const clap_process *process) noexcept
 {
     // If I have no outputs, do nothing
     if (process->audio_outputs_count <= 0)
@@ -447,7 +447,7 @@ clap_process_status ClapSawDemo::process(const clap_process *process) noexcept
  *
  * It reads, unsurprisingly, as a simple switch over type with reactions.
  */
-void ClapSawDemo::handleInboundEvent(const clap_event_header_t *evt)
+void ClapJuicy::handleInboundEvent(const clap_event_header_t *evt)
 {
     if (evt->space_id != CLAP_CORE_EVENT_SPACE_ID)
         return;
@@ -658,10 +658,10 @@ void ClapSawDemo::handleInboundEvent(const clap_event_header_t *evt)
     }
 }
 
-void ClapSawDemo::handleEventsFromUIQueue(const clap_output_events_t *ov)
+void ClapJuicy::handleEventsFromUIQueue(const clap_output_events_t *ov)
 {
     bool uiAdjustedValues{false};
-    ClapSawDemo::FromUI r;
+    ClapJuicy::FromUI r;
     while (fromUiQ.try_dequeue(r))
     {
         switch (r.type)
@@ -727,7 +727,7 @@ void ClapSawDemo::handleEventsFromUIQueue(const clap_output_events_t *ov)
  * The note on, note off, and push params to voices implementations are, basically, completely
  * uninteresting.
  */
-void ClapSawDemo::handleNoteOn(int port_index, int channel, int key, int noteid)
+void ClapJuicy::handleNoteOn(int port_index, int channel, int key, int noteid)
 {
     bool foundVoice{false};
     for (auto &v : voices)
@@ -762,7 +762,7 @@ void ClapSawDemo::handleNoteOn(int port_index, int channel, int key, int noteid)
     }
 }
 
-void ClapSawDemo::handleNoteOff(int port_index, int channel, int n)
+void ClapJuicy::handleNoteOff(int port_index, int channel, int n)
 {
     for (auto &v : voices)
     {
@@ -781,7 +781,7 @@ void ClapSawDemo::handleNoteOff(int port_index, int channel, int n)
     }
 }
 
-void ClapSawDemo::activateVoice(SawDemoVoice &v, int port_index, int channel, int key, int noteid)
+void ClapJuicy::activateVoice(SawDemoVoice &v, int port_index, int channel, int key, int noteid)
 {
     v.unison = std::max(1, std::min(7, (int)unisonCount));
     v.filterMode = (int)static_cast<int>(filterMode);
@@ -815,7 +815,7 @@ void ClapSawDemo::activateVoice(SawDemoVoice &v, int port_index, int channel, in
  * result in this being called on the main thread, and generating all the appropriate
  * param updates.
  */
-void ClapSawDemo::paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept
+void ClapJuicy::paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept
 {
     auto sz = in->size(in);
 
@@ -832,7 +832,7 @@ void ClapSawDemo::paramsFlush(const clap_input_events *in, const clap_output_eve
     // output, so we are done.
 }
 
-void ClapSawDemo::pushParamsToVoices()
+void ClapJuicy::pushParamsToVoices()
 {
     for (auto &v : voices)
     {
@@ -854,14 +854,14 @@ void ClapSawDemo::pushParamsToVoices()
     }
 }
 
-float ClapSawDemo::scaleTimeParamToSeconds(float param)
+float ClapJuicy::scaleTimeParamToSeconds(float param)
 {
     auto scaleTime = std::clamp((param - 2.0 / 3.0) * 6, -100.0, 2.0);
     auto res = powf(2.f, scaleTime);
     return res;
 }
 
-bool ClapSawDemo::stateSave(const clap_ostream *stream) noexcept
+bool ClapJuicy::stateSave(const clap_ostream *stream) noexcept
 {
     // Oh this is soooo bad. Please don't judge me. I'm just trying to get this
     // together for launch day! If you are using this as an example for your plugins,
@@ -891,7 +891,7 @@ bool ClapSawDemo::stateSave(const clap_ostream *stream) noexcept
     return true;
 }
 
-bool ClapSawDemo::stateLoad(const clap_istream *stream) noexcept
+bool ClapJuicy::stateLoad(const clap_istream *stream) noexcept
 {
     // Again, see the comment above on 'this is terrible'
     static constexpr uint32_t maxSize = 4096 * 8, chunkSize = 256;
@@ -956,25 +956,25 @@ bool ClapSawDemo::stateLoad(const clap_istream *stream) noexcept
 /*
  * A simple passthrough. Put it here to allow the template mechanics to see the impl.
  */
-void ClapSawDemo::editorParamsFlush()
+void ClapJuicy::editorParamsFlush()
 {
     if (_host.canUseParams())
         _host.paramsRequestFlush();
 }
 
 #if IS_LINUX
-bool ClapSawDemo::registerTimer(uint32_t interv, clap_id *id)
+bool ClapJuicy::registerTimer(uint32_t interv, clap_id *id)
 {
     auto res = _host.timerSupportRegister(interv, id);
     return res;
 }
-bool ClapSawDemo::unregisterTimer(clap_id id) { return _host.timerSupportUnregister(id); }
-bool ClapSawDemo::registerPosixFd(int fd)
+bool ClapJuicy::unregisterTimer(clap_id id) { return _host.timerSupportUnregister(id); }
+bool ClapJuicy::registerPosixFd(int fd)
 {
     return _host.posixFdSupportRegister(fd, CLAP_POSIX_FD_READ | CLAP_POSIX_FD_WRITE |
                                                 CLAP_POSIX_FD_ERROR);
 }
-bool ClapSawDemo::unregisterPosixFD(int fd) { return _host.posixFdSupportUnregister(fd); }
+bool ClapJuicy::unregisterPosixFD(int fd) { return _host.posixFdSupportUnregister(fd); }
 #endif
 
 } // namespace sst::clap_juicy
