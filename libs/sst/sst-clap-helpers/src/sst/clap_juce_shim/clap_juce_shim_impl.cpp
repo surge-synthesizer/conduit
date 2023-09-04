@@ -4,6 +4,11 @@
 #define JUCE_GUI_BASICS_INCLUDE_XHEADERS 1
 #include <juce_gui_basics/juce_gui_basics.h>
 
+
+#if JUCE_LINUX
+#include <juce_audio_plugin_client/detail/juce_LinuxMessageThread.h>
+#endif
+
 #include <memory>
 
 namespace sst::clap_juce_shim
@@ -16,21 +21,20 @@ struct Implementor
     std::unique_ptr<juce::ScopedJuceInitialiser_GUI> guiInitializer; // todo deal with lifecycle
     bool guiParentAttached{false};
 };
-}
+} // namespace details
 #define TRACE std::cout << __FILE__ << ":" << __LINE__ << " " << __func__ << std::endl;
-//#define TRACE ;
-ClapJuceShim::ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> ce) : createEditor(ce) {
+// #define TRACE ;
+ClapJuceShim::ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> ce,
+                           const clap_host *host)
+    : createEditor(ce), host(host)
+{
     impl = std::make_unique<details::Implementor>();
 }
 
-ClapJuceShim::~ClapJuceShim()
-{}
+ClapJuceShim::~ClapJuceShim() {}
 
-bool ClapJuceShim::isEditorAttached()
-{
-    return impl->guiParentAttached;
-}
-bool ClapJuceShim::guiAdjustSize(uint32_t *w, uint32_t *h) noexcept  { return true; }
+bool ClapJuceShim::isEditorAttached() { return impl->guiParentAttached; }
+bool ClapJuceShim::guiAdjustSize(uint32_t *w, uint32_t *h) noexcept { return true; }
 
 bool ClapJuceShim::guiSetSize(uint32_t width, uint32_t height) noexcept
 {
@@ -86,8 +90,8 @@ bool ClapJuceShim::guiSetParent(const clap_window *window) noexcept
     impl->editor->setVisible(false);
     impl->editor->addToDesktop(0, (void *)window);
     auto *display = juce::XWindowSystem::getInstance()->getDisplay();
-    juce::X11Symbols::getInstance()->xReparentWindow(display, (Window)impl->editor->getWindowHandle(),
-                                                     window->x11, 0, 0);
+    juce::X11Symbols::getInstance()->xReparentWindow(
+        display, (Window)impl->editor->getWindowHandle(), window->x11, 0, 0);
     impl->editor->setVisible(true);
     return true;
 
@@ -128,7 +132,8 @@ bool ClapJuceShim::guiGetSize(uint32_t *width, uint32_t *height) noexcept
         auto b = impl->editor->getBounds();
         *width = (uint32_t)b.getWidth();
         *height = (uint32_t)b.getHeight();
-        std::cout << __FILE__ << ":" << __LINE__ << " size is " << *width << " x " << *height << std::endl;
+        std::cout << __FILE__ << ":" << __LINE__ << " size is " << *width << " x " << *height
+                  << std::endl;
         return true;
     }
     else
@@ -139,8 +144,20 @@ bool ClapJuceShim::guiGetSize(uint32_t *width, uint32_t *height) noexcept
     return false;
 }
 
-bool ClapJuceShim::guiSetScale(double scale) noexcept
-{
-    return true;
+bool ClapJuceShim::guiSetScale(double scale) noexcept { return true; }
+
+void ClapJuceShim::onTimer(clap_id timerId) noexcept {
+    if (timerId != idleTimerId)
+        return;
+#if JUCE_LINUX
+    juce::ScopedJuceInitialiser_GUI libraryInitialiser;
+    const juce::MessageManagerLock mmLock;
+
+    while (juce::detail::dispatchNextMessageOnSystemQueue(true))
+    {
+    }
+
+#endif
+
 }
-}
+} // namespace sst::clap_juce_shim

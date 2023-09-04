@@ -152,7 +152,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     terminatedVoices.reserve(max_voices * 4);
 
     clapJuceShim =
-        std::make_unique<sst::clap_juce_shim::ClapJuceShim>([this]() { return createEditor(); });
+        std::make_unique<sst::clap_juce_shim::ClapJuceShim>([this]() { return createEditor(); }, host);
 }
 ConduitPolysynth::~ConduitPolysynth()
 {
