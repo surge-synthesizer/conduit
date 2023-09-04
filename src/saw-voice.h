@@ -1,5 +1,5 @@
 /*
- * ClapJuicy
+ * ConduitPolysynth
  * https://github.com/surge-synthesizer/clap-saw-demo
  *
  * Copyright 2022 Paul Walker and others as listed in the git history
@@ -13,7 +13,7 @@
 #include <array>
 #include "debug-helpers.h"
 
-namespace sst::clap_juicy
+namespace sst::conduit_polysynth
 {
 /*
  * SawDemoVoice is a single voice with the following features
@@ -134,5 +134,5 @@ struct SawDemoVoice
     std::array<float, max_uni> panL, panR, unitShift, norm;
     std::array<double, max_uni> phase, dPhase, dPhaseInv;
 };
-} // namespace sst::clap_juicy
+} // namespace sst::conduit_polysynth
 #endif

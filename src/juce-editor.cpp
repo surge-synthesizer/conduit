@@ -1,5 +1,5 @@
 
-#include "clap-saw-juicy.h"
+#include "conduit-polysynth.h"
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -10,6 +10,8 @@
 #include "sst/jucegui/data/Continuous.h"
 
 
+namespace sst::conduit_polysynth::editor
+{
 namespace jcmp = sst::jucegui::components;
 namespace jdat = sst::jucegui::data;
 
@@ -17,12 +19,13 @@ struct DataToQueueParam : jdat::ContinunousModulatable
 {
     // TODO - this plus begin/end
     // FIX - this can be queues only
-    sst::clap_juicy::ClapJuicy &csd;
-    sst::clap_juicy::ClapJuicy::paramIds pid;
-    sst::clap_juicy::ClapJuicy::ParamDesc pDesc{};
+    sst::conduit_polysynth::ConduitPolysynth &csd;
+    sst::conduit_polysynth::ConduitPolysynth::paramIds pid;
+    sst::conduit_polysynth::ConduitPolysynth::ParamDesc pDesc{};
 
-    DataToQueueParam(sst::clap_juicy::ClapJuicy &p, sst::clap_juicy::ClapJuicy::paramIds pid)
-    : csd(p), pid(pid)
+    DataToQueueParam(sst::conduit_polysynth::ConduitPolysynth &p,
+                     sst::conduit_polysynth::ConduitPolysynth::paramIds pid)
+        : csd(p), pid(pid)
     {
         pDesc = csd.paramDescriptionMap[pid];
     }
@@ -30,95 +33,94 @@ struct DataToQueueParam : jdat::ContinunousModulatable
 
     float f{0.f};
     float getValue() const override { return f; }
-    void setValueFromGUI(const float &fi) override {
+    void setValueFromGUI(const float &fi) override
+    {
         f = fi;
-        csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapJuicy::FromUI::MType::ADJUST_VALUE,
-                                    sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread,
-                                    f});
+        csd.fromUiQ.try_enqueue(
+            {sst::conduit_polysynth::ConduitPolysynth::FromUI::MType::ADJUST_VALUE,
+             sst::conduit_polysynth::ConduitPolysynth::paramIds::pmUnisonSpread, f});
     }
     void setValueFromModel(const float &fi) override { f = fi; }
     float getDefaultValue() const override { return pDesc.defaultVal; }
     float getMin() const override { return pDesc.minVal; }
     float getMax() const override { return pDesc.maxVal; }
 
-
     float getModulationValuePM1() const override { return 0; }
     void setModulationValuePM1(const float &f) override {}
     bool isModulationBipolar() const override { return false; }
 };
 
-struct JuicyEditor;
+struct ConduitPolysynthEditor;
 
-struct JuicyOscPanel : public juce::Component
+struct OscPanel : public juce::Component
 {
     // FIX - this can be the queues only
-    sst::clap_juicy::ClapJuicy &csd;
+    sst::conduit_polysynth::ConduitPolysynth &csd;
 
-    JuicyOscPanel(sst::clap_juicy::ClapJuicy &p, JuicyEditor &e) : csd(p) {
+    OscPanel(sst::conduit_polysynth::ConduitPolysynth &p, ConduitPolysynthEditor &e) : csd(p)
+    {
         oscUnisonSpread = std::make_unique<jcmp::Knob>();
         addAndMakeVisible(*oscUnisonSpread);
 
-        oscUnisonSource = std::make_unique<DataToQueueParam>(csd,
-                                                             sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread);
+        oscUnisonSource = std::make_unique<DataToQueueParam>(
+            csd, sst::conduit_polysynth::ConduitPolysynth::paramIds::pmUnisonSpread);
         oscUnisonSpread->setSource(oscUnisonSource.get());
 
-        oscUnisonSpread->onBeginEdit = [w = juce::Component::SafePointer(this)]()
-        {
-            w->csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapJuicy::FromUI::MType::BEGIN_EDIT,
-                                        sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread,
-                                        1});
+        oscUnisonSpread->onBeginEdit = [w = juce::Component::SafePointer(this)]() {
+            w->csd.fromUiQ.try_enqueue(
+                {sst::conduit_polysynth::ConduitPolysynth::FromUI::MType::BEGIN_EDIT,
+                 sst::conduit_polysynth::ConduitPolysynth::paramIds::pmUnisonSpread, 1});
             std::cout << "onDragStart" << std::endl;
         };
-        oscUnisonSpread->onEndEdit = [w = juce::Component::SafePointer(this)]()
-        {
-            w->csd.fromUiQ.try_enqueue({sst::clap_juicy::ClapJuicy::FromUI::MType::END_EDIT,
-                                        sst::clap_juicy::ClapJuicy::paramIds::pmUnisonSpread,
-                                        1});
+        oscUnisonSpread->onEndEdit = [w = juce::Component::SafePointer(this)]() {
+            w->csd.fromUiQ.try_enqueue(
+                {sst::conduit_polysynth::ConduitPolysynth::FromUI::MType::END_EDIT,
+                 sst::conduit_polysynth::ConduitPolysynth::paramIds::pmUnisonSpread, 1});
             std::cout << "onDragEnd" << std::endl;
         };
 
         registerDataSources(e);
     }
 
-    ~JuicyOscPanel()
-    {
-        oscUnisonSpread->setSource(nullptr);
-    }
+    ~OscPanel() { oscUnisonSpread->setSource(nullptr); }
 
-    void resized() override {
-        oscUnisonSpread->setBounds({10,10,60,60});
-    }
+    void resized() override { oscUnisonSpread->setBounds({10, 10, 60, 60}); }
 
-    void registerDataSources(JuicyEditor &e);
+    void registerDataSources(ConduitPolysynthEditor &e);
     std::unique_ptr<jcmp::Knob> oscUnisonSpread;
     std::unique_ptr<DataToQueueParam> oscUnisonSource;
 };
 
-struct JuicyEditor : public jcmp::WindowPanel
+struct ConduitPolysynthEditor : public jcmp::WindowPanel
 {
     // FIX - this can be the queues only
-    sst::clap_juicy::ClapJuicy &csd;
+    sst::conduit_polysynth::ConduitPolysynth &csd;
 
     struct IdleTimer : juce::Timer
     {
-        JuicyEditor &jomp;
-        IdleTimer(JuicyEditor &j) : jomp(j) {}
+        ConduitPolysynthEditor &jomp;
+        IdleTimer(ConduitPolysynthEditor &j) : jomp(j) {}
         void timerCallback() override { jomp.onIdle(); }
     };
     std::unique_ptr<IdleTimer> idleTimer;
 
-    JuicyEditor(sst::clap_juicy::ClapJuicy &p) : csd(p) {
+    ConduitPolysynthEditor(sst::conduit_polysynth::ConduitPolysynth &p) : csd(p)
+    {
         sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
-        const auto &base = sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(sst::jucegui::style::StyleSheet::DARK);
-        base->setColour(jcmp::WindowPanel::Styles::styleClass, jcmp::WindowPanel::Styles::backgroundgradstart, juce::Colour(60,60,70));
-        base->setColour(jcmp::WindowPanel::Styles::styleClass, jcmp::WindowPanel::Styles::backgroundgradend, juce::Colour(20,20,30));
-        base->setColour(jcmp::BaseStyles::styleClass, jcmp::BaseStyles::regionBorder, juce::Colour(90,90,100));
+        const auto &base = sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
+            sst::jucegui::style::StyleSheet::DARK);
+        base->setColour(jcmp::WindowPanel::Styles::styleClass,
+                        jcmp::WindowPanel::Styles::backgroundgradstart, juce::Colour(60, 60, 70));
+        base->setColour(jcmp::WindowPanel::Styles::styleClass,
+                        jcmp::WindowPanel::Styles::backgroundgradend, juce::Colour(20, 20, 30));
+        base->setColour(jcmp::BaseStyles::styleClass, jcmp::BaseStyles::regionBorder,
+                        juce::Colour(90, 90, 100));
         setStyle(base);
 
         oscPanel = std::make_unique<jcmp::NamedPanel>("Oscillator");
         addAndMakeVisible(*oscPanel);
 
-        auto oct = std::make_unique<JuicyOscPanel>(csd, *this);
+        auto oct = std::make_unique<OscPanel>(csd, *this);
         oscPanel->setContentAreaComponent(std::move(oct));
 
         vcfPanel = std::make_unique<jcmp::NamedPanel>("Filter");
@@ -130,10 +132,7 @@ struct JuicyEditor : public jcmp::WindowPanel
         idleTimer->startTimerHz(60);
     }
 
-    ~JuicyEditor()
-    {
-        idleTimer->stopTimer();
-    }
+    ~ConduitPolysynthEditor() { idleTimer->stopTimer(); }
 
     std::unique_ptr<juce::Slider> unisonSpread;
 
@@ -147,15 +146,15 @@ struct JuicyEditor : public jcmp::WindowPanel
     std::unique_ptr<jcmp::NamedPanel> vcfPanel;
     std::unique_ptr<jcmp::NamedPanel> oscPanel;
 
-    std::unordered_map<uint32_t,
-        std::pair<juce::Component *, jdat::ContinunousModulatable *>> dataTargets;
+    std::unordered_map<uint32_t, std::pair<juce::Component *, jdat::ContinunousModulatable *>>
+        dataTargets;
 
     void onIdle()
     {
-        sst::clap_juicy::ClapJuicy::ToUI r;
+        sst::conduit_polysynth::ConduitPolysynth::ToUI r;
         while (csd.toUiQ.try_dequeue(r))
         {
-            if (r.type == sst::clap_juicy::ClapJuicy::ToUI::MType::PARAM_VALUE)
+            if (r.type == sst::conduit_polysynth::ConduitPolysynth::ToUI::MType::PARAM_VALUE)
             {
                 auto p = dataTargets.find(r.id);
                 if (p != dataTargets.end())
@@ -172,18 +171,18 @@ struct JuicyEditor : public jcmp::WindowPanel
     }
 };
 
-void JuicyOscPanel::registerDataSources(JuicyEditor &e)
+void OscPanel::registerDataSources(ConduitPolysynthEditor &e)
 {
     // FIXME clean this up on dtor
-    e.dataTargets[sst::clap_juicy::ClapJuicy::pmUnisonSpread] =
-    {oscUnisonSpread.get(), oscUnisonSource.get()};
+    e.dataTargets[sst::conduit_polysynth::ConduitPolysynth::pmUnisonSpread] = {
+        oscUnisonSpread.get(), oscUnisonSource.get()};
 }
-
-namespace sst::clap_juicy
+} // namespace sst::conduit_polysynth::editor
+namespace sst::conduit_polysynth
 {
-std::unique_ptr<juce::Component> ClapJuicy::createEditor()
+std::unique_ptr<juce::Component> ConduitPolysynth::createEditor()
 {
     refreshUIValues = true;
-    return std::make_unique<JuicyEditor>(*this);
+    return std::make_unique<sst::conduit_polysynth::editor::ConduitPolysynthEditor>(*this);
 }
 }

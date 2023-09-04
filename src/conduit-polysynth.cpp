@@ -1,10 +1,10 @@
 /*
- * ClapJuicy is Free and Open Source released under the MIT license
+ * ConduitPolysynth is Free and Open Source released under the MIT license
  *
  * Copright (c) 2021, Paul Walker
  */
 
-#include "clap-saw-juicy.h"
+#include "conduit-polysynth.h"
 #include <iostream>
 #include <cmath>
 #include <cstring>
@@ -20,14 +20,14 @@
 #include <iomanip>
 #include <locale>
 
-namespace sst::clap_juicy
+namespace sst::conduit_polysynth
 {
 
-ClapJuicy::ClapJuicy(const clap_host *host)
+ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     : clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
                             clap::helpers::CheckingLevel::Maximal>(&desc, host)
 {
-    _DBGCOUT << "Constructing ClapJuicy" << std::endl;
+    _DBGCOUT << "Constructing ConduitPolysynth" << std::endl;
 
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE | CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID |
@@ -94,7 +94,7 @@ ClapJuicy::ClapJuicy(const clap_host *host)
     paramToValue[pmAmpIsGate] = &ampIsGate;
     paramDescriptions.push_back(ParamDesc()
                                     .asBool()
-                                    .withID(pmAmpRelease)
+                                    .withID(pmAmpIsGate)
                                     .withName("Bypass Amp Envelope")
                                     .withGroupName("AEG")
                                     .withFlags(steppedFlag));
@@ -139,24 +139,22 @@ ClapJuicy::ClapJuicy(const clap_host *host)
                                     .withID(pmFilterMode)
                                     .withName("Filter Type")
                                     .withGroupName("Filter")
-                                .withFlags(steppedFlag)
+                                    .withFlags(steppedFlag)
                                 );
-    /*
-    paramDescriptions.emplace_back(pmFilterMode, "Filter Type", "Filter", steppedFlag,
-                                   SawDemoVoice::StereoSimperSVF::Mode::LP,
-                                   SawDemoVoice::StereoSimperSVF::Mode::ALL, 0);
-*/
+
     assert(paramDescriptions.size() == nParams);
     for (const auto &pd : paramDescriptions)
-        paramDescriptionMap.insert({pd.id, pd});
+        paramDescriptionMap[pd.id] = pd;
     assert(paramDescriptionMap.size() == nParams);
+
+    std::cout << nParams << " " << paramDescriptionMap.size() << " " << paramDescriptions.size() << std::endl;
 
     terminatedVoices.reserve(max_voices * 4);
 
     clapJuceShim =
         std::make_unique<sst::clap_juce_shim::ClapJuceShim>([this]() { return createEditor(); });
 }
-ClapJuicy::~ClapJuicy()
+ConduitPolysynth::~ConduitPolysynth()
 {
     // I *think* this is a bitwig bug that they won't call guiDestroy if destroying a plugin
     // with an open window but
@@ -165,20 +163,20 @@ ClapJuicy::~ClapJuicy()
 }
 
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
-clap_plugin_descriptor ClapJuicy::desc = {CLAP_VERSION,
-                                          "org.surge-synth-team.clap-juicy",
-                                          "Clap Juicy Demo Synth",
+clap_plugin_descriptor ConduitPolysynth::desc = {CLAP_VERSION,
+                                          "org.surge-synth-team.conduit_polysynth",
+                                          "Conduit Polysymtn",
                                           "Surge Synth Team",
                                           "https://surge-synth-team.org",
                                           "",
                                           "",
                                           "1.0.0",
-                                          "A simple sawtooth synth to show CLAP features.",
+                                          "Wahey",
                                           features};
 /*
  * PARAMETER SETUP SECTION
  */
-bool ClapJuicy::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept
+bool ConduitPolysynth::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept
 {
     if (paramIndex >= nParams)
         return false;
@@ -189,7 +187,7 @@ bool ClapJuicy::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noe
     return true;
 }
 
-bool ClapJuicy::paramsValueToText(clap_id paramId, double value, char *display,
+bool ConduitPolysynth::paramsValueToText(clap_id paramId, double value, char *display,
                                   uint32_t size) noexcept
 {
     auto pos = paramDescriptionMap.find(paramId);
@@ -208,7 +206,7 @@ bool ClapJuicy::paramsValueToText(clap_id paramId, double value, char *display,
 }
 
 
-bool ClapJuicy::paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept
+bool ConduitPolysynth::paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept
 {
     auto pos = paramDescriptionMap.find(paramId);
     if (pos == paramDescriptionMap.end())
@@ -230,7 +228,7 @@ bool ClapJuicy::paramsTextToValue(clap_id paramId, const char *display, double *
  * The only trick is the idi in also has NOTE_DIALECT_CLAP which provides us
  * with options on note expression and the like.
  */
-bool ClapJuicy::audioPortsInfo(uint32_t index, bool isInput,
+bool ConduitPolysynth::audioPortsInfo(uint32_t index, bool isInput,
                                clap_audio_port_info *info) const noexcept
 {
     if (isInput || index != 0)
@@ -245,7 +243,7 @@ bool ClapJuicy::audioPortsInfo(uint32_t index, bool isInput,
     return true;
 }
 
-bool ClapJuicy::notePortsInfo(uint32_t index, bool isInput,
+bool ConduitPolysynth::notePortsInfo(uint32_t index, bool isInput,
                               clap_note_port_info *info) const noexcept
 {
     if (isInput)
@@ -264,7 +262,7 @@ bool ClapJuicy::notePortsInfo(uint32_t index, bool isInput,
  * generates audio if appropriate, writes outbound events, and informs the host
  * to continue operating.
  *
- * In the ClapJuicy, our process loop has 3 basic stages
+ * In the ConduitPolysynth, our process loop has 3 basic stages
  *
  * 1. See if the UI has sent us any events on the thread-safe UI Queue (
  *    see the discussion in the clap header file for this structure), apply them
@@ -276,7 +274,7 @@ bool ClapJuicy::notePortsInfo(uint32_t index, bool isInput,
  * 3. Detect any voices which have terminated in the block (their state has become 'NEWLY_OFF'),
  *    update them to 'OFF' and send a CLAP NOTE_END event to terminate any polyphonic modulators.
  */
-clap_process_status ClapJuicy::process(const clap_process *process) noexcept
+clap_process_status ConduitPolysynth::process(const clap_process *process) noexcept
 {
     // If I have no outputs, do nothing
     if (process->audio_outputs_count <= 0)
@@ -419,7 +417,7 @@ clap_process_status ClapJuicy::process(const clap_process *process) noexcept
  *
  * It reads, unsurprisingly, as a simple switch over type with reactions.
  */
-void ClapJuicy::handleInboundEvent(const clap_event_header_t *evt)
+void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
 {
     if (evt->space_id != CLAP_CORE_EVENT_SPACE_ID)
         return;
@@ -428,7 +426,6 @@ void ClapJuicy::handleInboundEvent(const clap_event_header_t *evt)
     {
     case CLAP_EVENT_MIDI:
     {
-        std::cout << "CLAN_EVEN_TMIDI" << std::endl;
         /*
          * We advertise both CLAP_DIALECT_MIDI and CLAP_DIALECT_CLAP_NOTE so we do need
          * to handle midi events. CLAP just gives us MIDI 1 (or 2 if you want, but I didn't code
@@ -629,10 +626,10 @@ void ClapJuicy::handleInboundEvent(const clap_event_header_t *evt)
     }
 }
 
-void ClapJuicy::handleEventsFromUIQueue(const clap_output_events_t *ov)
+void ConduitPolysynth::handleEventsFromUIQueue(const clap_output_events_t *ov)
 {
     bool uiAdjustedValues{false};
-    ClapJuicy::FromUI r;
+    ConduitPolysynth::FromUI r;
     while (fromUiQ.try_dequeue(r))
     {
         switch (r.type)
@@ -698,7 +695,7 @@ void ClapJuicy::handleEventsFromUIQueue(const clap_output_events_t *ov)
  * The note on, note off, and push params to voices implementations are, basically, completely
  * uninteresting.
  */
-void ClapJuicy::handleNoteOn(int port_index, int channel, int key, int noteid)
+void ConduitPolysynth::handleNoteOn(int port_index, int channel, int key, int noteid)
 {
     bool foundVoice{false};
     for (auto &v : voices)
@@ -733,7 +730,7 @@ void ClapJuicy::handleNoteOn(int port_index, int channel, int key, int noteid)
     }
 }
 
-void ClapJuicy::handleNoteOff(int port_index, int channel, int n)
+void ConduitPolysynth::handleNoteOff(int port_index, int channel, int n)
 {
     for (auto &v : voices)
     {
@@ -752,7 +749,7 @@ void ClapJuicy::handleNoteOff(int port_index, int channel, int n)
     }
 }
 
-void ClapJuicy::activateVoice(SawDemoVoice &v, int port_index, int channel, int key, int noteid)
+void ConduitPolysynth::activateVoice(SawDemoVoice &v, int port_index, int channel, int key, int noteid)
 {
     v.unison = std::max(1, std::min(7, (int)unisonCount));
     v.filterMode = (int)static_cast<int>(filterMode);
@@ -786,7 +783,7 @@ void ClapJuicy::activateVoice(SawDemoVoice &v, int port_index, int channel, int 
  * result in this being called on the main thread, and generating all the appropriate
  * param updates.
  */
-void ClapJuicy::paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept
+void ConduitPolysynth::paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept
 {
     auto sz = in->size(in);
 
@@ -803,7 +800,7 @@ void ClapJuicy::paramsFlush(const clap_input_events *in, const clap_output_event
     // output, so we are done.
 }
 
-void ClapJuicy::pushParamsToVoices()
+void ConduitPolysynth::pushParamsToVoices()
 {
     for (auto &v : voices)
     {
@@ -825,14 +822,14 @@ void ClapJuicy::pushParamsToVoices()
     }
 }
 
-float ClapJuicy::scaleTimeParamToSeconds(float param)
+float ConduitPolysynth::scaleTimeParamToSeconds(float param)
 {
     auto scaleTime = std::clamp((param - 2.0 / 3.0) * 6, -100.0, 2.0);
     auto res = powf(2.f, scaleTime);
     return res;
 }
 
-bool ClapJuicy::stateSave(const clap_ostream *stream) noexcept
+bool ConduitPolysynth::stateSave(const clap_ostream *stream) noexcept
 {
     // Oh this is soooo bad. Please don't judge me. I'm just trying to get this
     // together for launch day! If you are using this as an example for your plugins,
@@ -862,7 +859,7 @@ bool ClapJuicy::stateSave(const clap_ostream *stream) noexcept
     return true;
 }
 
-bool ClapJuicy::stateLoad(const clap_istream *stream) noexcept
+bool ConduitPolysynth::stateLoad(const clap_istream *stream) noexcept
 {
     // Again, see the comment above on 'this is terrible'
     static constexpr uint32_t maxSize = 4096 * 8, chunkSize = 256;
@@ -927,10 +924,10 @@ bool ClapJuicy::stateLoad(const clap_istream *stream) noexcept
 /*
  * A simple passthrough. Put it here to allow the template mechanics to see the impl.
  */
-void ClapJuicy::editorParamsFlush()
+void ConduitPolysynth::editorParamsFlush()
 {
     if (_host.canUseParams())
         _host.paramsRequestFlush();
 }
 
-} // namespace sst::clap_juicy
+} // namespace sst::conduit_polysynth

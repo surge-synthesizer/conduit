@@ -1,5 +1,5 @@
 /*
- * ClapJuicy
+ * ConduitPolysynth
  * https://github.com/surge-synthesizer/clap-saw-demo
  *
  * Copyright 2022 Paul Walker and others as listed in the git history
@@ -17,7 +17,7 @@
  * state management, but it is nothing surprising.
  */
 
-namespace sst::clap_juicy
+namespace sst::conduit_polysynth
 {
 float pival =
     3.14159265358979323846; // I always forget what you need for M_PI to work on all platforms
@@ -252,4 +252,4 @@ void SawDemoVoice::StereoSimperSVF::init()
         ic2eq[c] = 0.f;
     }
 }
-} // namespace sst::clap_juicy
+} // namespace sst::conduit_polysynth

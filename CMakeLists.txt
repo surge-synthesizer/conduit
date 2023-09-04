@@ -4,11 +4,13 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "Build for 10.1")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-project(clap-saw-juicy VERSION 0.9.0 LANGUAGES C CXX OBJC OBJCXX)
+project(conduit-polysynth VERSION 0.9.0 LANGUAGES C CXX OBJC OBJCXX)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_OBJC_VISIBILITY_PRESET hidden)
+set(CMAKE_OBJCXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 # use asan as an option (currently mac only)
@@ -31,19 +33,25 @@ add_clap_juce_shim(JUCE_PATH ${JUCE_PATH})
 add_subdirectory(libs/sst/sst-jucegui)
 add_subdirectory(libs/sst/sst-basic-blocks)
 
-add_library(${PROJECT_NAME} MODULE
-        src/clap-saw-juicy.cpp
+set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
+set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
+add_subdirectory(libs/clap-wrapper)
+
+
+set(CLAP_TARGET ${PROJECT_NAME}_clap)
+add_library(${CLAP_TARGET} MODULE
+        src/conduit-polysynth.cpp
         src/saw-voice.cpp
-        src/clap-saw-juicy-entry.cpp
+        src/conduit-polysynth-entry.cpp
         src/juce-editor.cpp
         )
-target_library_is_clap(TARGET ${PROJECT_NAME}
-        CLAP_NAME ${PROJECT_NAME}
+target_library_make_clap(TARGET ${CLAP_TARGET}
+        CLAP_NAME "Conduit Polysynth"
         CLAP_MACOS_BUNDLE_IDENTIFIER org.surge-synth-team.conduit.poly.clap
         CLAP_MACOS_BUNDLE_VERSION 0.1
-        COPY_AFTER_BUILD TRUE
+        COPY_AFTER_BUILD ${COPY_AFTER_BUILD}
         )
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${CLAP_TARGET}
         clap-core
         clap-helpers
         readerwriterqueue
@@ -52,3 +60,15 @@ target_link_libraries(${PROJECT_NAME}
         sst::clap_juce_shim
         sst-basic-blocks
         sst-jucegui)
+
+set(VST3_TARGET ${PROJECT_NAME}_vst3)
+add_library(${VST3_TARGET} MODULE)
+add_dependencies(${VST3_TARGET} ${CLAP_TARGET})
+target_add_vst3_wrapper(TARGET ${VST3_TARGET}
+        OUTPUT_NAME "Conduit PolySynth"
+        SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
+        MACOS_EMBEDDED_CLAP_LOCATION "${CMAKE_BINARY_DIR}/Conduit PolySynth.clap"
+        )
+if (${COPY_AFTER_BUILD})
+    target_vst3_copy_after_build(TARGET ${VST3_TARGET})
+endif()

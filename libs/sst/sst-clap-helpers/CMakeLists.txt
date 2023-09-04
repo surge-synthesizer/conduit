@@ -68,7 +68,7 @@ function(add_clap_juce_shim)
     add_library(sst::clap_juce_shim ALIAS clap_juce_shim)
 endfunction(add_clap_juce_shim)
 
-function(target_library_is_clap)
+function(target_library_make_clap)
     set(oneValueArgs
             TARGET
             CLAP_NAME
@@ -101,6 +101,7 @@ function(target_library_is_clap)
         set_target_properties(${TCLP_TARGET} PROPERTIES
                 BUNDLE True
                 BUNDLE_EXTENSION clap
+                LIBRARY_OUTPUT_NAME ${TCLP_CLAP_NAME}
                 MACOSX_BUNDLE_GUI_IDENTIFIER ${TCLP_CLAP_MACOS_BUNDLE_GUI_IDENTIFIER}
                 MACOSX_BUNDLE_BUNDLE_NAME ${TCLP_CLAP_NAME}
                 MACOSX_BUNDLE_BUNDLE_VERSION "${TCLP_CLAP_MACOS_BUNDLE_VERSION}"
@@ -111,7 +112,7 @@ function(target_library_is_clap)
         if (NOT ${CMAKE_GENERATOR} STREQUAL "Xcode")
             add_custom_command(TARGET ${TCLP_TARGET} POST_BUILD
                     WORKING_DIRECTORY $<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_DIRECTORY>
-                    COMMAND SetFile -a B "$<TARGET_PROPERTY:${TCLP_TARGET},MACOSX_BUNDLE_BUNDLE_NAME>.$<TARGET_PROPERTY:${TCLP_TARGET},BUNDLE_EXTENSION>")
+                    COMMAND SetFile -a B "$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.$<TARGET_PROPERTY:${TCLP_TARGET},BUNDLE_EXTENSION>")
         endif()
         if (${COPY_AFTER_BUILD})
             message(STATUS "Will copy plugin after every build" )
@@ -137,4 +138,23 @@ function(target_library_is_clap)
     else()
         set_target_properties(${TCLP_TARGET} PROPERTIES SUFFIX ".clap" PREFIX "")
     endif()
-endfunction(target_library_is_clap)
+endfunction(target_library_make_clap)
+
+function(target_vst3_copy_after_build)
+    set(oneValueArgs
+            TARGET
+            )
+    cmake_parse_arguments(TCLP "" "${oneValueArgs}" "" ${ARGN} )
+
+    if(APPLE)
+        message(STATUS "Will copy plugin after every build" )
+        set(products_folder ${CMAKE_BINARY_DIR})
+        add_custom_command(TARGET ${TCLP_TARGET} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E echo "Installing ${products_folder}/$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.vst3 to ~/Library/Audio/Plug-Ins/VST3/"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "~/Library/Audio/Plug-Ins/VST3"
+                COMMAND ${CMAKE_COMMAND} -E copy_directory "${products_folder}/$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.vst3" "~/Library/Audio/Plug-Ins/CLAP/$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.vst3"
+            )
+    elseif(UNIX)
+        message(STATUS "Implement Copy after Build for VST3")
+    endif()
+endfunction(target_vst3_copy_after_build)

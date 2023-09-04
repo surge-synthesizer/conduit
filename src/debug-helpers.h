@@ -1,5 +1,5 @@
 /*
- * ClapJuicy
+ * ConduitPolysynth
  * https://github.com/surge-synthesizer/clap-saw-demo
  *
  * Copyright 2022 Paul Walker and others as listed in the git history

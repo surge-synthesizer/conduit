@@ -19,3 +19,6 @@
 [submodule "libs/fmt"]
 	path = libs/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "libs/clap-wrapper"]
+	path = libs/clap-wrapper
+	url = https://github.com/free-audio/clap-wrapper
