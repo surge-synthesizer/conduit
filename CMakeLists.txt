@@ -72,7 +72,7 @@ target_library_make_clap(TARGET ${CLAP_TARGET}
 
 set(VST3_TARGET ${PROJECT_NAME}_vst3)
 add_library(${VST3_TARGET} MODULE)
-if (WIN32)
+if (NOT APPLE)
     # Our windows strategy includes the CLAP in the vst3 dll so
     target_sources(${VST3_TARGET} PRIVATE src/conduit-polysynth-entry.cpp)
     target_link_libraries(${VST3_TARGET} PRIVATE ${IMPL_TARGET})

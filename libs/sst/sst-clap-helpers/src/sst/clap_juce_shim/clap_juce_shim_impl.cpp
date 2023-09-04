@@ -1,6 +1,9 @@
 #include <iostream>
 #include "sst/clap_juce_shim/clap_juce_shim.h"
+
+#define JUCE_GUI_BASICS_INCLUDE_XHEADERS 1
 #include <juce_gui_basics/juce_gui_basics.h>
+
 #include <memory>
 
 namespace sst::clap_juce_shim
@@ -79,7 +82,16 @@ bool ClapJuceShim::guiSetParent(const clap_window *window) noexcept
     extern bool guiCocoaAttach(const clap_window *, juce::Component *);
     return guiCocoaAttach(window, impl->editor.get());
 #elif JUCE_LINUX
-    return guiX11Attach(nullptr, window->x11);
+    const juce::MessageManagerLock mmLock;
+    impl->editor->setVisible(false);
+    impl->editor->addToDesktop(0, (void *)window);
+    auto *display = juce::XWindowSystem::getInstance()->getDisplay();
+    juce::X11Symbols::getInstance()->xReparentWindow(display, (Window)impl->editor->getWindowHandle(),
+                                                     window->x11, 0, 0);
+    impl->editor->setVisible(true);
+    return true;
+
+    return false;
 #elif JUCE_WINDOWS
     impl->editor->setVisible(false);
     impl->editor->setOpaque(true);

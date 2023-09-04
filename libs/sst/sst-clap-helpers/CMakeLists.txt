@@ -61,7 +61,12 @@ function(add_clap_juce_shim)
                 "-framework CoreImage"
                 "-framework CoreVideo"
                 "-framework QuartzCore")
-        endif()
+    elseif(UNIX)
+        include(FindFreetype)
+        message(STATUS "Using FreeType ${FREETYPE_VERSION_STRING}")
+        target_include_directories(${underlib} PUBLIC ${FREETYPE_INCLUDE_DIRS})
+        target_link_libraries(${underlib} PUBLIC ${FREETYPE_LIBRARIES})
+    endif()
 
     add_library(sst::juceshim ALIAS ${underlib})
 
