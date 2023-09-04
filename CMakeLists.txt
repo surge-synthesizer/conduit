@@ -64,10 +64,10 @@ add_library(${CLAP_TARGET} MODULE
         )
 target_link_libraries(${CLAP_TARGET} ${IMPL_TARGET})
 target_library_make_clap(TARGET ${CLAP_TARGET}
-        CLAP_NAME "Conduit Polysynth"
+        CLAP_NAME "Conduit PolySynth"
         CLAP_MACOS_BUNDLE_IDENTIFIER org.surge-synth-team.conduit.poly.clap
         CLAP_MACOS_BUNDLE_VERSION 0.1
-        COPY_AFTER_BUILD ${COPY_AFTER_BUILD}
+        COPY_AFTER_BUILD ${COPY_AFTER_rBUILD}
         )
 
 set(VST3_TARGET ${PROJECT_NAME}_vst3)
