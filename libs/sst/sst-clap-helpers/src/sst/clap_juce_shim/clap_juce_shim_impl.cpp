@@ -146,18 +146,18 @@ bool ClapJuceShim::guiGetSize(uint32_t *width, uint32_t *height) noexcept
 
 bool ClapJuceShim::guiSetScale(double scale) noexcept { return true; }
 
+#if JUCE_LINUX
 void ClapJuceShim::onTimer(clap_id timerId) noexcept {
     if (timerId != idleTimerId)
         return;
-#if JUCE_LINUX
+
     juce::ScopedJuceInitialiser_GUI libraryInitialiser;
     const juce::MessageManagerLock mmLock;
 
     while (juce::detail::dispatchNextMessageOnSystemQueue(true))
     {
     }
-
+}
 #endif
 
-}
 } // namespace sst::clap_juce_shim
