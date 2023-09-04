@@ -72,16 +72,12 @@ target_library_make_clap(TARGET ${CLAP_TARGET}
 
 set(VST3_TARGET ${PROJECT_NAME}_vst3)
 add_library(${VST3_TARGET} MODULE)
-if (NOT APPLE)
-    # Our windows strategy includes the CLAP in the vst3 dll so
-    target_sources(${VST3_TARGET} PRIVATE src/conduit-polysynth-entry.cpp)
-    target_link_libraries(${VST3_TARGET} PRIVATE ${IMPL_TARGET})
-endif()
+target_sources(${VST3_TARGET} PRIVATE src/conduit-polysynth-entry.cpp)
+target_link_libraries(${VST3_TARGET} PRIVATE ${IMPL_TARGET})
 add_dependencies(${VST3_TARGET} ${CLAP_TARGET})
 target_add_vst3_wrapper(TARGET ${VST3_TARGET}
         OUTPUT_NAME "Conduit PolySynth"
         SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
-        MACOS_EMBEDDED_CLAP_LOCATION "${CMAKE_BINARY_DIR}/Conduit PolySynth.clap"
         )
 if (${COPY_AFTER_BUILD})
     target_vst3_copy_after_build(TARGET ${VST3_TARGET})
