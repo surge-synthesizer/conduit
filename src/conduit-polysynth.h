@@ -117,6 +117,8 @@ struct ConduitPolysynth
     std::vector<ParamDesc> paramDescriptions;
     std::unordered_map<uint32_t, ParamDesc> paramDescriptionMap;
 
+
+
     bool implementsParams() const noexcept override { return true; }
     bool isValidParamId(clap_id paramId) const noexcept override
     {
@@ -264,6 +266,8 @@ struct ConduitPolysynth
     bool guiCanResize() const noexcept override { return true; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
     ADD_SHIM_IMPLEMENTATION(clapJuceShim);
+    ADD_SHIM_LINUX_TIMER(clapJuceShim);
+
     std::unique_ptr<juce::Component> createEditor();
 
     // Setting this atomic to true will force a push of all current engine

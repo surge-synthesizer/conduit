@@ -24,7 +24,9 @@ struct Implementor;
 
 struct ClapJuceShim
 {
-    ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> ce);
+    const clap_host *host;
+
+    ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> ce, const clap_host *host);
     ~ClapJuceShim();
 
     std::function<std::unique_ptr<juce::Component>()> createEditor;
@@ -44,6 +46,13 @@ struct ClapJuceShim
     bool guiGetSize(uint32_t *width, uint32_t *height) noexcept;
 
     bool guiShow() noexcept;
+
+#if SHIM_LINUX
+    clap_id idleTimerId{0};
+    void onTimer(clap_id timerId) noexcept;
+
+#endif
+
 };
 } // namespace sst::clap_juce_shim
 
@@ -75,4 +84,15 @@ struct ClapJuceShim
         return clapJuceShim->guiGetSize(width, height);                                            \
     }                                                                                              \
     bool guiShow() noexcept override { return clapJuceShim->guiShow(); }
+
+#if SHIM_LINUX
+#define ADD_SHIM_LINUX_TIMER(clapJuceShim) \
+    bool implementsTimerSupport() const noexcept override { return true; } \
+    void onTimer(clap_id timerId) noexcept override { \
+        clapJuceShim->onTimer(timerId);                                       \
+    }
+#else
+#define ADD_SHIM_LINUX_TIMER(clapJuceShim) ;
+#endif
+
 #endif // CLAP_SAW_JUICY_CLAP_JUCE_SHIM_H
