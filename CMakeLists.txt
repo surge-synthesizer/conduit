@@ -4,13 +4,18 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "Build for 10.1")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-project(conduit-polysynth VERSION 0.9.0 LANGUAGES C CXX OBJC OBJCXX)
+project(conduit-polysynth VERSION 0.9.0 LANGUAGES C CXX)
+
+if (APPLE)
+    enable_language(OBJC)
+    enable_language(OBJCXX)
+    set(CMAKE_OBJC_VISIBILITY_PRESET hidden)
+    set(CMAKE_OBJCXX_VISIBILITY_PRESET hidden)
+endif()
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_OBJC_VISIBILITY_PRESET hidden)
-set(CMAKE_OBJCXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 # use asan as an option (currently mac only)
@@ -37,21 +42,13 @@ set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
 add_subdirectory(libs/clap-wrapper)
 
-
-set(CLAP_TARGET ${PROJECT_NAME}_clap)
-add_library(${CLAP_TARGET} MODULE
+set(IMPL_TARGET ${PROJECT_NAME}_impl)
+add_library(${IMPL_TARGET} STATIC
         src/conduit-polysynth.cpp
         src/saw-voice.cpp
-        src/conduit-polysynth-entry.cpp
         src/juce-editor.cpp
         )
-target_library_make_clap(TARGET ${CLAP_TARGET}
-        CLAP_NAME "Conduit Polysynth"
-        CLAP_MACOS_BUNDLE_IDENTIFIER org.surge-synth-team.conduit.poly.clap
-        CLAP_MACOS_BUNDLE_VERSION 0.1
-        COPY_AFTER_BUILD ${COPY_AFTER_BUILD}
-        )
-target_link_libraries(${CLAP_TARGET}
+target_link_libraries(${IMPL_TARGET} PUBLIC
         clap-core
         clap-helpers
         readerwriterqueue
@@ -61,8 +58,25 @@ target_link_libraries(${CLAP_TARGET}
         sst-basic-blocks
         sst-jucegui)
 
+set(CLAP_TARGET ${PROJECT_NAME}_clap)
+add_library(${CLAP_TARGET} MODULE
+        src/conduit-polysynth-entry.cpp
+        )
+target_link_libraries(${CLAP_TARGET} ${IMPL_TARGET})
+target_library_make_clap(TARGET ${CLAP_TARGET}
+        CLAP_NAME "Conduit Polysynth"
+        CLAP_MACOS_BUNDLE_IDENTIFIER org.surge-synth-team.conduit.poly.clap
+        CLAP_MACOS_BUNDLE_VERSION 0.1
+        COPY_AFTER_BUILD ${COPY_AFTER_BUILD}
+        )
+
 set(VST3_TARGET ${PROJECT_NAME}_vst3)
 add_library(${VST3_TARGET} MODULE)
+if (WIN32)
+    # Our windows strategy includes the CLAP in the vst3 dll so
+    target_sources(${VST3_TARGET} PRIVATE src/conduit-polysynth-entry.cpp)
+    target_link_libraries(${VST3_TARGET} PRIVATE ${IMPL_TARGET})
+endif()
 add_dependencies(${VST3_TARGET} ${CLAP_TARGET})
 target_add_vst3_wrapper(TARGET ${VST3_TARGET}
         OUTPUT_NAME "Conduit PolySynth"

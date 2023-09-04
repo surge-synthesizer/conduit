@@ -165,7 +165,7 @@ ConduitPolysynth::~ConduitPolysynth()
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
 clap_plugin_descriptor ConduitPolysynth::desc = {CLAP_VERSION,
                                           "org.surge-synth-team.conduit_polysynth",
-                                          "Conduit Polysymtn",
+                                          "Conduit PolySynth",
                                           "Surge Synth Team",
                                           "https://surge-synth-team.org",
                                           "",

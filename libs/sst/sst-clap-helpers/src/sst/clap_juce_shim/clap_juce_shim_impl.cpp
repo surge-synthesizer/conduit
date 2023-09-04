@@ -14,8 +14,8 @@ struct Implementor
     bool guiParentAttached{false};
 };
 }
-// #define TRACE std::cout << __FILE__ << ":" << __LINE__ << " " << __func__ << std::endl;
-#define TRACE ;
+#define TRACE std::cout << __FILE__ << ":" << __LINE__ << " " << __func__ << std::endl;
+//#define TRACE ;
 ClapJuceShim::ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> ce) : createEditor(ce) {
     impl = std::make_unique<details::Implementor>();
 }
@@ -81,7 +81,12 @@ bool ClapJuceShim::guiSetParent(const clap_window *window) noexcept
 #elif JUCE_LINUX
     return guiX11Attach(nullptr, window->x11);
 #elif JUCE_WINDOWS
-    return guiWin32Attach(window->win32);
+    impl->editor->setVisible(false);
+    impl->editor->setOpaque(true);
+    impl->editor->setTopLeftPosition(0, 0);
+    impl->editor->addToDesktop(0, (void *)window->win32);
+    impl->editor->setVisible(true);
+    return true;
 #else
     impl->guiParentAttached = false;
     return false;
@@ -111,6 +116,7 @@ bool ClapJuceShim::guiGetSize(uint32_t *width, uint32_t *height) noexcept
         auto b = impl->editor->getBounds();
         *width = (uint32_t)b.getWidth();
         *height = (uint32_t)b.getHeight();
+        std::cout << __FILE__ << ":" << __LINE__ << " size is " << *width << " x " << *height << std::endl;
         return true;
     }
     else

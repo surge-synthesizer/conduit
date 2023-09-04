@@ -9,9 +9,11 @@
 
 #ifndef CLAP_SAW_DEMO_H
 #define CLAP_SAW_DEMO_H
+
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <optional>
 #include "debug-helpers.h"
 #include "sst/clap_juce_shim/clap_juce_shim.h"
 

@@ -1,4 +1,9 @@
-project(sst-juce-gui-shim VERSION 0.9.0 LANGUAGES C CXX OBJC OBJCXX)
+project(sst-juce-gui-shim VERSION 0.9.0 LANGUAGES C CXX)
+
+if (APPLE)
+    enable_language(OBJC)
+    enable_language(OBJCXX)
+endif()
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
@@ -40,6 +45,11 @@ function(add_clap_juce_shim)
             JUCE_USE_OGGVORBIS=0
             JUCE_USE_WINDOWS_MEDIA_FORMAT=0
             )
+    if (MSVC)
+        message(STATUS "Turning on bigobj for ${underlib}")
+        target_compile_options(${underlib} PRIVATE /bigobj)
+    endif()
+
     target_include_directories(${underlib} PUBLIC ${JUCE_PATH}/modules)
     if (APPLE)
         target_link_libraries(${underlib} PUBLIC
@@ -124,7 +134,7 @@ function(target_library_make_clap)
                     )
         endif()
     elseif(UNIX)
-        set_target_properties(${TCLP_TARGET} PROPERTIES SUFFIX ".clap" PREFIX "")
+        set_target_properties(${TCLP_TARGET} PROPERTIES OUTPUT_NAME ${TCLP_CLAP_NAME} SUFFIX ".clap" PREFIX "")
         if (${COPY_AFTER_BUILD})
             message(STATUS "Will copy plugin after every build" )
             set(products_folder ${CMAKE_BINARY_DIR})
@@ -136,7 +146,7 @@ function(target_library_make_clap)
         endif()
 
     else()
-        set_target_properties(${TCLP_TARGET} PROPERTIES SUFFIX ".clap" PREFIX "")
+        set_target_properties(${TCLP_TARGET} PROPERTIES OUTPUT_NAME ${TCLP_CLAP_NAME} SUFFIX ".clap" PREFIX "")
     endif()
 endfunction(target_library_make_clap)
 
