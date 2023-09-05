@@ -17,7 +17,7 @@
  * state management, but it is nothing surprising.
  */
 
-namespace sst::conduit_polysynth
+namespace sst::conduit::polysynth
 {
 float pival =
     3.14159265358979323846; // I always forget what you need for M_PI to work on all platforms

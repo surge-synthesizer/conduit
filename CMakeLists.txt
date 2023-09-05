@@ -4,7 +4,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "Build for 10.1")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-project(conduit-polysynth VERSION 0.9.0 LANGUAGES C CXX)
+project(conduit VERSION 0.9.0 LANGUAGES C CXX)
 
 if (APPLE)
     enable_language(OBJC)
@@ -42,41 +42,31 @@ set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
 add_subdirectory(libs/clap-wrapper)
 
+add_subdirectory(src/conduit-shared)
+add_subdirectory(src/polysynth)
 set(IMPL_TARGET ${PROJECT_NAME}_impl)
-add_library(${IMPL_TARGET} STATIC
-        src/conduit-polysynth.cpp
-        src/saw-voice.cpp
-        src/juce-editor.cpp
-        )
-target_link_libraries(${IMPL_TARGET} PUBLIC
-        clap-core
-        clap-helpers
-        readerwriterqueue
-        fmt
-        juce::juce_gui_basics
-        sst::clap_juce_shim
-        sst-basic-blocks
-        sst-jucegui)
+add_library(${IMPL_TARGET} INTERFACE)
+target_link_libraries(${IMPL_TARGET} INTERFACE polysynth)
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)
 add_library(${CLAP_TARGET} MODULE
-        src/conduit-polysynth-entry.cpp
+        src/conduit-clap-entry.cpp
         )
 target_link_libraries(${CLAP_TARGET} ${IMPL_TARGET})
 target_library_make_clap(TARGET ${CLAP_TARGET}
-        CLAP_NAME "Conduit PolySynth"
-        CLAP_MACOS_BUNDLE_IDENTIFIER org.surge-synth-team.conduit.poly.clap
+        CLAP_NAME "Conduit"
+        CLAP_MACOS_BUNDLE_IDENTIFIER org.surge-synth-team.conduit.clap
         CLAP_MACOS_BUNDLE_VERSION 0.1
-        COPY_AFTER_BUILD ${COPY_AFTER_rBUILD}
+        COPY_AFTER_BUILD ${COPY_AFTER_BUILD}
         )
 
 set(VST3_TARGET ${PROJECT_NAME}_vst3)
 add_library(${VST3_TARGET} MODULE)
-target_sources(${VST3_TARGET} PRIVATE src/conduit-polysynth-entry.cpp)
+target_sources(${VST3_TARGET} PRIVATE src/conduit-clap-entry.cpp)
 target_link_libraries(${VST3_TARGET} PRIVATE ${IMPL_TARGET})
 add_dependencies(${VST3_TARGET} ${CLAP_TARGET})
 target_add_vst3_wrapper(TARGET ${VST3_TARGET}
-        OUTPUT_NAME "Conduit PolySynth"
+        OUTPUT_NAME "Conduit"
         SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
         )
 if (${COPY_AFTER_BUILD})

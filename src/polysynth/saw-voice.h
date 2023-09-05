@@ -13,7 +13,7 @@
 #include <array>
 #include "debug-helpers.h"
 
-namespace sst::conduit_polysynth
+namespace sst::conduit::polysynth
 {
 /*
  * SawDemoVoice is a single voice with the following features

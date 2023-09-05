@@ -4,7 +4,7 @@
  * Copright (c) 2021, Paul Walker
  */
 
-#include "conduit-polysynth.h"
+#include "polysynth.h"
 #include <iostream>
 #include <cmath>
 #include <cstring>
@@ -20,7 +20,7 @@
 #include <iomanip>
 #include <locale>
 
-namespace sst::conduit_polysynth
+namespace sst::conduit::polysynth
 {
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
@@ -136,7 +136,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     paramToValue[pmFilterMode] = &filterMode;
     // TODO
     paramDescriptions.push_back(ParamDesc()
-                                    .asBool()
+                                    .asInt()
                                     .withID(pmFilterMode)
                                     .withName("Filter Type")
                                     .withGroupName("Filter")
@@ -182,7 +182,7 @@ ConduitPolysynth::~ConduitPolysynth()
 }
 
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
-clap_plugin_descriptor ConduitPolysynth::desc = {CLAP_VERSION,
+clap_plugin_descriptor desc = {CLAP_VERSION,
                                           "org.surge-synth-team.conduit_polysynth",
                                           "Conduit PolySynth",
                                           "Surge Synth Team",

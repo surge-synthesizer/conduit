@@ -49,8 +49,13 @@
 #include <memory>
 #include "sst/basic-blocks/params/ParamMetadata.h"
 
-namespace sst::conduit_polysynth
+namespace sst::conduit::polysynth
 {
+/*
+     * This static (defined in the cpp file) allows us to present a name, feature set,
+     * url etc... and is consumed by clap-saw-demo-pluginentry.cpp
+ */
+extern clap_plugin_descriptor desc;
 
 struct ConduitPolysynth
     : public clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
@@ -59,12 +64,6 @@ struct ConduitPolysynth
     static constexpr int max_voices = 64;
     ConduitPolysynth(const clap_host *host);
     ~ConduitPolysynth();
-
-    /*
-     * This static (defined in the cpp file) allows us to present a name, feature set,
-     * url etc... and is consumed by clap-saw-demo-pluginentry.cpp
-     */
-    static clap_plugin_descriptor desc;
 
     /*
      * Activate makes sure sampleRate is distributed through
