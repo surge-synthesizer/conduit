@@ -218,7 +218,7 @@ bool ConduitPolysynth::paramsValueToText(clap_id paramId, double value, char *di
 
     if (sValue.has_value())
     {
-        strncpy(display, sValue->c_str(), CLAP_NAME_SIZE);
+        strncpy(display, sValue->c_str(), size);
         return true;
     }
     return false;
