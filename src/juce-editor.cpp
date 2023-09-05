@@ -15,19 +15,22 @@ namespace sst::conduit_polysynth::editor
 namespace jcmp = sst::jucegui::components;
 namespace jdat = sst::jucegui::data;
 
+using cps_t = sst::conduit_polysynth::ConduitPolysynth;
+using uicomm_t = cps_t::UICommunicationBundle;
+
 struct DataToQueueParam : jdat::ContinunousModulatable
 {
     // TODO - this plus begin/end
     // FIX - this can be queues only
-    sst::conduit_polysynth::ConduitPolysynth &csd;
-    sst::conduit_polysynth::ConduitPolysynth::paramIds pid;
-    sst::conduit_polysynth::ConduitPolysynth::ParamDesc pDesc{};
+    uicomm_t &uic;
+    cps_t::paramIds pid;
+    cps_t::ParamDesc pDesc{};
 
-    DataToQueueParam(sst::conduit_polysynth::ConduitPolysynth &p,
-                     sst::conduit_polysynth::ConduitPolysynth::paramIds pid)
-        : csd(p), pid(pid)
+    DataToQueueParam(uicomm_t &p,
+                     cps_t::paramIds pid)
+        : uic(p), pid(pid)
     {
-        pDesc = csd.paramDescriptionMap[pid];
+        pDesc = uic.getParameterDescription(pid);
     }
     std::string getLabel() const override { return pDesc.name; }
 
@@ -36,7 +39,7 @@ struct DataToQueueParam : jdat::ContinunousModulatable
     void setValueFromGUI(const float &fi) override
     {
         f = fi;
-        csd.fromUiQ.try_enqueue(
+        uic.fromUiQ.try_enqueue(
             {sst::conduit_polysynth::ConduitPolysynth::FromUI::MType::ADJUST_VALUE,
              sst::conduit_polysynth::ConduitPolysynth::paramIds::pmUnisonSpread, f});
     }
@@ -54,26 +57,25 @@ struct ConduitPolysynthEditor;
 
 struct OscPanel : public juce::Component
 {
-    // FIX - this can be the queues only
-    sst::conduit_polysynth::ConduitPolysynth &csd;
+    uicomm_t &uic;
 
-    OscPanel(sst::conduit_polysynth::ConduitPolysynth &p, ConduitPolysynthEditor &e) : csd(p)
+    OscPanel(uicomm_t &p, ConduitPolysynthEditor &e) : uic(p)
     {
         oscUnisonSpread = std::make_unique<jcmp::Knob>();
         addAndMakeVisible(*oscUnisonSpread);
 
         oscUnisonSource = std::make_unique<DataToQueueParam>(
-            csd, sst::conduit_polysynth::ConduitPolysynth::paramIds::pmUnisonSpread);
+            uic, sst::conduit_polysynth::ConduitPolysynth::paramIds::pmUnisonSpread);
         oscUnisonSpread->setSource(oscUnisonSource.get());
 
         oscUnisonSpread->onBeginEdit = [w = juce::Component::SafePointer(this)]() {
-            w->csd.fromUiQ.try_enqueue(
+            w->uic.fromUiQ.try_enqueue(
                 {sst::conduit_polysynth::ConduitPolysynth::FromUI::MType::BEGIN_EDIT,
                  sst::conduit_polysynth::ConduitPolysynth::paramIds::pmUnisonSpread, 1});
             std::cout << "onDragStart" << std::endl;
         };
         oscUnisonSpread->onEndEdit = [w = juce::Component::SafePointer(this)]() {
-            w->csd.fromUiQ.try_enqueue(
+            w->uic.fromUiQ.try_enqueue(
                 {sst::conduit_polysynth::ConduitPolysynth::FromUI::MType::END_EDIT,
                  sst::conduit_polysynth::ConduitPolysynth::paramIds::pmUnisonSpread, 1});
             std::cout << "onDragEnd" << std::endl;
@@ -93,8 +95,7 @@ struct OscPanel : public juce::Component
 
 struct ConduitPolysynthEditor : public jcmp::WindowPanel
 {
-    // FIX - this can be the queues only
-    sst::conduit_polysynth::ConduitPolysynth &csd;
+    uicomm_t &uic;
 
     struct IdleTimer : juce::Timer
     {
@@ -104,7 +105,7 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel
     };
     std::unique_ptr<IdleTimer> idleTimer;
 
-    ConduitPolysynthEditor(sst::conduit_polysynth::ConduitPolysynth &p) : csd(p)
+    ConduitPolysynthEditor(uicomm_t &p) : uic(p)
     {
         sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
         const auto &base = sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
@@ -120,7 +121,7 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel
         oscPanel = std::make_unique<jcmp::NamedPanel>("Oscillator");
         addAndMakeVisible(*oscPanel);
 
-        auto oct = std::make_unique<OscPanel>(csd, *this);
+        auto oct = std::make_unique<OscPanel>(uic, *this);
         oscPanel->setContentAreaComponent(std::move(oct));
 
         vcfPanel = std::make_unique<jcmp::NamedPanel>("Filter");
@@ -152,7 +153,7 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel
     void onIdle()
     {
         sst::conduit_polysynth::ConduitPolysynth::ToUI r;
-        while (csd.toUiQ.try_dequeue(r))
+        while (uic.toUiQ.try_dequeue(r))
         {
             if (r.type == sst::conduit_polysynth::ConduitPolysynth::ToUI::MType::PARAM_VALUE)
             {
@@ -183,6 +184,6 @@ namespace sst::conduit_polysynth
 std::unique_ptr<juce::Component> ConduitPolysynth::createEditor()
 {
     refreshUIValues = true;
-    return std::make_unique<sst::conduit_polysynth::editor::ConduitPolysynthEditor>(*this);
+    return std::make_unique<sst::conduit_polysynth::editor::ConduitPolysynthEditor>(uiComms);
 }
 }

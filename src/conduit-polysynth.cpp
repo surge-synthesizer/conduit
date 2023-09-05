@@ -25,7 +25,8 @@ namespace sst::conduit_polysynth
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     : clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
-                            clap::helpers::CheckingLevel::Maximal>(&desc, host)
+                            clap::helpers::CheckingLevel::Maximal>(&desc, host),
+      uiComms(*this)
 {
     _DBGCOUT << "Constructing ConduitPolysynth" << std::endl;
 
@@ -151,8 +152,26 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
 
     terminatedVoices.reserve(max_voices * 4);
 
+    auto rut = [this](clap_id &id, int ms, bool reg)
+    {
+        // FIXME better name for linux
+        std::cout << "Registering timer " << ms << " " << reg << std::endl;
+#if JUCE_LINUX
+        if (!_host.canUseTimerSupport())
+            return false;
+        if (reg)
+        {
+            _host.timerSupportRegister(ms, &id);
+        }
+        else
+        {
+            _host.timerSupportUnregister(id);
+        }
+#endif
+        return true;
+    };
     clapJuceShim =
-        std::make_unique<sst::clap_juce_shim::ClapJuceShim>([this]() { return createEditor(); }, host);
+        std::make_unique<sst::clap_juce_shim::ClapJuceShim>([this]() { return createEditor(); }, rut);
 }
 ConduitPolysynth::~ConduitPolysynth()
 {
@@ -388,8 +407,8 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
 
         ov->try_push(ov, &(evt.header));
 
-        dataCopyForUI.updateCount++;
-        dataCopyForUI.polyphony--;
+        uiComms.dataCopyForUI.updateCount++;
+        uiComms.dataCopyForUI.polyphony--;
     }
     terminatedVoices.clear();
 
@@ -501,7 +520,7 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
             r.id = v->param_id;
             r.value = (double)v->value;
 
-            toUiQ.try_enqueue(r);
+            uiComms.toUiQ.try_enqueue(r);
         }
     }
     break;
@@ -630,7 +649,7 @@ void ConduitPolysynth::handleEventsFromUIQueue(const clap_output_events_t *ov)
 {
     bool uiAdjustedValues{false};
     ConduitPolysynth::FromUI r;
-    while (fromUiQ.try_dequeue(r))
+    while (uiComms.fromUiQ.try_dequeue(r))
     {
         switch (r.type)
         {
@@ -683,7 +702,7 @@ void ConduitPolysynth::handleEventsFromUIQueue(const clap_output_events_t *ov)
             r.type = ToUI::PARAM_VALUE;
             r.id = k;
             r.value = *v;
-            toUiQ.try_enqueue(r);
+            uiComms.toUiQ.try_enqueue(r);
         }
     }
 
@@ -718,15 +737,15 @@ void ConduitPolysynth::handleNoteOn(int port_index, int channel, int key, int no
         activateVoice(v, port_index, channel, key, noteid);
     }
 
-    dataCopyForUI.updateCount++;
-    dataCopyForUI.polyphony++;
+    uiComms.dataCopyForUI.updateCount++;
+    uiComms.dataCopyForUI.polyphony++;
 
     if (clapJuceShim->isEditorAttached())
     {
         auto r = ToUI();
         r.type = ToUI::MIDI_NOTE_ON;
         r.id = (uint32_t)key;
-        toUiQ.try_enqueue(r);
+        uiComms.toUiQ.try_enqueue(r);
     }
 }
 
@@ -745,7 +764,7 @@ void ConduitPolysynth::handleNoteOff(int port_index, int channel, int n)
         auto r = ToUI();
         r.type = ToUI::MIDI_NOTE_OFF;
         r.id = (uint32_t)n;
-        toUiQ.try_enqueue(r);
+        uiComms.toUiQ.try_enqueue(r);
     }
 }
 

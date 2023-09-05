@@ -219,14 +219,14 @@ struct ConduitPolysynth
      */
     bool startProcessing() noexcept override
     {
-        dataCopyForUI.isProcessing = true;
-        dataCopyForUI.updateCount++;
+        uiComms.dataCopyForUI.isProcessing = true;
+        uiComms.dataCopyForUI.updateCount++;
         return true;
     }
     void stopProcessing() noexcept override
     {
-        dataCopyForUI.isProcessing = false;
-        dataCopyForUI.updateCount++;
+        uiComms.dataCopyForUI.isProcessing = false;
+        uiComms.dataCopyForUI.updateCount++;
     }
 
   protected:
@@ -316,15 +316,35 @@ struct ConduitPolysynth
         std::atomic<uint32_t> updateCount{0};
         std::atomic<bool> isProcessing{false};
         std::atomic<int> polyphony{0};
-    } dataCopyForUI;
+    };
 
-    typedef moodycamel::ReaderWriterQueue<ToUI, 4096> SynthToUI_Queue_t;
-    typedef moodycamel::ReaderWriterQueue<FromUI, 4096> UIToSynth_Queue_t;
+    struct UICommunicationBundle
+    {
+        UICommunicationBundle(const ConduitPolysynth &h) : cp(h) {}
+        typedef moodycamel::ReaderWriterQueue<ToUI, 4096> SynthToUI_Queue_t;
+        typedef moodycamel::ReaderWriterQueue<FromUI, 4096> UIToSynth_Queue_t;
 
-    SynthToUI_Queue_t toUiQ;
-    UIToSynth_Queue_t fromUiQ;
+        SynthToUI_Queue_t toUiQ;
+        UIToSynth_Queue_t fromUiQ;
+        DataCopyForUI dataCopyForUI;
 
-  private:
+        // todo make this std optional I guess
+        ParamDesc getParameterDescription(paramIds id) const
+        {
+            // const so [] isn't an option
+            auto fp = cp.paramDescriptionMap.find(id);
+            if (fp == cp.paramDescriptionMap.end())
+            {
+                return ParamDesc();
+            }
+            return fp->second;
+        }
+
+      private:
+        const ConduitPolysynth &cp;
+    } uiComms;
+
+    private:
 
     // These items are ONLY read and written on the audio thread, so they
     // are safe to be non-atomic doubles. We keep a map to locate them

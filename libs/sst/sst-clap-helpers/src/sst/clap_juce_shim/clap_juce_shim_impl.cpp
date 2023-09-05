@@ -18,15 +18,24 @@ namespace details
 struct Implementor
 {
     std::unique_ptr<juce::Component> editor{nullptr};
-    std::unique_ptr<juce::ScopedJuceInitialiser_GUI> guiInitializer; // todo deal with lifecycle
+    std::unique_ptr<juce::ScopedJuceInitialiser_GUI> guiInitializer{nullptr}; // todo deal with lifecycle
+
     bool guiParentAttached{false};
+    void guaranteeSetup()
+    {
+        if (!guiInitializer)
+        {
+            std::cout << "Creating SHGI" << std::endl;
+            guiInitializer = std::make_unique<juce::ScopedJuceInitialiser_GUI>();
+        }
+    }
 };
 } // namespace details
 #define TRACE std::cout << __FILE__ << ":" << __LINE__ << " " << __func__ << std::endl;
 // #define TRACE ;
 ClapJuceShim::ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> ce,
-                           const clap_host *host)
-    : createEditor(ce), host(host)
+                           std::function<bool(clap_id &, int, bool)> rut)
+    : createEditor(ce), registerOrUnregisterTimer(rut)
 {
     impl = std::make_unique<details::Implementor>();
 }
@@ -59,6 +68,12 @@ bool ClapJuceShim::guiIsApiSupported(const char *api, bool isFloating) noexcept
 bool ClapJuceShim::guiCreate(const char *api, bool isFloating) noexcept
 {
     TRACE;
+    impl->guaranteeSetup();
+#if JUCE_LINUX
+    idleTimerId = 0;
+    registerOrUnregisterTimer(idleTimerId, 1000/50, true);
+#endif
+
     impl->guiInitializer = std::make_unique<juce::ScopedJuceInitialiser_GUI>();
     juce::ignoreUnused(api);
 
@@ -74,6 +89,10 @@ bool ClapJuceShim::guiCreate(const char *api, bool isFloating) noexcept
 void ClapJuceShim::guiDestroy() noexcept
 {
     TRACE;
+#if JUCE_LINUX
+    registerOrUnregisterTimer(idleTimerId, 0, false);
+#endif
+
     impl->guiParentAttached = false;
     impl->editor.reset(nullptr);
 }
@@ -88,7 +107,7 @@ bool ClapJuceShim::guiSetParent(const clap_window *window) noexcept
 #elif JUCE_LINUX
     const juce::MessageManagerLock mmLock;
     impl->editor->setVisible(false);
-    impl->editor->addToDesktop(0, (void *)window);
+    impl->editor->addToDesktop(0, (void *)window->x11);
     auto *display = juce::XWindowSystem::getInstance()->getDisplay();
     juce::X11Symbols::getInstance()->xReparentWindow(
         display, (Window)impl->editor->getWindowHandle(), window->x11, 0, 0);

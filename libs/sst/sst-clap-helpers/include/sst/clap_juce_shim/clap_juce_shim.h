@@ -24,12 +24,13 @@ struct Implementor;
 
 struct ClapJuceShim
 {
-    const clap_host *host;
 
-    ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> ce, const clap_host *host);
+    ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> createEditor,
+                 std::function<bool(clap_id &, int, bool)> registerOrUnregisterTimer);
     ~ClapJuceShim();
 
     std::function<std::unique_ptr<juce::Component>()> createEditor;
+    std::function<bool(clap_id &, int, bool)> registerOrUnregisterTimer;
     std::unique_ptr<details::Implementor> impl;
 
     bool isEditorAttached();
