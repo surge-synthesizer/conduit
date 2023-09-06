@@ -155,9 +155,10 @@ struct ConduitPolysynth
      * improve it, PRs welcome! But it's just like any other read-and-write-goop
      * from-a-stream api really.
      */
-    bool implementsState() const noexcept override { return true; }
+    /*bool implementsState() const noexcept override { return true; }
     bool stateSave(const clap_ostream *) noexcept override;
     bool stateLoad(const clap_istream *) noexcept override;
+     */
 
     /*
      * process is the meat of the operation. It does obvious things like trigger

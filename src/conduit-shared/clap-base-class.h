@@ -47,8 +47,12 @@ struct ClapBaseClass : public plugHelper_t
             paramToValue[pd.id] = &(patch.params[patchIdx]);
 
             patch.params[patchIdx] = pd.defaultVal;
+            CNDOUT << CNDVAR(patch.params[patchIdx]) << CNDVAR(patchIdx) << CNDVAR(pd.id) << std::endl;
+
+            patchIdx ++;
         }
         assert(paramDescriptionMap.size() == nParams);
+        assert(patchIdx == nParams);
     }
 
     bool implementsParams() const noexcept override { return true; }
@@ -64,7 +68,6 @@ struct ClapBaseClass : public plugHelper_t
 
         const auto &pd = paramDescriptions[paramIndex];
 
-        _DBGCOUT << pd.name << " " << pd.id << " " << paramIndex << std::endl;
         pd.template toClapParamInfo<CLAP_NAME_SIZE>(info);
         return true;
     }
@@ -72,6 +75,7 @@ struct ClapBaseClass : public plugHelper_t
     bool paramsValue(clap_id paramId, double *value) noexcept override
     {
         *value = *paramToValue[paramId];
+        CNDOUT << paramId << " " << *value << std::endl;
         return true;
     }
     bool paramsValueToText(clap_id paramId, double value, char *display,

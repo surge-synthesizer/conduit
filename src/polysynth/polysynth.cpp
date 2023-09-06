@@ -34,7 +34,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, nParams>(&desc, host),
       uiComms(*this)
 {
-    _DBGCOUT << "Constructing ConduitPolysynth" << std::endl;
+    CNDOUT << "Constructing ConduitPolysynth" << std::endl;
 
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE | CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID |
@@ -132,7 +132,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     configureParams();
 
     attachParam(pmUnisonCount, unisonCount);
-    _DBGCOUT << "Post Attach " << *unisonCount << std::endl;
+    CNDOUT << "Post Attach " << *unisonCount << std::endl;
     attachParam(pmUnisonSpread, unisonSpread);
     attachParam(pmOscDetune, oscDetune);
     attachParam(pmCutoff, cutoff);
@@ -488,7 +488,7 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
             }
             case paramIds::pmOscDetune:
             {
-                // _DBGCOUT << "Detune Mod" << _D(pevt->amount) << std::endl;
+                // CNDOUT << "Detune Mod" << CNDVAR(pevt->amount) << std::endl;
                 v.oscDetuneMod = pevt->amount;
                 v.recalcPitch();
                 break;
@@ -780,6 +780,8 @@ float ConduitPolysynth::scaleTimeParamToSeconds(float param)
     return res;
 }
 
+
+#if 0
 bool ConduitPolysynth::stateSave(const clap_ostream *stream) noexcept
 {
     // Oh this is soooo bad. Please don't judge me. I'm just trying to get this
@@ -794,7 +796,7 @@ bool ConduitPolysynth::stateSave(const clap_ostream *stream) noexcept
     {
         oss << id << "=" << std::setw(30) << std::setprecision(20) << *val << ";";
     }
-    _DBGCOUT << oss.str() << std::endl;
+    CNDOUT << oss.str() << std::endl;
 
     auto st = oss.str();
     auto c = st.c_str();
@@ -826,7 +828,7 @@ bool ConduitPolysynth::stateLoad(const clap_istream *stream) noexcept
         totalRd += rd;
         if (totalRd >= maxSize - chunkSize - 1)
         {
-            _DBGCOUT << "Invalid stream: Why did you send me so many bytes!" << std::endl;
+            CNDOUT << "Invalid stream: Why did you send me so many bytes!" << std::endl;
             // What the heck? You sdent me more than 32kb of data for a 700 byte string?
             // That means my next chunk read will blow out memory so....
             return false;
@@ -838,7 +840,7 @@ bool ConduitPolysynth::stateLoad(const clap_istream *stream) noexcept
         buffer[totalRd] = 0;
 
     auto dat = std::string(buffer);
-    _DBGCOUT << dat << std::endl;
+    CNDOUT << dat << std::endl;
 
     std::vector<std::string> items;
     size_t spos{0};
@@ -851,7 +853,7 @@ bool ConduitPolysynth::stateLoad(const clap_istream *stream) noexcept
 
     if (items[0] != "STREAM-VERSION-1")
     {
-        _DBGCOUT << "Invalid stream" << std::endl;
+        CNDOUT << "Invalid stream" << std::endl;
         return false;
     }
     for (auto i : items)
@@ -871,6 +873,7 @@ bool ConduitPolysynth::stateLoad(const clap_istream *stream) noexcept
     pushParamsToVoices();
     return true;
 }
+#endif
 
 /*
  * A simple passthrough. Put it here to allow the template mechanics to see the impl.

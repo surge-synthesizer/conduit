@@ -42,6 +42,8 @@ set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
 add_subdirectory(libs/clap-wrapper)
 
+set(CONDUIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE STRING "Top level source")
+
 add_subdirectory(src)
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)

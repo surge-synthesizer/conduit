@@ -79,6 +79,10 @@ struct ConduitPolymetricDelay
     typedef std::unordered_map<int, int> PatchPluginExtension;
   protected:
 
+    static constexpr uint32_t bufSize{1<<16};
+    float delayBuffer[2][bufSize];
+    uint32_t wp{0};
+
     std::unique_ptr<juce::Component> createEditor() { return nullptr; }
     std::atomic<bool> refreshUIValues{false};
 

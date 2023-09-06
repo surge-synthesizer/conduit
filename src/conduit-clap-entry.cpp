@@ -36,7 +36,7 @@ namespace sst::conduit::pluginentry
 uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 2; }
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
-    _DBGCOUT << "Asking for clap plugin number " << w << std::endl;
+    CNDOUT << "Asking for clap plugin number " << w << std::endl;
     if (w == 0)
         return &polysynth::desc;
     if (w == 1)
@@ -48,7 +48,7 @@ const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_facto
 static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_host *host,
                                              const char *plugin_id)
 {
-    _DBGCOUT << "Creating clap plugin " << plugin_id << std::endl;
+    CNDOUT << "Creating clap plugin " << plugin_id << std::endl;
     if (strcmp(plugin_id, polysynth::desc.id) == 0)
     {
         auto p = new polysynth::ConduitPolysynth(host);
@@ -60,7 +60,7 @@ static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const
         return p->clapPlugin();
     }
 
-    _DBGCOUT << "No plugin found; returning nullptr" << std::endl;
+    CNDOUT << "No plugin found; returning nullptr" << std::endl;
     return nullptr;
 }
 

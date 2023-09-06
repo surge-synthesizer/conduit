@@ -36,6 +36,8 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
                                     .withDefault(4800)
                                     .withLinearScaleFormatting("samples"));
     configureParams();
+
+    memset(delayBuffer, 0, sizeof(delayBuffer));
 }
 
 ConduitPolymetricDelay::~ConduitPolymetricDelay()
@@ -80,6 +82,14 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
     float ** const in = process->audio_inputs[0].data32;
     auto ichans = process->audio_inputs->channel_count;
 
+    static int foo{0};
+    if (foo == 100)
+    {
+        CNDOUT << CNDVAR(patch.params[0]) << std::endl;
+        foo = 0;
+    }
+    foo++;
+
     auto chans = std::min(ochans, ichans);
     if (chans < 0)
         return CLAP_PROCESS_SLEEP;
@@ -88,9 +98,12 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
     {
         for (int c=0; c<chans; ++c)
         {
-            out[c][i] = in[c][i];
+            delayBuffer[c][wp] = in[c][i];
+            auto rp = (wp + bufSize + (int)patch.params[0]) & (bufSize - 1);
+            wp = (wp + 1) & (bufSize - 1);
+            out[c][i] = in[c][i] * 0.7 + delayBuffer[c][rp] * 0.3;
         }
     }
-
+    return CLAP_PROCESS_CONTINUE;
 }
 }
