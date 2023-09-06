@@ -116,28 +116,13 @@ struct ConduitPolysynth
         pmFilterMode = 14255
     };
     static constexpr int nParams = 10;
-    using ParamDesc = sst::basic_blocks::params::ParamMetaData;
-    std::vector<ParamDesc> paramDescriptions;
-    std::unordered_map<uint32_t, ParamDesc> paramDescriptionMap;
 
-
-
-    bool implementsParams() const noexcept override { return true; }
-    bool isValidParamId(clap_id paramId) const noexcept override
-    {
-        return paramToValue.find(paramId) != paramToValue.end();
-    }
-    uint32_t paramsCount() const noexcept override { return nParams; }
-    bool paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept override;
+    // TODO think about factoring of this
     bool paramsValue(clap_id paramId, double *value) noexcept override
     {
         *value = *paramToValue[paramId];
         return true;
     }
-
-    bool paramsValueToText(clap_id paramId, double value, char *display,
-                           uint32_t size) noexcept override;
-    bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept override;
 
   public:
     // Convert 0-1 linear into 0-4s exponential

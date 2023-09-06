@@ -149,12 +149,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withFlags(steppedFlag)
                                 );
 
-    assert(paramDescriptions.size() == nParams);
-    for (const auto &pd : paramDescriptions)
-        paramDescriptionMap[pd.id] = pd;
-    assert(paramDescriptionMap.size() == nParams);
-
-    std::cout << nParams << " " << paramDescriptionMap.size() << " " << paramDescriptions.size() << std::endl;
+    configureParams();
 
     terminatedVoices.reserve(max_voices * 4);
 
@@ -187,56 +182,7 @@ ConduitPolysynth::~ConduitPolysynth()
         guiDestroy();
 }
 
-/*
- * PARAMETER SETUP SECTION
- */
-bool ConduitPolysynth::paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept
-{
-    if (paramIndex >= nParams)
-        return false;
 
-    const auto &pd = paramDescriptions[paramIndex];
-
-    pd.toClapParamInfo<CLAP_NAME_SIZE>(info);
-    return true;
-}
-
-bool ConduitPolysynth::paramsValueToText(clap_id paramId, double value, char *display,
-                                  uint32_t size) noexcept
-{
-    auto pos = paramDescriptionMap.find(paramId);
-    if (pos == paramDescriptionMap.end())
-        return false;
-
-    const auto &pd = pos->second;
-    auto sValue = pd.valueToString(value);
-
-    if (sValue.has_value())
-    {
-        strncpy(display, sValue->c_str(), size);
-        return true;
-    }
-    return false;
-}
-
-
-bool ConduitPolysynth::paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept
-{
-    auto pos = paramDescriptionMap.find(paramId);
-    if (pos == paramDescriptionMap.end())
-        return false;
-
-    const auto &pd = pos->second;
-
-    std::string emsg;
-    auto res = pd.valueFromString(display, emsg);
-    if (res.has_value())
-    {
-        *value = *res;
-        return true;
-    }
-    return false;
-}
 /*
  * Stereo out, Midi in, in a pretty obvious way.
  * The only trick is the idi in also has NOTE_DIALECT_CLAP which provides us
