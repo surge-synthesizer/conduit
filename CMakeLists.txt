@@ -42,17 +42,13 @@ set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
 add_subdirectory(libs/clap-wrapper)
 
-add_subdirectory(src/conduit-shared)
-add_subdirectory(src/polysynth)
-set(IMPL_TARGET ${PROJECT_NAME}_impl)
-add_library(${IMPL_TARGET} INTERFACE)
-target_link_libraries(${IMPL_TARGET} INTERFACE polysynth)
+add_subdirectory(src)
 
 set(CLAP_TARGET ${PROJECT_NAME}_clap)
 add_library(${CLAP_TARGET} MODULE
         src/conduit-clap-entry.cpp
         )
-target_link_libraries(${CLAP_TARGET} ${IMPL_TARGET})
+target_link_libraries(${CLAP_TARGET} conduit-impl)
 target_library_make_clap(TARGET ${CLAP_TARGET}
         CLAP_NAME "Conduit"
         CLAP_MACOS_BUNDLE_IDENTIFIER org.surge-synth-team.conduit.clap
@@ -63,8 +59,7 @@ target_library_make_clap(TARGET ${CLAP_TARGET}
 set(VST3_TARGET ${PROJECT_NAME}_vst3)
 add_library(${VST3_TARGET} MODULE)
 target_sources(${VST3_TARGET} PRIVATE src/conduit-clap-entry.cpp)
-target_link_libraries(${VST3_TARGET} PRIVATE ${IMPL_TARGET})
-add_dependencies(${VST3_TARGET} ${CLAP_TARGET})
+target_link_libraries(${VST3_TARGET} PRIVATE conduit-impl)
 target_add_vst3_wrapper(TARGET ${VST3_TARGET}
         OUTPUT_NAME "Conduit"
         SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE

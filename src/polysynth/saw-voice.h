@@ -11,7 +11,7 @@
 #define CLAP_SAW_DEMO_VOICE_H
 
 #include <array>
-#include "debug-helpers.h"
+#include "conduit-shared/debug-helpers.h"
 
 namespace sst::conduit::polysynth
 {

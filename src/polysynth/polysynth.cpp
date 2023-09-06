@@ -12,20 +12,26 @@
 // FIXME jsut for now need juce component reference for unique ptr
 #include <juce_gui_basics/juce_gui_basics.h>
 
-// Eject the core symbols for the plugin
-#include <clap/helpers/plugin.hh>
-#include <clap/helpers/plugin.hxx>
-#include <clap/helpers/host-proxy.hh>
-#include <clap/helpers/host-proxy.hxx>
+
 #include <iomanip>
 #include <locale>
 
 namespace sst::conduit::polysynth
 {
+const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
+clap_plugin_descriptor desc = {CLAP_VERSION,
+                               "org.surge-synth-team.conduit_polysynth",
+                               "Conduit PolySynth",
+                               "Surge Synth Team",
+                               "https://surge-synth-team.org",
+                               "",
+                               "",
+                               "0.1.0",
+                               "The Conduit Polysynth is a work in progress",
+                               features};
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
-    : clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
-                            clap::helpers::CheckingLevel::Maximal>(&desc, host),
+    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth>(&desc, host),
       uiComms(*this)
 {
     _DBGCOUT << "Constructing ConduitPolysynth" << std::endl;
@@ -181,17 +187,6 @@ ConduitPolysynth::~ConduitPolysynth()
         guiDestroy();
 }
 
-const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
-clap_plugin_descriptor desc = {CLAP_VERSION,
-                                          "org.surge-synth-team.conduit_polysynth",
-                                          "Conduit PolySynth",
-                                          "Surge Synth Team",
-                                          "https://surge-synth-team.org",
-                                          "",
-                                          "",
-                                          "1.0.0",
-                                          "Wahey",
-                                          features};
 /*
  * PARAMETER SETUP SECTION
  */

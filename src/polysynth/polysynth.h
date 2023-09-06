@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <vector>
 #include <optional>
-#include "debug-helpers.h"
+#include "conduit-shared/debug-helpers.h"
 #include "sst/clap_juce_shim/clap_juce_shim.h"
 
 /*
@@ -38,16 +38,21 @@
  * bundle of atomic values to which the editor holds a const &.
  */
 
-#include <clap/helpers/plugin.hh>
 #include <atomic>
 #include <array>
 #include <unordered_map>
 #include <memory>
+#include <memory>
+
+#include <clap/helpers/plugin.hh>
+
 #include <readerwriterqueue.h>
 
-#include "saw-voice.h"
-#include <memory>
 #include "sst/basic-blocks/params/ParamMetadata.h"
+
+#include "conduit-shared/clap-base-class.h"
+#include "saw-voice.h"
+
 
 namespace sst::conduit::polysynth
 {
@@ -58,8 +63,7 @@ namespace sst::conduit::polysynth
 extern clap_plugin_descriptor desc;
 
 struct ConduitPolysynth
-    : public clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
-                                                  clap::helpers::CheckingLevel::Maximal>
+    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth>
 {
     static constexpr int max_voices = 64;
     ConduitPolysynth(const clap_host *host);
@@ -131,19 +135,8 @@ struct ConduitPolysynth
         return true;
     }
 
-    /*
-     * This converts the numerical value of the parameter to a display value for the DAW.
-     * For instance we model filter cutoff in 12-TET MIDI Note space, so the value
-     * "60" of pmCutoff shows as "261.6 hz" and "69" (concert A) as "440 hz". Similarly
-     * this is where we show our time scaling for our attack and release, filter type,
-     * and so on. If you want, you can also implement paramsTextToValue which is the
-     * inverse function, for hosts which allow user typeins. In this example, we choose
-     * to not implement that.
-     */
     bool paramsValueToText(clap_id paramId, double value, char *display,
                            uint32_t size) noexcept override;
-
-  protected:
     bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept override;
 
   public:
@@ -229,38 +222,6 @@ struct ConduitPolysynth
     }
 
   protected:
-    /*
-     * OK so now you see how the engine works. Great! But how does the GUI work?
-     * CLAP is based on extensions and the core gui extension has a simple
-     * protocol for sizing, for supported APIs, and for reparenting a component
-     * with a platform-native window. Here we are going to use VSTGUI to create
-     * a small UI which attaches to our CLAP. That's the API below.
-     *
-     * But that UI runs in another thread, and all the CLAP events are handled
-     * in process, so we also need to think about inter-thread communication.
-     * To do that we have three core data structures, a function, and one pointer
-     *
-     * - A pointer to an editor object (here a concrete editor, but a more advanced
-     *   implementation could make that a proxy or a bool), which we test for null
-     *   when the editor is open
-     * - A lock-free queue from the engine to the UI for things like parameter
-     *   updates. This queue is written in `ConduitPolysynth::process` if editor is
-     *   non-null and is read in the `::idle` loop of the editor on the UI thread
-     * - A lock-free queue from the UI to the engine for things like begin and end
-     *   gestures and value changes. This is written on the UI thread and read in
-     *   stage 1 of `CLapSawDemo::process` go update engine parameters and send parameter
-     *   change events to the host from the processing thread.
-     * - A data structure which contains std::atomic values and where the editor keeps
-     *   an in-memory const& to it. ::process updates a counter and the idle loop looks
-     *   for counter changes. This allows values to propagate without events, and we use
-     *   it here for polyphony count.
-     * - A single std::function<void()> which the editor can use to ask the host to do
-     *   a parameter flush.
-     *
-     * These functions are members of ConduitPolysynth but we implement them in
-     * `clap-saw-demo-editor.cpp` along with the VSTGUI implementation. You can consult the
-     * extensive comments in the clap gui extension for semantics and rules.
-     */
     bool implementsGui() const noexcept override { return true; }
     bool guiCanResize() const noexcept override { return true; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
@@ -268,9 +229,6 @@ struct ConduitPolysynth
     ADD_SHIM_LINUX_TIMER(clapJuceShim);
 
     std::unique_ptr<juce::Component> createEditor();
-
-    // Setting this atomic to true will force a push of all current engine
-    // params to ui using the queue mechanism
     std::atomic<bool> refreshUIValues{false};
 
     // This is an API point the editor can call back to request the host to flush
