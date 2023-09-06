@@ -31,8 +31,7 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
                                features};
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
-    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, nParams>(&desc, host),
-      uiComms(*this)
+    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(&desc, host)
 {
     CNDOUT << "Constructing ConduitPolysynth" << std::endl;
 

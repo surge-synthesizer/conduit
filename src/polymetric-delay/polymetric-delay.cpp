@@ -20,8 +20,7 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
 
 
 ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
-    : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay, nParams>(&desc, host),
-      uiComms(*this)
+    : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay, ConduitPolymetricDelayConfig>(&desc, host)
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE;

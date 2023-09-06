@@ -52,7 +52,6 @@
 #include "conduit-shared/clap-base-class.h"
 #include "saw-voice.h"
 
-
 namespace sst::conduit::polysynth
 {
 /*
@@ -62,8 +61,20 @@ namespace sst::conduit::polysynth
 extern clap_plugin_descriptor desc;
 static constexpr int nParams{10};
 
+struct ConduitPolysynthConfig
+{
+    static constexpr int nParams{sst::conduit::polysynth::nParams};
+    using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
+    struct DataCopyForUI
+    {
+        std::atomic<uint32_t> updateCount{0};
+        std::atomic<bool> isProcessing{false};
+        std::atomic<int> polyphony{0};
+    };
+};
+
 struct ConduitPolysynth
-    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, nParams>
+    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>
 {
     static constexpr int max_voices = 64;
     ConduitPolysynth(const clap_host *host);
@@ -216,63 +227,6 @@ struct ConduitPolysynth
      * These are the core data structures we use for the communication
      * outlined above.
      */
-    struct ToUI
-    {
-        enum MType
-        {
-            PARAM_VALUE = 0x31,
-            MIDI_NOTE_ON,
-            MIDI_NOTE_OFF
-        } type;
-
-        uint32_t id;  // param-id for PARAM_VALUE, key for noteon/noteoff
-        double value; // value or unused
-    };
-
-    struct FromUI
-    {
-        enum MType
-        {
-            BEGIN_EDIT = 0xF9,
-            END_EDIT,
-            ADJUST_VALUE
-        } type;
-        uint32_t id;
-        double value;
-    };
-
-    struct DataCopyForUI
-    {
-        std::atomic<uint32_t> updateCount{0};
-        std::atomic<bool> isProcessing{false};
-        std::atomic<int> polyphony{0};
-    };
-
-    struct UICommunicationBundle
-    {
-        UICommunicationBundle(const ConduitPolysynth &h) : cp(h) {}
-        typedef moodycamel::ReaderWriterQueue<ToUI, 4096> SynthToUI_Queue_t;
-        typedef moodycamel::ReaderWriterQueue<FromUI, 4096> UIToSynth_Queue_t;
-
-        SynthToUI_Queue_t toUiQ;
-        UIToSynth_Queue_t fromUiQ;
-        DataCopyForUI dataCopyForUI;
-
-        // todo make this std optional I guess
-        ParamDesc getParameterDescription(paramIds id) const
-        {
-            // const so [] isn't an option
-            auto fp = cp.paramDescriptionMap.find(id);
-            if (fp == cp.paramDescriptionMap.end())
-            {
-                return ParamDesc();
-            }
-            return fp->second;
-        }
-
-      private:
-        const ConduitPolysynth &cp;
-    } uiComms;
 
     private:
 
@@ -288,6 +242,8 @@ struct ConduitPolysynth
     std::array<SawDemoVoice, max_voices> voices;
     std::vector<std::tuple<int, int, int, int>> terminatedVoices; // that's PCK ID
 };
-} // namespace sst::conduit_polysynth
+} // namespace sst::conduit::polysynth
+
+
 
 #endif

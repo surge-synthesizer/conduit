@@ -11,6 +11,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include <readerwriterqueue.h>
+
 #include <clap/helpers/plugin.hh>
 
 #include <sst/basic-blocks/params/ParamMetadata.h>
@@ -24,18 +26,28 @@ static constexpr clap::helpers::CheckingLevel checkLevel = clap::helpers::Checki
 
 using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 
-template<typename T, int nParams, typename PatchExtension = int>
+struct EmptyPatchExtension
+{
+    static constexpr bool hasExtension{false};
+
+    /*
+     void toStream(const clap_ostream *stream) noexcept {}
+    void fromStream(const clap_istream *stream) noexcept {}
+     */
+};
+
+template<typename T, typename TConfig>
 struct ClapBaseClass : public plugHelper_t
 {
-    ClapBaseClass(const clap_plugin_descriptor *desc, const clap_host *host) : plugHelper_t(desc, host) {}
-
+    ClapBaseClass(const clap_plugin_descriptor *desc, const clap_host *host) : plugHelper_t(desc, host), uiComms(*this) {}
+    
     using ParamDesc = sst::basic_blocks::params::ParamMetaData;
     std::vector<ParamDesc> paramDescriptions;
     std::unordered_map<uint32_t, ParamDesc> paramDescriptionMap;
 
     void configureParams()
     {
-        assert(paramDescriptions.size() == nParams);
+        assert(paramDescriptions.size() == TConfig::nParams);
         paramDescriptionMap.clear();
         int patchIdx{0};
         for (const auto &pd : paramDescriptions)
@@ -51,8 +63,8 @@ struct ClapBaseClass : public plugHelper_t
 
             patchIdx ++;
         }
-        assert(paramDescriptionMap.size() == nParams);
-        assert(patchIdx == nParams);
+        assert(paramDescriptionMap.size() == TConfig::nParams);
+        assert(patchIdx == TConfig::nParams);
     }
 
     bool implementsParams() const noexcept override { return true; }
@@ -60,10 +72,10 @@ struct ClapBaseClass : public plugHelper_t
     {
         return paramDescriptionMap.find(paramId) != paramDescriptionMap.end();
     }
-    uint32_t paramsCount() const noexcept override { return nParams; }
+    uint32_t paramsCount() const noexcept override { return TConfig::nParams; }
     bool paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept override
     {
-        if (paramIndex >= nParams)
+        if (paramIndex >= TConfig::nParams)
             return false;
 
         const auto &pd = paramDescriptions[paramIndex];
@@ -117,8 +129,8 @@ struct ClapBaseClass : public plugHelper_t
 
     struct Patch
     {
-        float params[nParams];
-        PatchExtension extension;
+        float params[TConfig::nParams];
+        typename TConfig::PatchExtension extension;
     } patch;
     std::unordered_map<clap_id, float *> paramToValue;
     std::unordered_map<clap_id, int> paramToPatchIndex;
@@ -141,6 +153,57 @@ struct ClapBaseClass : public plugHelper_t
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
     ADD_SHIM_IMPLEMENTATION(clapJuceShim);
     ADD_SHIM_LINUX_TIMER(clapJuceShim);
+
+    struct ToUI
+    {
+        enum MType
+        {
+            PARAM_VALUE = 0x31,
+            MIDI_NOTE_ON,
+            MIDI_NOTE_OFF
+        } type;
+
+        uint32_t id;  // param-id for PARAM_VALUE, key for noteon/noteoff
+        double value; // value or unused
+    };
+
+    struct FromUI
+    {
+        enum MType
+        {
+            BEGIN_EDIT = 0xF9,
+            END_EDIT,
+            ADJUST_VALUE
+        } type;
+        uint32_t id;
+        double value;
+    };
+
+    struct UICommunicationBundle
+    {
+        UICommunicationBundle(const ClapBaseClass<T, TConfig> &h) : cp(h) {}
+        typedef moodycamel::ReaderWriterQueue<ToUI, 4096> SynthToUI_Queue_t;
+        typedef moodycamel::ReaderWriterQueue<FromUI, 4096> UIToSynth_Queue_t;
+
+        SynthToUI_Queue_t toUiQ;
+        UIToSynth_Queue_t fromUiQ;
+        typename TConfig::DataCopyForUI dataCopyForUI;
+
+        // todo make this std optional I guess
+        ParamDesc getParameterDescription(uint32_t id) const
+        {
+            // const so [] isn't an option
+            auto fp = cp.paramDescriptionMap.find(id);
+            if (fp == cp.paramDescriptionMap.end())
+            {
+                return ParamDesc();
+            }
+            return fp->second;
+        }
+
+      private:
+        const ClapBaseClass<T, TConfig> &cp;
+    } uiComms;
 };
 }
 

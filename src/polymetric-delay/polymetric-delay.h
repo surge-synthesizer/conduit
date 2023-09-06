@@ -11,7 +11,6 @@
 #include <array>
 #include <unordered_map>
 #include <memory>
-#include <readerwriterqueue.h>
 
 #include <memory>
 #include "sst/basic-blocks/params/ParamMetadata.h"
@@ -24,8 +23,20 @@ extern clap_plugin_descriptor desc;
 static constexpr int nParams = 1;
 
 
+struct ConduitPolymetricDelayConfig
+{
+    static constexpr int nParams{sst::conduit::polymetric_delay::nParams};
+    using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
+    struct DataCopyForUI
+    {
+        std::atomic<uint32_t> updateCount{0};
+        std::atomic<bool> isProcessing{false};
+    };
+};
+
+
 struct ConduitPolymetricDelay
-    : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay, nParams>
+    : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay, ConduitPolymetricDelayConfig>
 {
     ConduitPolymetricDelay(const clap_host *host);
     ~ConduitPolymetricDelay();
@@ -75,6 +86,10 @@ struct ConduitPolymetricDelay
         uiComms.dataCopyForUI.updateCount++;
     }
 
+    struct DataCopyForUI
+    {
+
+    };
 
     typedef std::unordered_map<int, int> PatchPluginExtension;
   protected:
@@ -93,61 +108,6 @@ struct ConduitPolymetricDelay
 
   public:
     static constexpr uint32_t GUI_DEFAULT_W = 390, GUI_DEFAULT_H = 530;
-
-    struct ToUI
-    {
-        enum MType
-        {
-            PARAM_VALUE = 0x31,
-        } type;
-
-        uint32_t id;  // param-id for PARAM_VALUE, key for noteon/noteoff
-        double value; // value or unused
-    };
-
-    struct FromUI
-    {
-        enum MType
-        {
-            BEGIN_EDIT = 0xF9,
-            END_EDIT,
-            ADJUST_VALUE
-        } type;
-        uint32_t id;
-        double value;
-    };
-
-    struct DataCopyForUI
-    {
-        std::atomic<uint32_t> updateCount{0};
-        std::atomic<bool> isProcessing{false};
-    };
-
-    struct UICommunicationBundle
-    {
-        UICommunicationBundle(const ConduitPolymetricDelay &h) : cp(h) {}
-        typedef moodycamel::ReaderWriterQueue<ToUI, 4096> SynthToUI_Queue_t;
-        typedef moodycamel::ReaderWriterQueue<FromUI, 4096> UIToSynth_Queue_t;
-
-        SynthToUI_Queue_t toUiQ;
-        UIToSynth_Queue_t fromUiQ;
-        DataCopyForUI dataCopyForUI;
-
-        // todo make this std optional I guess
-        ParamDesc getParameterDescription(paramIds id) const
-        {
-            // const so [] isn't an option
-            auto fp = cp.paramDescriptionMap.find(id);
-            if (fp == cp.paramDescriptionMap.end())
-            {
-                return ParamDesc();
-            }
-            return fp->second;
-        }
-
-      private:
-        const ConduitPolymetricDelay &cp;
-    } uiComms;
 };
 }
 
