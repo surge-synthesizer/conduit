@@ -189,6 +189,8 @@ struct ClapBaseClass : public plugHelper_t
         UIToSynth_Queue_t fromUiQ;
         typename TConfig::DataCopyForUI dataCopyForUI;
 
+        std::atomic<bool> refreshUIValues{false};
+
         // todo make this std optional I guess
         ParamDesc getParameterDescription(uint32_t id) const
         {
@@ -204,6 +206,101 @@ struct ClapBaseClass : public plugHelper_t
       private:
         const ClapBaseClass<T, TConfig> &cp;
     } uiComms;
+
+    uint32_t handleEventsFromUIQueue(const clap_output_events_t *ov)
+    {
+        bool uiAdjustedValues{false};
+        FromUI r;
+
+        uint32_t adjustedCount{0};
+        while (uiComms.fromUiQ.try_dequeue(r))
+        {
+            switch (r.type)
+            {
+            case FromUI::BEGIN_EDIT:
+            case FromUI::END_EDIT:
+            {
+                adjustedCount++;
+                auto evt = clap_event_param_gesture();
+                evt.header.size = sizeof(clap_event_param_gesture);
+                evt.header.type = (r.type == FromUI::BEGIN_EDIT ? CLAP_EVENT_PARAM_GESTURE_BEGIN
+                                                                : CLAP_EVENT_PARAM_GESTURE_END);
+                evt.header.time = 0;
+                evt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                evt.header.flags = 0;
+                evt.param_id = r.id;
+                ov->try_push(ov, &evt.header);
+
+                break;
+            }
+            case FromUI::ADJUST_VALUE:
+            {
+                adjustedCount ++;
+                // So set my value
+                *paramToValue[r.id] = r.value;
+
+                // But we also need to generate outbound message to the host
+                auto evt = clap_event_param_value();
+                evt.header.size = sizeof(clap_event_param_value);
+                evt.header.type = (uint16_t)CLAP_EVENT_PARAM_VALUE;
+                evt.header.time = 0; // for now
+                evt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                evt.header.flags = 0;
+                evt.param_id = r.id;
+                evt.value = r.value;
+
+                ov->try_push(ov, &(evt.header));
+            }
+            }
+        }
+
+        // Similarly we need to push values to a UI on startup
+        if (uiComms.refreshUIValues && clapJuceShim->isEditorAttached())
+        {
+            uiComms.refreshUIValues = false;
+
+            for (const auto &[k, v] : paramToValue)
+            {
+                auto r = ToUI();
+                r.type = ToUI::PARAM_VALUE;
+                r.id = k;
+                r.value = *v;
+                uiComms.toUiQ.try_enqueue(r);
+            }
+        }
+
+        return adjustedCount;
+    }
+
+    bool handleParamBaseEvents(const clap_event_header *evt)
+    {
+        if (evt->space_id != CLAP_CORE_EVENT_SPACE_ID)
+            return false;
+
+        switch(evt->type)
+        {
+        case CLAP_EVENT_PARAM_VALUE:
+        {
+            auto v = reinterpret_cast<const clap_event_param_value *>(evt);
+
+            *paramToValue[v->param_id] = v->value;
+
+            if (clapJuceShim && clapJuceShim->isEditorAttached())
+            {
+                auto r = ToUI();
+                r.type = ToUI::PARAM_VALUE;
+                r.id = v->param_id;
+                r.value = (double)v->value;
+
+                uiComms.toUiQ.try_enqueue(r);
+            }
+            return true;
+        }
+        break;
+        }
+
+        return false;
+    }
 };
 }
 

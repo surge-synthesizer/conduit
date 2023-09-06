@@ -236,7 +236,9 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
      * The UI can send us gesture begin/end events which translate in to a
      * `clap_event_param_gesture` or value adjustments.
      */
-    handleEventsFromUIQueue(process->out_events);
+    auto ct = handleEventsFromUIQueue(process->out_events);
+    if (ct)
+        pushParamsToVoices();
 
     /*
      * Stage 2: Create the AUDIO output and process events
@@ -369,6 +371,12 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
  */
 void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
 {
+    if (handleParamBaseEvents(evt))
+    {
+        pushParamsToVoices();
+        return;
+    }
+
     if (evt->space_id != CLAP_CORE_EVENT_SPACE_ID)
         return;
 
@@ -576,7 +584,7 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
     break;
     }
 }
-
+#if 0
 void ConduitPolysynth::handleEventsFromUIQueue(const clap_output_events_t *ov)
 {
     bool uiAdjustedValues{false};
@@ -623,9 +631,9 @@ void ConduitPolysynth::handleEventsFromUIQueue(const clap_output_events_t *ov)
     }
 
     // Similarly we need to push values to a UI on startup
-    if (refreshUIValues && clapJuceShim->isEditorAttached())
+    if (uiComms.refreshUIValues && clapJuceShim->isEditorAttached())
     {
-        refreshUIValues = false;
+        uiComms.refreshUIValues = false;
 
         for (const auto &[k, v] : paramToValue)
         {
@@ -640,6 +648,7 @@ void ConduitPolysynth::handleEventsFromUIQueue(const clap_output_events_t *ov)
     if (uiAdjustedValues)
         pushParamsToVoices();
 }
+#endif
 
 /*
  * The note on, note off, and push params to voices implementations are, basically, completely
@@ -744,7 +753,11 @@ void ConduitPolysynth::paramsFlush(const clap_input_events *in, const clap_outpu
         handleInboundEvent(nextEvent);
     }
 
-    handleEventsFromUIQueue(out);
+    auto ct = handleEventsFromUIQueue(out);
+
+    if (ct)
+        pushParamsToVoices();
+
 
     // We will never generate a note end event with processing active, and we have no midi
     // output, so we are done.

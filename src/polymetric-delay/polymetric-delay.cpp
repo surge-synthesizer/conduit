@@ -81,20 +81,35 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
     float ** const in = process->audio_inputs[0].data32;
     auto ichans = process->audio_inputs->channel_count;
 
-    static int foo{0};
-    if (foo == 100)
-    {
-        CNDOUT << CNDVAR(patch.params[0]) << std::endl;
-        foo = 0;
-    }
-    foo++;
+    handleEventsFromUIQueue(process->out_events);
 
     auto chans = std::min(ochans, ichans);
-    if (chans < 0)
+    if (chans < 2)
         return CLAP_PROCESS_SLEEP;
+
+    auto ev = process->in_events;
+    auto sz = ev->size(ev);
+
+    // This pointer is the sentinel to our next event which we advance once an event is processed
+    const clap_event_header_t *nextEvent{nullptr};
+    uint32_t nextEventIndex{0};
+    if (sz != 0)
+    {
+        nextEvent = ev->get(ev, nextEventIndex);
+    }
 
     for (int i=0; i<process->frames_count; ++i)
     {
+        while (nextEvent && nextEvent->time == i)
+        {
+            handleInboundEvent(nextEvent);
+            nextEventIndex++;
+            if (nextEventIndex >= sz)
+                nextEvent = nullptr;
+            else
+                nextEvent = ev->get(ev, nextEventIndex);
+        }
+
         for (int c=0; c<chans; ++c)
         {
             delayBuffer[c][wp] = in[c][i];
@@ -104,5 +119,15 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
         }
     }
     return CLAP_PROCESS_CONTINUE;
+}
+
+void ConduitPolymetricDelay::handleInboundEvent(const clap_event_header_t *evt)
+{
+    if (handleParamBaseEvents(evt))
+    {
+        return;
+    }
+
+    // Other events just get dropped right now
 }
 }

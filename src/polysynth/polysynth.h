@@ -183,7 +183,6 @@ struct ConduitPolysynth
     void handleNoteOn(int port_index, int channel, int key, int noteid);
     void handleNoteOff(int port_index, int channel, int key);
     void activateVoice(SawDemoVoice &v, int port_index, int channel, int key, int noteid);
-    void handleEventsFromUIQueue(const clap_output_events_t *);
 
     /*
      * In addition to ::process, the plugin should implement ::paramsFlush. ::paramsFlush will be
@@ -213,7 +212,6 @@ struct ConduitPolysynth
   protected:
 
     std::unique_ptr<juce::Component> createEditor();
-    std::atomic<bool> refreshUIValues{false};
 
     // This is an API point the editor can call back to request the host to flush
     // bound by a lambda to the editor. For a technical template reason its implemented

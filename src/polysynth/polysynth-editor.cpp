@@ -166,7 +166,7 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel
             }
             else
             {
-                std::cout << "Ignored message of type " << r.type << std::endl;
+
             }
         }
     }
@@ -183,7 +183,7 @@ namespace sst::conduit::polysynth
 {
 std::unique_ptr<juce::Component> ConduitPolysynth::createEditor()
 {
-    refreshUIValues = true;
+    uiComms.refreshUIValues = true;
     return std::make_unique<sst::conduit::polysynth::editor::ConduitPolysynthEditor>(uiComms);
 }
 }

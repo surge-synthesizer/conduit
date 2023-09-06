@@ -70,8 +70,7 @@ struct ConduitPolymetricDelay
 
     clap_process_status process(const clap_process *process) noexcept override;
     void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override {}
-    void handleInboundEvent(const clap_event_header_t *evt) {}
-    void handleEventsFromUIQueue(const clap_output_events_t *) {}
+    void handleInboundEvent(const clap_event_header_t *evt);
 
 
     bool startProcessing() noexcept override
