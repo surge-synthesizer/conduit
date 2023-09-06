@@ -67,3 +67,4 @@ target_add_vst3_wrapper(TARGET ${VST3_TARGET}
 if (${COPY_AFTER_BUILD})
     target_vst3_copy_after_build(TARGET ${VST3_TARGET})
 endif()
+

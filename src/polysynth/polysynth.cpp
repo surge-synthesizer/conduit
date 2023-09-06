@@ -20,7 +20,7 @@ namespace sst::conduit::polysynth
 {
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
 clap_plugin_descriptor desc = {CLAP_VERSION,
-                               "org.surge-synth-team.conduit_polysynth",
+                               "org.surge-synth-team.conduit.polysynth",
                                "Conduit PolySynth",
                                "Surge Synth Team",
                                "https://surge-synth-team.org",
@@ -450,6 +450,7 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
      */
     case CLAP_EVENT_PARAM_VALUE:
     {
+
         auto v = reinterpret_cast<const clap_event_param_value *>(evt);
 
         *paramToValue[v->param_id] = v->value;
@@ -635,7 +636,6 @@ void ConduitPolysynth::handleEventsFromUIQueue(const clap_output_events_t *ov)
     // Similarly we need to push values to a UI on startup
     if (refreshUIValues && clapJuceShim->isEditorAttached())
     {
-        _DBGCOUT << "Pushing a refresh of UI values to the editor" << std::endl;
         refreshUIValues = false;
 
         for (const auto &[k, v] : paramToValue)

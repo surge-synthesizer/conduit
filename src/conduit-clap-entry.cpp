@@ -24,32 +24,44 @@
 #include <clap/plugin.h>
 #include <clap/factory/plugin-factory.h>
 
+#include "conduit-shared/debug-helpers.h"
+
 #include "polysynth/polysynth.h"
+#include "polymetric-delay/polymetric-delay.h"
 
 
 namespace sst::conduit::pluginentry
 {
 
-uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 1; }
+uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 2; }
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
-    return &polysynth::desc;
+    _DBGCOUT << "Asking for clap plugin number " << w << std::endl;
+    if (w == 0)
+        return &polysynth::desc;
+    if (w == 1)
+        return &polymetric_delay::desc;
+
+    return nullptr;
 }
 
 static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_host *host,
                                              const char *plugin_id)
 {
-    if (strcmp(plugin_id, polysynth::desc.id))
+    _DBGCOUT << "Creating clap plugin " << plugin_id << std::endl;
+    if (strcmp(plugin_id, polysynth::desc.id) == 0)
     {
-        std::cout << "Warning: CLAP asked for plugin_id '" << plugin_id
-                  << "' and clap-saw-demo ID is '" << polysynth::desc.id << "'" << std::endl;
-        return nullptr;
+        auto p = new polysynth::ConduitPolysynth(host);
+        return p->clapPlugin();
     }
-    // I know it looks like a leak right? but the clap-plugin-helpers basically
-    // take ownership and destroy the wrapper when the host destroys the
-    // underlying plugin (look at Plugin<h, l>::clapDestroy if you don't believe me!)
-    auto p = new polysynth::ConduitPolysynth(host);
-    return p->clapPlugin();
+    if (strcmp(plugin_id, polymetric_delay::desc.id) == 0)
+    {
+        auto p = new polymetric_delay::ConduitPolymetricDelay(host);
+        return p->clapPlugin();
+    }
+
+    _DBGCOUT << "No plugin found; returning nullptr" << std::endl;
+    return nullptr;
 }
 
 const struct clap_plugin_factory conduit_polysynth_factory = {
