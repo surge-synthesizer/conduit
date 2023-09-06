@@ -23,7 +23,7 @@ static constexpr clap::helpers::CheckingLevel checkLevel = clap::helpers::Checki
 
 using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 
-template<typename T>
+template<typename T, int nParams, typename PatchExtension = int>
 struct ClapBaseClass : public plugHelper_t
 {
     ClapBaseClass(const clap_plugin_descriptor *desc, const clap_host *host) : plugHelper_t(desc, host) {}
@@ -34,15 +34,20 @@ struct ClapBaseClass : public plugHelper_t
 
     void configureParams()
     {
-        assert(paramDescriptions.size() == T::nParams);
+        assert(paramDescriptions.size() == nParams);
         paramDescriptionMap.clear();
+        int patchIdx{0};
         for (const auto &pd : paramDescriptions)
         {
             // If you hit this assert you have a duplicate param id
             assert(paramDescriptionMap.find(pd.id) == paramDescriptionMap.end());
             paramDescriptionMap[pd.id] = pd;
+            paramToPatchIndex[pd.id] = patchIdx;
+            paramToValue[pd.id] = &(patch.params[patchIdx]);
+
+            patch.params[patchIdx] = pd.defaultVal;
         }
-        assert(paramDescriptionMap.size() == T::nParams);
+        assert(paramDescriptionMap.size() == nParams);
     }
 
     bool implementsParams() const noexcept override { return true; }
@@ -50,10 +55,10 @@ struct ClapBaseClass : public plugHelper_t
     {
         return paramDescriptionMap.find(paramId) != paramDescriptionMap.end();
     }
-    uint32_t paramsCount() const noexcept override { return T::nParams; }
+    uint32_t paramsCount() const noexcept override { return nParams; }
     bool paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept override
     {
-        if (paramIndex >= T::nParams)
+        if (paramIndex >= nParams)
             return false;
 
         const auto &pd = paramDescriptions[paramIndex];
@@ -62,6 +67,11 @@ struct ClapBaseClass : public plugHelper_t
         return true;
     }
 
+    bool paramsValue(clap_id paramId, double *value) noexcept override
+    {
+        *value = *paramToValue[paramId];
+        return true;
+    }
     bool paramsValueToText(clap_id paramId, double value, char *display,
                            uint32_t size) noexcept override
     {
@@ -97,6 +107,29 @@ struct ClapBaseClass : public plugHelper_t
         }
         return false;
     }
+
+
+    struct Patch
+    {
+        float params[nParams];
+        PatchExtension extension;
+    } patch;
+    std::unordered_map<clap_id, float *> paramToValue;
+    std::unordered_map<clap_id, int> paramToPatchIndex;
+
+    void attachParam(clap_id paramId, float *&to)
+    {
+        auto ptpi = paramToPatchIndex.find(paramId);
+        if (ptpi == paramToPatchIndex.end())
+        {
+            to = nullptr;
+        }
+        else
+        {
+            to = &patch.params[ptpi->second];
+        }
+    }
+
 
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;

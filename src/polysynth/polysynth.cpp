@@ -31,7 +31,7 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
                                features};
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
-    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth>(&desc, host),
+    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, nParams>(&desc, host),
       uiComms(*this)
 {
     _DBGCOUT << "Constructing ConduitPolysynth" << std::endl;
@@ -41,7 +41,6 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                    CLAP_PARAM_IS_MODULATABLE_PER_KEY;
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
 
-    paramToValue[pmUnisonCount] = &unisonCount;
     paramDescriptions.push_back(ParamDesc()
                                     .asInt()
                                     .withID(pmUnisonCount)
@@ -51,8 +50,6 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withDefault(3)
                                     .withFlags(steppedFlag)
                                     .withLinearScaleFormatting("voices"));
-
-    paramToValue[pmUnisonSpread] = &unisonSpread;
     paramDescriptions.push_back(ParamDesc()
                                 .asFloat()
                                 .withID(pmUnisonSpread)
@@ -63,8 +60,6 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                 .withDefault(10)
                                 .withFlags(modFlag)
                                 );
-
-    paramToValue[pmOscDetune] = &oscDetune;
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmOscDetune)
@@ -75,8 +70,6 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withDefault(0)
                                     .withFlags(modFlag)
                                     );
-
-    paramToValue[pmAmpAttack] = &ampAttack;
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmAmpAttack)
@@ -86,8 +79,6 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withRange(0, 1)
                                     .withDefault(0.05)
                                     .withFlags(autoFlag));
-
-    paramToValue[pmAmpRelease] = &ampRelease;
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmAmpRelease)
@@ -97,16 +88,12 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withRange(0, 1)
                                     .withDefault(0.05)
                                     .withFlags(autoFlag));
-
-    paramToValue[pmAmpIsGate] = &ampIsGate;
     paramDescriptions.push_back(ParamDesc()
                                     .asBool()
                                     .withID(pmAmpIsGate)
                                     .withName("Bypass Amp Envelope")
                                     .withGroupName("AEG")
                                     .withFlags(steppedFlag));
-
-    paramToValue[pmCutoff] = &cutoff;
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmCutoff)
@@ -116,8 +103,6 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withDefault(69)
                                     .withSemitoneZeroAtMIDIZeroFormatting()
                                     .withFlags(modFlag));
-
-    paramToValue[pmResonance] = &resonance;
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmResonance)
@@ -127,8 +112,6 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withDefault(sqrt(2) / 2)
                                     .withLinearScaleFormatting("")
                                     .withFlags(modFlag));
-
-    paramToValue[pmPreFilterVCA] = &preFilterVCA;
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmPreFilterVCA)
@@ -138,9 +121,6 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withDefault(1)
                                     .withLinearScaleFormatting("")
                                     .withFlags(modFlag));
-
-    paramToValue[pmFilterMode] = &filterMode;
-    // TODO
     paramDescriptions.push_back(ParamDesc()
                                     .asInt()
                                     .withID(pmFilterMode)
@@ -151,12 +131,22 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
 
     configureParams();
 
+    attachParam(pmUnisonCount, unisonCount);
+    _DBGCOUT << "Post Attach " << *unisonCount << std::endl;
+    attachParam(pmUnisonSpread, unisonSpread);
+    attachParam(pmOscDetune, oscDetune);
+    attachParam(pmCutoff, cutoff);
+    attachParam(pmResonance, resonance);
+    attachParam(pmAmpAttack, ampAttack);
+    attachParam(pmAmpRelease, ampRelease);
+    attachParam(pmAmpIsGate, ampIsGate);
+    attachParam(pmPreFilterVCA, preFilterVCA);
+    attachParam(pmFilterMode, filterMode);
+
     terminatedVoices.reserve(max_voices * 4);
 
     auto rut = [this](clap_id &id, int ms, bool reg)
     {
-        // FIXME better name for linux
-        std::cout << "Registering timer " << ms << " " << reg << std::endl;
 #if JUCE_LINUX
         if (!_host.canUseTimerSupport())
             return false;
@@ -712,20 +702,20 @@ void ConduitPolysynth::handleNoteOff(int port_index, int channel, int n)
 
 void ConduitPolysynth::activateVoice(SawDemoVoice &v, int port_index, int channel, int key, int noteid)
 {
-    v.unison = std::max(1, std::min(7, (int)unisonCount));
-    v.filterMode = (int)static_cast<int>(filterMode);
+    v.unison = std::max(1, std::min(7, (int)*unisonCount));
+    v.filterMode = (int)static_cast<int>(*filterMode);
     v.note_id = noteid;
     v.portid = port_index;
     v.channel = channel;
 
-    v.uniSpread = unisonSpread;
-    v.oscDetune = oscDetune;
-    v.cutoff = cutoff;
-    v.res = resonance;
-    v.preFilterVCA = preFilterVCA;
-    v.ampRelease = scaleTimeParamToSeconds(ampRelease);
-    v.ampAttack = scaleTimeParamToSeconds(ampAttack);
-    v.ampGate = ampIsGate > 0.5;
+    v.uniSpread = *unisonSpread;
+    v.oscDetune = *oscDetune;
+    v.cutoff = *cutoff;
+    v.res = *resonance;
+    v.preFilterVCA = *preFilterVCA;
+    v.ampRelease = scaleTimeParamToSeconds(*ampRelease);
+    v.ampAttack = scaleTimeParamToSeconds(*ampAttack);
+    v.ampGate = *ampIsGate > 0.5;
 
     // reset all the modulations
     v.cutoffMod = 0;
@@ -767,15 +757,15 @@ void ConduitPolysynth::pushParamsToVoices()
     {
         if (v.isPlaying())
         {
-            v.uniSpread = unisonSpread;
-            v.oscDetune = oscDetune;
-            v.cutoff = cutoff;
-            v.res = resonance;
-            v.preFilterVCA = preFilterVCA;
-            v.ampRelease = scaleTimeParamToSeconds(ampRelease);
-            v.ampAttack = scaleTimeParamToSeconds(ampAttack);
-            v.ampGate = ampIsGate > 0.5;
-            v.filterMode = filterMode;
+            v.uniSpread = *unisonSpread;
+            v.oscDetune = *oscDetune;
+            v.cutoff = *cutoff;
+            v.res = *resonance;
+            v.preFilterVCA = *preFilterVCA;
+            v.ampRelease = scaleTimeParamToSeconds(*ampRelease);
+            v.ampAttack = scaleTimeParamToSeconds(*ampAttack);
+            v.ampGate = *ampIsGate > 0.5;
+            v.filterMode = *filterMode;
 
             v.recalcPitch();
             v.recalcFilter();

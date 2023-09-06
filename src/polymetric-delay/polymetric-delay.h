@@ -21,9 +21,11 @@ namespace sst::conduit::polymetric_delay
 {
 
 extern clap_plugin_descriptor desc;
+static constexpr int nParams = 1;
+
 
 struct ConduitPolymetricDelay
-    : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay>
+    : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay, nParams>
 {
     ConduitPolymetricDelay(const clap_host *host);
     ~ConduitPolymetricDelay();
@@ -38,7 +40,6 @@ struct ConduitPolymetricDelay
     {
         pmDelayInSamples = 8241
     };
-    static constexpr int nParams = 11;
 
     float delayInSamples{1000};
 
@@ -80,6 +81,8 @@ struct ConduitPolymetricDelay
         uiComms.dataCopyForUI.updateCount++;
     }
 
+
+    typedef std::unordered_map<int, int> PatchPluginExtension;
   protected:
 
     std::unique_ptr<juce::Component> createEditor() { return nullptr; }

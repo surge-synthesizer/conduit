@@ -60,9 +60,10 @@ namespace sst::conduit::polysynth
      * url etc... and is consumed by clap-saw-demo-pluginentry.cpp
  */
 extern clap_plugin_descriptor desc;
+static constexpr int nParams{10};
 
 struct ConduitPolysynth
-    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth>
+    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, nParams>
 {
     static constexpr int max_voices = 64;
     ConduitPolysynth(const clap_host *host);
@@ -114,14 +115,6 @@ struct ConduitPolysynth
         pmResonance = 94,
         pmFilterMode = 14255
     };
-    static constexpr int nParams = 10;
-
-    // TODO think about factoring of this
-    bool paramsValue(clap_id paramId, double *value) noexcept override
-    {
-        *value = *paramToValue[paramId];
-        return true;
-    }
 
   public:
     // Convert 0-1 linear into 0-4s exponential
@@ -285,9 +278,10 @@ struct ConduitPolysynth
     // These items are ONLY read and written on the audio thread, so they
     // are safe to be non-atomic doubles. We keep a map to locate them
     // for parameter updates.
-    double unisonCount{3}, unisonSpread{10}, oscDetune{0}, cutoff{69}, resonance{0.7},
-        ampAttack{0.01}, ampRelease{0.2}, ampIsGate{0}, preFilterVCA{1.0}, filterMode{0};
-    std::unordered_map<clap_id, double *> paramToValue;
+    float * unisonCount, *unisonSpread, *oscDetune, *cutoff, *resonance,
+        *ampAttack, *ampRelease, *ampIsGate, *preFilterVCA, *filterMode;
+
+    typedef std::unordered_map<int, int> PatchPluginExtension;
 
     // "Voice Management" is "randomly pick a voice to kill and put it in stolen voices"
     std::array<SawDemoVoice, max_voices> voices;
