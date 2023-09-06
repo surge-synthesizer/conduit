@@ -43,11 +43,6 @@ struct ConduitPolymetricDelay
 
     float delayInSamples{1000};
 
-    bool paramsValue(clap_id paramId, double *value) noexcept override
-    {
-        *value = delayInSamples;
-        return true;
-    }
     bool implementsAudioPorts() const noexcept override { return true; }
     uint32_t audioPortsCount(bool isInput) const noexcept override { return 1; }
     bool audioPortsInfo(uint32_t index, bool isInput,
@@ -62,8 +57,7 @@ struct ConduitPolymetricDelay
     //bool stateSave(const clap_ostream *) noexcept override;
     //bool stateLoad(const clap_istream *) noexcept override;
 
-    clap_process_status process(const clap_process *process) noexcept override
-    { return CLAP_PROCESS_CONTINUE; }
+    clap_process_status process(const clap_process *process) noexcept override;
     void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override {}
     void handleInboundEvent(const clap_event_header_t *evt) {}
     void handleEventsFromUIQueue(const clap_output_events_t *) {}

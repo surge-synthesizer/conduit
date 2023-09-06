@@ -68,3 +68,5 @@ if (${COPY_AFTER_BUILD})
     target_vst3_copy_after_build(TARGET ${VST3_TARGET})
 endif()
 
+add_custom_target(${PROJECT_NAME}_all)
+add_dependencies(${PROJECT_NAME}_all ${PROJECT_NAME}_clap ${PROJECT_NAME}_vst3)

@@ -31,8 +31,8 @@ struct Implementor
     }
 };
 } // namespace details
-#define TRACE std::cout << __FILE__ << ":" << __LINE__ << " " << __func__ << std::endl;
-// #define TRACE ;
+// #define TRACE std::cout << __FILE__ << ":" << __LINE__ << " " << __func__ << std::endl;
+#define TRACE ;
 ClapJuceShim::ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> ce,
                            std::function<bool(clap_id &, int, bool)> rut)
     : createEditor(ce), registerOrUnregisterTimer(rut)

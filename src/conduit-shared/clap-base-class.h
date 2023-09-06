@@ -15,6 +15,7 @@
 
 #include <sst/basic-blocks/params/ParamMetadata.h>
 #include <sst/clap_juce_shim/clap_juce_shim.h>
+#include "debug-helpers.h"
 
 namespace sst::conduit::shared
 {
@@ -63,6 +64,7 @@ struct ClapBaseClass : public plugHelper_t
 
         const auto &pd = paramDescriptions[paramIndex];
 
+        _DBGCOUT << pd.name << " " << pd.id << " " << paramIndex << std::endl;
         pd.template toClapParamInfo<CLAP_NAME_SIZE>(info);
         return true;
     }

@@ -6,7 +6,7 @@
 
 namespace sst::conduit::polymetric_delay
 {
-const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
+const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
 clap_plugin_descriptor desc = {CLAP_VERSION,
                                "org.surge-synth-team.conduit.polymetric-delay",
                                "Conduit Polymetric Delay",
@@ -36,7 +36,6 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
                                     .withDefault(4800)
                                     .withLinearScaleFormatting("samples"));
     configureParams();
-
 }
 
 ConduitPolymetricDelay::~ConduitPolymetricDelay()
@@ -68,4 +67,30 @@ bool ConduitPolymetricDelay::audioPortsInfo(uint32_t index, bool isInput, clap_a
     return true;
 }
 
+clap_process_status ConduitPolymetricDelay::process(const clap_process *process) noexcept
+{
+    if (process->audio_outputs_count <= 0)
+        return CLAP_PROCESS_SLEEP;
+    if (process->audio_inputs_count <= 0)
+        return CLAP_PROCESS_SLEEP;
+
+    float **out = process->audio_outputs[0].data32;
+    auto ochans = process->audio_outputs->channel_count;
+
+    float ** const in = process->audio_inputs[0].data32;
+    auto ichans = process->audio_inputs->channel_count;
+
+    auto chans = std::min(ochans, ichans);
+    if (chans < 0)
+        return CLAP_PROCESS_SLEEP;
+
+    for (int i=0; i<process->frames_count; ++i)
+    {
+        for (int c=0; c<chans; ++c)
+        {
+            out[c][i] = in[c][i];
+        }
+    }
+
+}
 }
