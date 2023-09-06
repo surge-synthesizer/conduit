@@ -173,6 +173,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     };
     clapJuceShim =
         std::make_unique<sst::clap_juce_shim::ClapJuceShim>([this]() { return createEditor(); }, rut);
+    clapJuceShim->setResizable(true);
 }
 ConduitPolysynth::~ConduitPolysynth()
 {

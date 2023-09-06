@@ -15,7 +15,6 @@
 #include <vector>
 #include <optional>
 #include "conduit-shared/debug-helpers.h"
-#include "sst/clap_juce_shim/clap_juce_shim.h"
 
 /*
  * ConduitPolysynth is the core synthesizer class. It uses the clap-helpers C++ plugin extensions
@@ -207,11 +206,6 @@ struct ConduitPolysynth
     }
 
   protected:
-    bool implementsGui() const noexcept override { return true; }
-    bool guiCanResize() const noexcept override { return true; }
-    std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
-    ADD_SHIM_IMPLEMENTATION(clapJuceShim);
-    ADD_SHIM_LINUX_TIMER(clapJuceShim);
 
     std::unique_ptr<juce::Component> createEditor();
     std::atomic<bool> refreshUIValues{false};

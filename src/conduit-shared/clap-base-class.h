@@ -14,6 +14,7 @@
 #include <clap/helpers/plugin.hh>
 
 #include <sst/basic-blocks/params/ParamMetadata.h>
+#include <sst/clap_juce_shim/clap_juce_shim.h>
 
 namespace sst::conduit::shared
 {
@@ -97,6 +98,10 @@ struct ClapBaseClass : public plugHelper_t
         return false;
     }
 
+    bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
+    std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
+    ADD_SHIM_IMPLEMENTATION(clapJuceShim);
+    ADD_SHIM_LINUX_TIMER(clapJuceShim);
 };
 }
 

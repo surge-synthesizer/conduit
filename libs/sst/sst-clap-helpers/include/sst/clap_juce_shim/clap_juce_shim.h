@@ -29,12 +29,16 @@ struct ClapJuceShim
                  std::function<bool(clap_id &, int, bool)> registerOrUnregisterTimer);
     ~ClapJuceShim();
 
+    void setResizable(bool b) { resizable = b; }
+
     std::function<std::unique_ptr<juce::Component>()> createEditor;
     std::function<bool(clap_id &, int, bool)> registerOrUnregisterTimer;
     std::unique_ptr<details::Implementor> impl;
+    bool resizable{false};
 
     bool isEditorAttached();
 
+    bool guiCanResize() const noexcept { return resizable; }
     bool guiIsApiSupported(const char *api, bool isFloating) noexcept;
 
     bool guiCreate(const char *api, bool isFloating) noexcept;
@@ -53,11 +57,11 @@ struct ClapJuceShim
     void onTimer(clap_id timerId) noexcept;
 
 #endif
-
 };
 } // namespace sst::clap_juce_shim
 
 #define ADD_SHIM_IMPLEMENTATION(clapJuceShim)                                                      \
+    bool guiCanResize() const noexcept override { return clapJuceShim->guiCanResize(); }           \
     bool guiIsApiSupported(const char *api, bool isFloating) noexcept override                     \
     {                                                                                              \
         return clapJuceShim->guiIsApiSupported(api, isFloating);                                   \
@@ -80,18 +84,16 @@ struct ClapJuceShim
     {                                                                                              \
         return clapJuceShim->guiSetSize(width, height);                                            \
     }                                                                                              \
-    bool guiGetSize(uint32_t *width, uint32_t *height) noexcept override                                  \
+    bool guiGetSize(uint32_t *width, uint32_t *height) noexcept override                           \
     {                                                                                              \
         return clapJuceShim->guiGetSize(width, height);                                            \
     }                                                                                              \
     bool guiShow() noexcept override { return clapJuceShim->guiShow(); }
 
 #if SHIM_LINUX
-#define ADD_SHIM_LINUX_TIMER(clapJuceShim) \
-    bool implementsTimerSupport() const noexcept override { return true; } \
-    void onTimer(clap_id timerId) noexcept override { \
-        clapJuceShim->onTimer(timerId);                                       \
-    }
+#define ADD_SHIM_LINUX_TIMER(clapJuceShim)                                                         \
+    bool implementsTimerSupport() const noexcept override { return true; }                         \
+    void onTimer(clap_id timerId) noexcept override { clapJuceShim->onTimer(timerId); }
 #else
 #define ADD_SHIM_LINUX_TIMER(clapJuceShim) ;
 #endif

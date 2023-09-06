@@ -2,7 +2,14 @@ project(conduit-src)
 
 add_library(conduit-shared STATIC conduit-shared/shared-symbols.cpp)
 target_include_directories(conduit-shared PUBLIC .)
-target_link_libraries(conduit-shared PUBLIC clap clap-helpers sst-basic-blocks fmt)
+target_link_libraries(conduit-shared PUBLIC
+        clap
+        clap-helpers
+        fmt
+        juce::juce_gui_basics
+        sst::clap_juce_shim
+        sst-basic-blocks
+        sst-jucegui)
 
 add_subdirectory(polysynth)
 
