@@ -122,12 +122,24 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withDefault(1)
                                     .withLinearScaleFormatting("")
                                     .withFlags(modFlag));
-    paramDescriptions.push_back(ParamDesc()
-                                    .asInt()
-                                    .withID(pmFilterMode)
-                                    .withName("Filter Type")
-                                    .withGroupName("Filter")
-                                    .withFlags(steppedFlag));
+
+    std::unordered_map<int, std::string> filterModes;
+    using sv = SawDemoVoice::StereoSimperSVF;
+    filterModes[sv::LP] = "Low Pass";
+    filterModes[sv::HP] = "High Pass";
+    filterModes[sv::BP] = "Band Pass";
+    filterModes[sv::NOTCH] = "Notch";
+    filterModes[sv::PEAK] = "Peak";
+    filterModes[sv::ALL] = "All Pass";
+    paramDescriptions.push_back(
+        ParamDesc()
+            .asInt()
+            .withID(pmFilterMode)
+            .withName("Filter Type")
+            .withGroupName("Filter")
+            .withRange(SawDemoVoice::StereoSimperSVF::LP, SawDemoVoice::StereoSimperSVF::ALL)
+            .withUnorderedMapFormatting(filterModes)
+            .withFlags(steppedFlag));
 
     configureParams();
 
@@ -869,6 +881,5 @@ bool ConduitPolysynth::stateLoad(const clap_istream *stream) noexcept
     return true;
 }
 #endif
-
 
 } // namespace sst::conduit::polysynth

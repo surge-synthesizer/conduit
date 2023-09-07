@@ -165,7 +165,6 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     }
 
   protected:
-
     // This is an OK default implementation but you may want to replace it
     void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override
     {

@@ -37,22 +37,24 @@ struct ControlsPanel : juce::Component
     uicomm_t &uic;
 
     ControlsPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e);
-    ~ControlsPanel() {
+    ~ControlsPanel()
+    {
         time->setSource(nullptr);
         feedback->setSource(nullptr);
         mix->setSource(nullptr);
     }
 
-    void resized() override {
+    void resized() override
+    {
         auto b = getLocalBounds().reduced(5);
         auto ks = std::min(b.getWidth() / 3, b.getHeight());
 
         int yp = 0;
         auto bx = b.withHeight(ks).withWidth(ks).reduced(4);
         time->setBounds(bx);
-        bx = bx.translated(ks,0);
+        bx = bx.translated(ks, 0);
         feedback->setBounds(bx);
-        bx = bx.translated(ks,0);
+        bx = bx.translated(ks, 0);
         mix->setBounds(bx);
     }
 
@@ -90,7 +92,10 @@ struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel
     std::unique_ptr<jcmp::NamedPanel> ctrlPanel;
 };
 
-ControlsPanel::ControlsPanel(sst::conduit::polymetric_delay::editor::uicomm_t &p, sst::conduit::polymetric_delay::editor::ConduitPolymetricDelayEditor &e) : uic(p)
+ControlsPanel::ControlsPanel(
+    sst::conduit::polymetric_delay::editor::uicomm_t &p,
+    sst::conduit::polymetric_delay::editor::ConduitPolymetricDelayEditor &e)
+    : uic(p)
 {
     time = std::make_unique<jcmp::Knob>();
     addAndMakeVisible(*time);
