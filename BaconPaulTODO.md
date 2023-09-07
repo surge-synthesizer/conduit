@@ -1,6 +1,5 @@
 # TODO
 
-- chordmaker (exercise midi effect)
 - ringmodulator (exercise sidechains)
 
 - stateLoad robust under missing param
@@ -8,6 +7,11 @@
 - set up installer targets or zip
 - macos signing
 - write the polymetric delay
+
+- desc version from build version
+
+- pull the built things into same directory all platforms. 
+like have conduit_all be the collect stage
 
 - BYOSDKs
 - AUv2 turned on
