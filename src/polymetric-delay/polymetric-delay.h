@@ -107,8 +107,6 @@ struct ConduitPolymetricDelay
     std::atomic<bool> refreshUIValues{false};
 
   public:
-    static constexpr uint32_t GUI_DEFAULT_W = 390, GUI_DEFAULT_H = 530;
-
     float *sampleTime, *mix, *feedback;
 };
 } // namespace sst::conduit::polymetric_delay

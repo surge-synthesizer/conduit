@@ -220,14 +220,6 @@ struct ConduitPolysynth
   protected:
     std::unique_ptr<juce::Component> createEditor() override;
 
-  public:
-    static constexpr uint32_t GUI_DEFAULT_W = 390, GUI_DEFAULT_H = 530;
-
-    /*
-     * These are the core data structures we use for the communication
-     * outlined above.
-     */
-
   private:
     // These items are ONLY read and written on the audio thread, so they
     // are safe to be non-atomic doubles. We keep a map to locate them
