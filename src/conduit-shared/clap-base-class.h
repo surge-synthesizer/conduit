@@ -52,7 +52,8 @@ struct EmptyPatchExtension
      */
 };
 
-template <typename T, typename TConfig> struct ClapBaseClass : public plugHelper_t
+template <typename T, typename TConfig>
+struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 {
     ClapBaseClass(const clap_plugin_descriptor *desc, const clap_host *host)
         : plugHelper_t(desc, host), uiComms(*this)
@@ -444,6 +445,26 @@ template <typename T, typename TConfig> struct ClapBaseClass : public plugHelper
 
         return false;
     }
+
+    bool registerOrUnregisterTimer(clap_id &id, int i, bool b) override
+    {
+#if JUCE_LINUX
+        if (!_host.canUseTimerSupport())
+            return false;
+        if (reg)
+        {
+            _host.timerSupportRegister(ms, &id);
+        }
+        else
+        {
+            _host.timerSupportUnregister(id);
+        }
+        return true;
+#else
+        id = 0;
+        return false;
+#endif
+    };
 };
 } // namespace sst::conduit::shared
 

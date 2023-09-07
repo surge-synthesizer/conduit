@@ -14,6 +14,7 @@
  */
 
 #include "polymetric-delay.h"
+#include "juce_gui_basics/juce_gui_basics.h"
 
 namespace sst::conduit::polymetric_delay
 {
@@ -44,10 +45,51 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
                                     .withGroupName("Delay")
                                     .withRange(20, 48000)
                                     .withDefault(4800)
-                                    .withLinearScaleFormatting("samples"));
+                                    .withLinearScaleFormatting("samples")
+                                    .withFlags(autoFlag));
+
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercent()
+                                    .withID(pmMixLevel)
+                                    .withName("Mix Level")
+                                    .withGroupName("Delay")
+                                    .withDefault(0.8)
+                                    .withFlags(autoFlag));
+
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercent()
+                                    .withID(pmFeedbackLevel)
+                                    .withName("Feedback Level")
+                                    .withGroupName("Delay")
+                                    .withDefault(0.2)
+                                    .withFlags(autoFlag));
+
     configureParams();
 
+    attachParam(pmDelayInSamples, sampleTime);
+    attachParam(pmMixLevel, mix);
+    attachParam(pmFeedbackLevel, feedback);
+
     memset(delayBuffer, 0, sizeof(delayBuffer));
+
+    auto rut = [this](clap_id &id, int ms, bool reg) {
+#if JUCE_LINUX
+        if (!_host.canUseTimerSupport())
+            return false;
+        if (reg)
+        {
+            _host.timerSupportRegister(ms, &id);
+        }
+        else
+        {
+            _host.timerSupportUnregister(id);
+        }
+#endif
+        return true;
+    };
+    clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
+    //[this]() { return createEditor(); }, rut);
+    clapJuceShim->setResizable(true);
 }
 
 ConduitPolymetricDelay::~ConduitPolymetricDelay() {}
@@ -121,10 +163,10 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
 
         for (int c = 0; c < chans; ++c)
         {
-            auto rp = (wp + bufSize + (int)patch.params[0]) & (bufSize - 1);
-            out[c][i] = in[c][i] * 0.9 + delayBuffer[c][rp] * 0.4;
+            auto rp = (wp + bufSize + (int)(*sampleTime)) & (bufSize - 1);
+            out[c][i] = in[c][i] * (1.0 - *mix) + delayBuffer[c][rp] * (*mix);
 
-            delayBuffer[c][wp] = in[c][i] + delayBuffer[c][rp] * 0.1;
+            delayBuffer[c][wp] = in[c][i] + delayBuffer[c][rp] * (*feedback);
         }
         wp = (wp + 1) & (bufSize - 1);
     }

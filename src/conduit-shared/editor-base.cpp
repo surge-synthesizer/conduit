@@ -80,8 +80,9 @@ struct Background : public jcmp::WindowPanel
         addAndMakeVisible(*il);
         idLabel = std::move(il);
 
-        auto vl =
-            std::make_unique<juce::Label>("Plugin Version", sst::conduit::build::FullVersionStr);
+        auto vs = std::string(sst::conduit::build::BuildDate) + " " +
+                  std::string(sst::conduit::build::BuildTime) + " " + sst::conduit::build::GitHash;
+        auto vl = std::make_unique<juce::Label>("Plugin Version", vs);
         vl->setColour(juce::Label::ColourIds::textColourId, juce::Colour(220, 220, 230));
         vl->setFont(vsFont);
         vl->setJustificationType(juce::Justification::centredRight);
@@ -105,7 +106,6 @@ struct Background : public jcmp::WindowPanel
 
     juce::Typeface::Ptr loadFont(const std::string &path)
     {
-        CNDOUT << "Loading font '" << path << "'" << std::endl;
         try
         {
             auto fs = cmrc::conduit_resources::get_filesystem();

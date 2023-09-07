@@ -30,7 +30,7 @@ namespace sst::conduit::polymetric_delay
 {
 
 extern clap_plugin_descriptor desc;
-static constexpr int nParams = 1;
+static constexpr int nParams = 3;
 
 struct ConduitPolymetricDelayConfig
 {
@@ -59,7 +59,9 @@ struct ConduitPolymetricDelay
 
     enum paramIds : uint32_t
     {
-        pmDelayInSamples = 8241
+        pmDelayInSamples = 8241,
+        pmMixLevel = 81,
+        pmFeedbackLevel = 999742
     };
 
     float delayInSamples{1000};
@@ -104,7 +106,7 @@ struct ConduitPolymetricDelay
     float delayBuffer[2][bufSize];
     uint32_t wp{0};
 
-    std::unique_ptr<juce::Component> createEditor() { return nullptr; }
+    std::unique_ptr<juce::Component> createEditor() override;
     std::atomic<bool> refreshUIValues{false};
 
     // This is an API point the editor can call back to request the host to flush
@@ -114,6 +116,8 @@ struct ConduitPolymetricDelay
 
   public:
     static constexpr uint32_t GUI_DEFAULT_W = 390, GUI_DEFAULT_H = 530;
+
+    float *sampleTime, *mix, *feedback;
 };
 } // namespace sst::conduit::polymetric_delay
 

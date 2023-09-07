@@ -218,7 +218,7 @@ struct ConduitPolysynth
     }
 
   protected:
-    std::unique_ptr<juce::Component> createEditor();
+    std::unique_ptr<juce::Component> createEditor() override;
 
     // This is an API point the editor can call back to request the host to flush
     // bound by a lambda to the editor. For a technical template reason its implemented

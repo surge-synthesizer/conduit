@@ -22,17 +22,19 @@ namespace details
 struct Implementor;
 }
 
+struct EditorProvider
+{
+    virtual ~EditorProvider() = default;
+    virtual std::unique_ptr<juce::Component> createEditor() = 0;
+    virtual bool registerOrUnregisterTimer(clap_id &, int, bool) = 0;
+};
 struct ClapJuceShim
 {
-
-    ClapJuceShim(std::function<std::unique_ptr<juce::Component>()> createEditor,
-                 std::function<bool(clap_id &, int, bool)> registerOrUnregisterTimer);
+    ClapJuceShim(EditorProvider *editorProvider);
     ~ClapJuceShim();
 
     void setResizable(bool b) { resizable = b; }
 
-    std::function<std::unique_ptr<juce::Component>()> createEditor;
-    std::function<bool(clap_id &, int, bool)> registerOrUnregisterTimer;
     std::unique_ptr<details::Implementor> impl;
     bool resizable{false};
 
@@ -57,6 +59,8 @@ struct ClapJuceShim
     void onTimer(clap_id timerId) noexcept;
 
 #endif
+
+    EditorProvider *editorProvider;
 };
 } // namespace sst::clap_juce_shim
 

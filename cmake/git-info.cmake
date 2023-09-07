@@ -1,5 +1,5 @@
-add_custom_command(
-        OUTPUT ${CMAKE_BINARY_DIR}/geninclude/version.cpp
+add_custom_target(conduit-generate-version-info
+        BYPRODUCTS ${CMAKE_BINARY_DIR}/geninclude/version.cpp
         DEPENDS ${CMAKE_SOURCE_DIR}/cmake/version.h
         ${CMAKE_SOURCE_DIR}/cmake/version.cpp.in
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -19,5 +19,7 @@ add_custom_command(
 add_library(conduit-version-info)
 target_sources(conduit-version-info PRIVATE ${CMAKE_BINARY_DIR}/geninclude/version.cpp)
 target_include_directories(conduit-version-info PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+target_link_libraries(conduit-version-info)
+add_dependencies(conduit-version-info conduit-generate-version-info)
 
 

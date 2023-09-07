@@ -18,9 +18,6 @@
 #include <cmath>
 #include <cstring>
 
-// FIXME jsut for now need juce component reference for unique ptr
-#include <juce_gui_basics/juce_gui_basics.h>
-
 #include <iomanip>
 #include <locale>
 
@@ -147,23 +144,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
 
     terminatedVoices.reserve(max_voices * 4);
 
-    auto rut = [this](clap_id &id, int ms, bool reg) {
-#if JUCE_LINUX
-        if (!_host.canUseTimerSupport())
-            return false;
-        if (reg)
-        {
-            _host.timerSupportRegister(ms, &id);
-        }
-        else
-        {
-            _host.timerSupportUnregister(id);
-        }
-#endif
-        return true;
-    };
-    clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(
-        [this]() { return createEditor(); }, rut);
+    clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
     clapJuceShim->setResizable(true);
 }
 ConduitPolysynth::~ConduitPolysynth()
