@@ -14,10 +14,8 @@
  */
 
 #include "polysynth.h"
-#include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "sst/jucegui/style/StyleSheet.h"
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
@@ -104,7 +102,7 @@ std::unique_ptr<juce::Component> ConduitPolysynth::createEditor()
     uiComms.refreshUIValues = true;
     auto innards =
         std::make_unique<sst::conduit::polysynth::editor::ConduitPolysynthEditor>(uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase>();
+    auto editor = std::make_unique<conduit::shared::EditorBase>(desc.name, desc.id);
     editor->setContentComponent(std::move(innards));
 
     return editor;

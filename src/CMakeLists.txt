@@ -8,6 +8,8 @@ target_compile_definitions(conduit-shared PUBLIC -DCONDUIT_SOURCE_DIR=\"${CONDUI
 target_link_libraries(conduit-shared PUBLIC
         clap
         clap-helpers
+        conduit-resources
+        conduit-version-info
         fmt
         tinyxml
         readerwriterqueue

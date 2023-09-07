@@ -1,0 +1,39 @@
+/*
+** This file is rebuilt and substitited every time you run a build.
+** Things which need to be per-build should be defined here, declared
+** in the version.h header, and then used wherever you want
+*/
+#include <version.h>
+
+// clang-format off
+namespace sst::conduit
+{
+const char *build::MajorVersionStr = "@CONDUIT_MAJOR_VERSION@";
+const int build::MajorVersionInt = @CONDUIT_MAJOR_VERSION@;
+
+const char *build::SubVersionStr = "@CONDUIT_SUB_VERSION@";
+const int build::SubVersionInt = @CONDUIT_SUB_VERSION@;
+
+const char *build::ReleaseNumberStr = "@CONDUIT_RELEASE_NUMBER@";
+const char *build::ReleaseStr = "@CONDUIT_RELEASE_VERSION@";
+
+const char *build::BuildNumberStr =
+    "@CONDUIT_BUILD_HASH@"; // Build number to be sure that each result could identified.
+
+const char *build::FullVersionStr = "@CONDUIT_FULL_VERSION@";
+const char *build::BuildHost = "@CONDUIT_BUILD_FQDN@";
+const char *build::BuildArch = "@CONDUIT_BUILD_ARCH@";
+const char *build::BuildCompiler = "@CMAKE_CXX_COMPILER_ID@-@CMAKE_CXX_COMPILER_VERSION@";
+
+const char *build::BuildLocation = "@CONDUIT_BUILD_LOCATION@";
+
+const char *build::BuildDate = "@CONDUIT_BUILD_DATE@";
+const char *build::BuildTime = "@CONDUIT_BUILD_TIME@";
+const char *build::BuildYear = "@CONDUIT_BUILD_YEAR@";
+
+const char *build::GitHash = "@GIT_COMMIT_HASH@";
+const char *build::GitBranch = "@GIT_BRANCH@";
+
+const char *build::CMAKE_INSTALL_PREFIX = "@CMAKE_INSTALL_PREFIX@";
+} // namespace scxt
+//clang-format on

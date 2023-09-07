@@ -5,7 +5,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "Build for 10.1")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-project(conduit VERSION 0.9.0 LANGUAGES C CXX)
+project(conduit VERSION 0.1.0 LANGUAGES C CXX)
 
 if (APPLE)
     enable_language(OBJC)
@@ -46,6 +46,11 @@ set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
 add_subdirectory(libs/clap-wrapper)
 
 set(CONDUIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE STRING "Top level source")
+
+include(cmake/CmakeRC.cmake)
+add_subdirectory(resources)
+
+include(cmake/git-info.cmake)
 
 add_subdirectory(src)
 
