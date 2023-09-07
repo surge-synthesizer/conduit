@@ -869,13 +869,5 @@ bool ConduitPolysynth::stateLoad(const clap_istream *stream) noexcept
 }
 #endif
 
-/*
- * A simple passthrough. Put it here to allow the template mechanics to see the impl.
- */
-void ConduitPolysynth::editorParamsFlush()
-{
-    if (_host.canUseParams())
-        _host.paramsRequestFlush();
-}
 
 } // namespace sst::conduit::polysynth

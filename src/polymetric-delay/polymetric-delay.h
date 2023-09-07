@@ -78,9 +78,6 @@ struct ConduitPolymetricDelay
      */
 
     clap_process_status process(const clap_process *process) noexcept override;
-    void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override
-    {
-    }
     void handleInboundEvent(const clap_event_header_t *evt);
 
     bool startProcessing() noexcept override
@@ -108,11 +105,6 @@ struct ConduitPolymetricDelay
 
     std::unique_ptr<juce::Component> createEditor() override;
     std::atomic<bool> refreshUIValues{false};
-
-    // This is an API point the editor can call back to request the host to flush
-    // bound by a lambda to the editor. For a technical template reason its implemented
-    // (trivially) in clap-saw-demo.cpp not demo-editor
-    void editorParamsFlush() { return; }
 
   public:
     static constexpr uint32_t GUI_DEFAULT_W = 390, GUI_DEFAULT_H = 530;

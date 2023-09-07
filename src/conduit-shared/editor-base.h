@@ -109,6 +109,7 @@ template <typename T> struct EditorCommunicationsHandler
 
             f = fi;
             uic.fromUiQ.try_enqueue({FromUI::MType::ADJUST_VALUE, pid, f});
+            uic.requestHostParamFlush();
         }
         void setValueFromModel(const float &fi) override { f = fi; }
         float getDefaultValue() const override { return pDesc.defaultVal; }

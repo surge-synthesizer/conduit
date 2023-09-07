@@ -164,6 +164,23 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         }
     }
 
+  protected:
+
+    // This is an OK default implementation but you may want to replace it
+    void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override
+    {
+        auto sz = in->size(in);
+
+        for (auto e = 0U; e < sz; ++e)
+        {
+            auto nextEvent = in->get(in, e);
+            handleParamBaseEvents(nextEvent);
+        }
+
+        auto ct = handleEventsFromUIQueue(out);
+    }
+
+  public:
     static constexpr int streamingVersion{1};
     bool implementsState() const noexcept override { return true; }
     bool stateSave(const clap_ostream *ostream) noexcept override
@@ -334,6 +351,12 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         typename TConfig::DataCopyForUI dataCopyForUI;
 
         std::atomic<bool> refreshUIValues{false};
+
+        void requestHostParamFlush()
+        {
+            if (cp._host.canUseParams())
+                cp._host.paramsRequestFlush();
+        }
 
         // todo make this std optional I guess
         ParamDesc getParameterDescription(uint32_t id) const

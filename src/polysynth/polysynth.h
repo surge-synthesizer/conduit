@@ -220,11 +220,6 @@ struct ConduitPolysynth
   protected:
     std::unique_ptr<juce::Component> createEditor() override;
 
-    // This is an API point the editor can call back to request the host to flush
-    // bound by a lambda to the editor. For a technical template reason its implemented
-    // (trivially) in clap-saw-demo.cpp not demo-editor
-    void editorParamsFlush();
-
   public:
     static constexpr uint32_t GUI_DEFAULT_W = 390, GUI_DEFAULT_H = 530;
 
