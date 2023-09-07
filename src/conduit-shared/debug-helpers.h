@@ -18,6 +18,7 @@
 
 // These are just some macros I put in to trace certain lifecycle and value moments to stdout
 #include <iostream>
+#include <cstring>
 
 namespace sst::conduit::shared::details
 {

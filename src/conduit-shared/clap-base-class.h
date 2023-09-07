@@ -469,9 +469,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         return false;
     }
 
-    bool registerOrUnregisterTimer(clap_id &id, int i, bool b) override
+    bool registerOrUnregisterTimer(clap_id &id, int ms, bool reg) override
     {
-#if JUCE_LINUX
         if (!_host.canUseTimerSupport())
             return false;
         if (reg)
@@ -483,10 +482,6 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             _host.timerSupportUnregister(id);
         }
         return true;
-#else
-        id = 0;
-        return false;
-#endif
     };
 };
 } // namespace sst::conduit::shared

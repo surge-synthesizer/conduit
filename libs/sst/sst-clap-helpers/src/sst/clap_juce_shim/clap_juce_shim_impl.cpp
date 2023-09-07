@@ -69,7 +69,7 @@ bool ClapJuceShim::guiCreate(const char *api, bool isFloating) noexcept
     impl->guaranteeSetup();
 #if JUCE_LINUX
     idleTimerId = 0;
-    registerOrUnregisterTimer(idleTimerId, 1000/50, true);
+    editorProvider->registerOrUnregisterTimer(idleTimerId, 1000/50, true);
 #endif
 
     impl->guiInitializer = std::make_unique<juce::ScopedJuceInitialiser_GUI>();
@@ -88,7 +88,7 @@ void ClapJuceShim::guiDestroy() noexcept
 {
     TRACE;
 #if JUCE_LINUX
-    registerOrUnregisterTimer(idleTimerId, 0, false);
+    editorProvider->registerOrUnregisterTimer(idleTimerId, 0, false);
 #endif
 
     impl->guiParentAttached = false;
