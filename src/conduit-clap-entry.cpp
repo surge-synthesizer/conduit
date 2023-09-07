@@ -1,10 +1,16 @@
 /*
- * polysynth
- * https://github.com/surge-synthesizer/clap-saw-demo
+ * Conduit - a series of demonstration and fun plugins
  *
- * Copyright 2022 Paul Walker and others as listed in the git history
+ * Copyright 2023 Paul Walker and authors in github
  *
- * Released under the MIT License. See LICENSE.md for full text.
+ * This file you are viewing now is released under the
+ * MIT license, but the assembled program which results
+ * from compiling it has GPL3 dependencies, so the total
+ * program is a GPL3 program. More details to come.
+ *
+ * Basically before I give this to folks, document this bit and
+ * replace these headers
+ *
  */
 
 /*
@@ -28,7 +34,6 @@
 
 #include "polysynth/polysynth.h"
 #include "polymetric-delay/polymetric-delay.h"
-
 
 namespace sst::conduit::pluginentry
 {
@@ -69,13 +74,16 @@ const struct clap_plugin_factory conduit_polysynth_factory = {
     sst::conduit::pluginentry::clap_get_plugin_descriptor,
     sst::conduit::pluginentry::clap_create_plugin,
 };
-static const void *get_factory(const char *factory_id) { return (!strcmp(factory_id,CLAP_PLUGIN_FACTORY_ID)) ? &conduit_polysynth_factory : nullptr; }
+static const void *get_factory(const char *factory_id)
+{
+    return (!strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID)) ? &conduit_polysynth_factory : nullptr;
+}
 
 // clap_init and clap_deinit are required to be fast, but we have nothing we need to do here
 bool clap_init(const char *p) { return true; }
 void clap_deinit() {}
 
-} // namespace sst::conduit_polysynth::pluginentry
+} // namespace sst::conduit::pluginentry
 
 extern "C"
 {

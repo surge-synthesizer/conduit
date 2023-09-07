@@ -1,3 +1,17 @@
+/*
+ * Conduit - a series of demonstration and fun plugins
+ *
+ * Copyright 2023 Paul Walker and authors in github
+ *
+ * This file you are viewing now is released under the
+ * MIT license, but the assembled program which results
+ * from compiling it has GPL3 dependencies, so the total
+ * program is a GPL3 program. More details to come.
+ *
+ * Basically before I give this to folks, document this bit and
+ * replace these headers
+ *
+ */
 
 #include "polysynth.h"
 #include <juce_core/juce_core.h>
@@ -8,7 +22,6 @@
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
 #include "sst/jucegui/data/Continuous.h"
-
 
 namespace sst::conduit::polysynth::editor
 {
@@ -26,9 +39,7 @@ struct DataToQueueParam : jdat::ContinunousModulatable
     cps_t::paramIds pid;
     cps_t::ParamDesc pDesc{};
 
-    DataToQueueParam(uicomm_t &p,
-                     cps_t::paramIds pid)
-        : uic(p), pid(pid)
+    DataToQueueParam(uicomm_t &p, cps_t::paramIds pid) : uic(p), pid(pid)
     {
         pDesc = uic.getParameterDescription(pid);
     }
@@ -166,7 +177,6 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel
             }
             else
             {
-
             }
         }
     }
@@ -186,4 +196,4 @@ std::unique_ptr<juce::Component> ConduitPolysynth::createEditor()
     uiComms.refreshUIValues = true;
     return std::make_unique<sst::conduit::polysynth::editor::ConduitPolysynthEditor>(uiComms);
 }
-}
+} // namespace sst::conduit::polysynth

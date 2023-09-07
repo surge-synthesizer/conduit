@@ -1,9 +1,20 @@
-//
-// Created by Paul Walker on 9/6/23.
-//
+/*
+ * Conduit - a series of demonstration and fun plugins
+ *
+ * Copyright 2023 Paul Walker and authors in github
+ *
+ * This file you are viewing now is released under the
+ * MIT license, but the assembled program which results
+ * from compiling it has GPL3 dependencies, so the total
+ * program is a GPL3 program. More details to come.
+ *
+ * Basically before I give this to folks, document this bit and
+ * replace these headers
+ *
+ */
 
-#ifndef CONDUIT_CLAP_BASE_CLASS_H
-#define CONDUIT_CLAP_BASE_CLASS_H
+#ifndef CONDUIT_SRC_CONDUIT_SHARED_CLAP_BASE_CLASS_H
+#define CONDUIT_SRC_CONDUIT_SHARED_CLAP_BASE_CLASS_H
 
 #include <cstdint>
 #include <vector>
@@ -24,7 +35,8 @@
 
 namespace sst::conduit::shared
 {
-static constexpr clap::helpers::MisbehaviourHandler misLevel = clap::helpers::MisbehaviourHandler::Terminate;
+static constexpr clap::helpers::MisbehaviourHandler misLevel =
+    clap::helpers::MisbehaviourHandler::Terminate;
 static constexpr clap::helpers::CheckingLevel checkLevel = clap::helpers::CheckingLevel::Maximal;
 
 using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
@@ -40,11 +52,13 @@ struct EmptyPatchExtension
      */
 };
 
-template<typename T, typename TConfig>
-struct ClapBaseClass : public plugHelper_t
+template <typename T, typename TConfig> struct ClapBaseClass : public plugHelper_t
 {
-    ClapBaseClass(const clap_plugin_descriptor *desc, const clap_host *host) : plugHelper_t(desc, host), uiComms(*this) {}
-    
+    ClapBaseClass(const clap_plugin_descriptor *desc, const clap_host *host)
+        : plugHelper_t(desc, host), uiComms(*this)
+    {
+    }
+
     using ParamDesc = sst::basic_blocks::params::ParamMetaData;
     std::vector<ParamDesc> paramDescriptions;
     std::unordered_map<uint32_t, ParamDesc> paramDescriptionMap;
@@ -64,7 +78,7 @@ struct ClapBaseClass : public plugHelper_t
 
             patch.params[patchIdx] = pd.defaultVal;
 
-            patchIdx ++;
+            patchIdx++;
         }
         assert(paramDescriptionMap.size() == TConfig::nParams);
         assert(patchIdx == TConfig::nParams);
@@ -128,7 +142,6 @@ struct ClapBaseClass : public plugHelper_t
         return false;
     }
 
-
     struct Patch
     {
         float params[TConfig::nParams];
@@ -149,7 +162,6 @@ struct ClapBaseClass : public plugHelper_t
             to = &patch.params[ptpi->second];
         }
     }
-
 
     static constexpr int streamingVersion{1};
     bool implementsState() const noexcept override { return true; }
@@ -249,8 +261,7 @@ struct ClapBaseClass : public plugHelper_t
             return false;
         }
 
-
-        while(currParam)
+        while (currParam)
         {
             double value;
             int id;
@@ -280,8 +291,6 @@ struct ClapBaseClass : public plugHelper_t
 
         return true;
     }
-
-
 
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
@@ -369,7 +378,7 @@ struct ClapBaseClass : public plugHelper_t
             }
             case FromUI::ADJUST_VALUE:
             {
-                adjustedCount ++;
+                adjustedCount++;
                 // So set my value
                 *paramToValue[r.id] = r.value;
 
@@ -411,7 +420,7 @@ struct ClapBaseClass : public plugHelper_t
         if (evt->space_id != CLAP_CORE_EVENT_SPACE_ID)
             return false;
 
-        switch(evt->type)
+        switch (evt->type)
         {
         case CLAP_EVENT_PARAM_VALUE:
         {
@@ -436,6 +445,6 @@ struct ClapBaseClass : public plugHelper_t
         return false;
     }
 };
-}
+} // namespace sst::conduit::shared
 
 #endif // CONDUIT_CLAP_BASE_CLASS_H

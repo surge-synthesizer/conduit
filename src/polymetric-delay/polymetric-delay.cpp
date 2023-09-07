@@ -1,6 +1,17 @@
-//
-// Created by Paul Walker on 9/6/23.
-//
+/*
+ * Conduit - a series of demonstration and fun plugins
+ *
+ * Copyright 2023 Paul Walker and authors in github
+ *
+ * This file you are viewing now is released under the
+ * MIT license, but the assembled program which results
+ * from compiling it has GPL3 dependencies, so the total
+ * program is a GPL3 program. More details to come.
+ *
+ * Basically before I give this to folks, document this bit and
+ * replace these headers
+ *
+ */
 
 #include "polymetric-delay.h"
 
@@ -18,9 +29,9 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
                                "The Conduit Polymetric Delay is a work in progress",
                                features};
 
-
 ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
-    : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay, ConduitPolymetricDelayConfig>(&desc, host)
+    : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay, ConduitPolymetricDelayConfig>(
+          &desc, host)
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE;
@@ -39,12 +50,10 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
     memset(delayBuffer, 0, sizeof(delayBuffer));
 }
 
-ConduitPolymetricDelay::~ConduitPolymetricDelay()
-{
+ConduitPolymetricDelay::~ConduitPolymetricDelay() {}
 
-}
-
-bool ConduitPolymetricDelay::audioPortsInfo(uint32_t index, bool isInput, clap_audio_port_info *info) const noexcept
+bool ConduitPolymetricDelay::audioPortsInfo(uint32_t index, bool isInput,
+                                            clap_audio_port_info *info) const noexcept
 {
     static constexpr uint32_t inId{16}, outId{72};
     if (isInput)
@@ -78,7 +87,7 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
     float **out = process->audio_outputs[0].data32;
     auto ochans = process->audio_outputs->channel_count;
 
-    float ** const in = process->audio_inputs[0].data32;
+    float **const in = process->audio_inputs[0].data32;
     auto ichans = process->audio_inputs->channel_count;
 
     handleEventsFromUIQueue(process->out_events);
@@ -98,7 +107,7 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
         nextEvent = ev->get(ev, nextEventIndex);
     }
 
-    for (int i=0; i<process->frames_count; ++i)
+    for (int i = 0; i < process->frames_count; ++i)
     {
         while (nextEvent && nextEvent->time == i)
         {
@@ -110,7 +119,7 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
                 nextEvent = ev->get(ev, nextEventIndex);
         }
 
-        for (int c=0; c<chans; ++c)
+        for (int c = 0; c < chans; ++c)
         {
             auto rp = (wp + bufSize + (int)patch.params[0]) & (bufSize - 1);
             out[c][i] = in[c][i] * 0.9 + delayBuffer[c][rp] * 0.4;
@@ -131,4 +140,4 @@ void ConduitPolymetricDelay::handleInboundEvent(const clap_event_header_t *evt)
 
     // Other events just get dropped right now
 }
-}
+} // namespace sst::conduit::polymetric_delay

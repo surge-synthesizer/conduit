@@ -1,14 +1,20 @@
 /*
- * ConduitPolysynth
- * https://github.com/surge-synthesizer/clap-saw-demo
+ * Conduit - a series of demonstration and fun plugins
  *
- * Copyright 2022 Paul Walker and others as listed in the git history
+ * Copyright 2023 Paul Walker and authors in github
  *
- * Released under the MIT License. See LICENSE.md for full text.
+ * This file you are viewing now is released under the
+ * MIT license, but the assembled program which results
+ * from compiling it has GPL3 dependencies, so the total
+ * program is a GPL3 program. More details to come.
+ *
+ * Basically before I give this to folks, document this bit and
+ * replace these headers
+ *
  */
 
-#ifndef CLAP_SAW_DEMO_H
-#define CLAP_SAW_DEMO_H
+#ifndef CONDUIT_SRC_POLYSYNTH_POLYSYNTH_H
+#define CONDUIT_SRC_POLYSYNTH_POLYSYNTH_H
 
 #include <iostream>
 #include <unordered_map>
@@ -55,8 +61,8 @@
 namespace sst::conduit::polysynth
 {
 /*
-     * This static (defined in the cpp file) allows us to present a name, feature set,
-     * url etc... and is consumed by clap-saw-demo-pluginentry.cpp
+ * This static (defined in the cpp file) allows us to present a name, feature set,
+ * url etc... and is consumed by clap-saw-demo-pluginentry.cpp
  */
 extern clap_plugin_descriptor desc;
 static constexpr int nParams{10};
@@ -212,7 +218,6 @@ struct ConduitPolysynth
     }
 
   protected:
-
     std::unique_ptr<juce::Component> createEditor();
 
     // This is an API point the editor can call back to request the host to flush
@@ -228,13 +233,12 @@ struct ConduitPolysynth
      * outlined above.
      */
 
-    private:
-
+  private:
     // These items are ONLY read and written on the audio thread, so they
     // are safe to be non-atomic doubles. We keep a map to locate them
     // for parameter updates.
-    float * unisonCount, *unisonSpread, *oscDetune, *cutoff, *resonance,
-        *ampAttack, *ampRelease, *ampIsGate, *preFilterVCA, *filterMode;
+    float *unisonCount, *unisonSpread, *oscDetune, *cutoff, *resonance, *ampAttack, *ampRelease,
+        *ampIsGate, *preFilterVCA, *filterMode;
 
     typedef std::unordered_map<int, int> PatchPluginExtension;
 
@@ -243,7 +247,5 @@ struct ConduitPolysynth
     std::vector<std::tuple<int, int, int, int>> terminatedVoices; // that's PCK ID
 };
 } // namespace sst::conduit::polysynth
-
-
 
 #endif

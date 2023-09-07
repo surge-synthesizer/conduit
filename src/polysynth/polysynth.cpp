@@ -1,7 +1,16 @@
 /*
- * ConduitPolysynth is Free and Open Source released under the MIT license
+ * Conduit - a series of demonstration and fun plugins
  *
- * Copright (c) 2021, Paul Walker
+ * Copyright 2023 Paul Walker and authors in github
+ *
+ * This file you are viewing now is released under the
+ * MIT license, but the assembled program which results
+ * from compiling it has GPL3 dependencies, so the total
+ * program is a GPL3 program. More details to come.
+ *
+ * Basically before I give this to folks, document this bit and
+ * replace these headers
+ *
  */
 
 #include "polysynth.h"
@@ -48,25 +57,23 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withFlags(steppedFlag)
                                     .withLinearScaleFormatting("voices"));
     paramDescriptions.push_back(ParamDesc()
-                                .asFloat()
-                                .withID(pmUnisonSpread)
-                                .withName("Unison Spread")
-                                .withGroupName("Oscillator")
-                                .withLinearScaleFormatting("cents")
-                                .withRange(0,100)
-                                .withDefault(10)
-                                .withFlags(modFlag)
-                                );
+                                    .asFloat()
+                                    .withID(pmUnisonSpread)
+                                    .withName("Unison Spread")
+                                    .withGroupName("Oscillator")
+                                    .withLinearScaleFormatting("cents")
+                                    .withRange(0, 100)
+                                    .withDefault(10)
+                                    .withFlags(modFlag));
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmOscDetune)
                                     .withName("Unison Detune")
                                     .withGroupName("Oscillator")
                                     .withLinearScaleFormatting("cents")
-                                    .withRange(-200,200)
+                                    .withRange(-200, 200)
                                     .withDefault(0)
-                                    .withFlags(modFlag)
-                                    );
+                                    .withFlags(modFlag));
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmAmpAttack)
@@ -123,8 +130,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withID(pmFilterMode)
                                     .withName("Filter Type")
                                     .withGroupName("Filter")
-                                    .withFlags(steppedFlag)
-                                );
+                                    .withFlags(steppedFlag));
 
     configureParams();
 
@@ -141,8 +147,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
 
     terminatedVoices.reserve(max_voices * 4);
 
-    auto rut = [this](clap_id &id, int ms, bool reg)
-    {
+    auto rut = [this](clap_id &id, int ms, bool reg) {
 #if JUCE_LINUX
         if (!_host.canUseTimerSupport())
             return false;
@@ -157,8 +162,8 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
 #endif
         return true;
     };
-    clapJuceShim =
-        std::make_unique<sst::clap_juce_shim::ClapJuceShim>([this]() { return createEditor(); }, rut);
+    clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(
+        [this]() { return createEditor(); }, rut);
     clapJuceShim->setResizable(true);
 }
 ConduitPolysynth::~ConduitPolysynth()
@@ -169,14 +174,13 @@ ConduitPolysynth::~ConduitPolysynth()
         guiDestroy();
 }
 
-
 /*
  * Stereo out, Midi in, in a pretty obvious way.
  * The only trick is the idi in also has NOTE_DIALECT_CLAP which provides us
  * with options on note expression and the like.
  */
 bool ConduitPolysynth::audioPortsInfo(uint32_t index, bool isInput,
-                               clap_audio_port_info *info) const noexcept
+                                      clap_audio_port_info *info) const noexcept
 {
     if (isInput || index != 0)
         return false;
@@ -191,7 +195,7 @@ bool ConduitPolysynth::audioPortsInfo(uint32_t index, bool isInput,
 }
 
 bool ConduitPolysynth::notePortsInfo(uint32_t index, bool isInput,
-                              clap_note_port_info *info) const noexcept
+                                     clap_note_port_info *info) const noexcept
 {
     if (isInput)
     {
@@ -705,7 +709,8 @@ void ConduitPolysynth::handleNoteOff(int port_index, int channel, int n)
     }
 }
 
-void ConduitPolysynth::activateVoice(SawDemoVoice &v, int port_index, int channel, int key, int noteid)
+void ConduitPolysynth::activateVoice(SawDemoVoice &v, int port_index, int channel, int key,
+                                     int noteid)
 {
     v.unison = std::max(1, std::min(7, (int)*unisonCount));
     v.filterMode = (int)static_cast<int>(*filterMode);
@@ -739,7 +744,8 @@ void ConduitPolysynth::activateVoice(SawDemoVoice &v, int port_index, int channe
  * result in this being called on the main thread, and generating all the appropriate
  * param updates.
  */
-void ConduitPolysynth::paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept
+void ConduitPolysynth::paramsFlush(const clap_input_events *in,
+                                   const clap_output_events *out) noexcept
 {
     auto sz = in->size(in);
 
@@ -754,7 +760,6 @@ void ConduitPolysynth::paramsFlush(const clap_input_events *in, const clap_outpu
 
     if (ct)
         pushParamsToVoices();
-
 
     // We will never generate a note end event with processing active, and we have no midi
     // output, so we are done.
@@ -788,7 +793,6 @@ float ConduitPolysynth::scaleTimeParamToSeconds(float param)
     auto res = powf(2.f, scaleTime);
     return res;
 }
-
 
 #if 0
 bool ConduitPolysynth::stateSave(const clap_ostream *stream) noexcept
@@ -893,4 +897,4 @@ void ConduitPolysynth::editorParamsFlush()
         _host.paramsRequestFlush();
 }
 
-} // namespace sst::conduit_polysynth
+} // namespace sst::conduit::polysynth

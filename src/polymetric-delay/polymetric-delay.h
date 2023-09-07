@@ -1,10 +1,20 @@
-//
-// Created by Paul Walker on 9/6/23.
-//
+/*
+ * Conduit - a series of demonstration and fun plugins
+ *
+ * Copyright 2023 Paul Walker and authors in github
+ *
+ * This file you are viewing now is released under the
+ * MIT license, but the assembled program which results
+ * from compiling it has GPL3 dependencies, so the total
+ * program is a GPL3 program. More details to come.
+ *
+ * Basically before I give this to folks, document this bit and
+ * replace these headers
+ *
+ */
 
-#ifndef CONDUIT_POLYMETRIC_DELAY_H
-#define CONDUIT_POLYMETRIC_DELAY_H
-
+#ifndef CONDUIT_SRC_POLYMETRIC_DELAY_POLYMETRIC_DELAY_H
+#define CONDUIT_SRC_POLYMETRIC_DELAY_POLYMETRIC_DELAY_H
 
 #include <clap/helpers/plugin.hh>
 #include <atomic>
@@ -22,7 +32,6 @@ namespace sst::conduit::polymetric_delay
 extern clap_plugin_descriptor desc;
 static constexpr int nParams = 1;
 
-
 struct ConduitPolymetricDelayConfig
 {
     static constexpr int nParams{sst::conduit::polymetric_delay::nParams};
@@ -35,7 +44,6 @@ struct ConduitPolymetricDelayConfig
 
     static clap_plugin_descriptor *getDescription() { return &desc; }
 };
-
 
 struct ConduitPolymetricDelay
     : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay, ConduitPolymetricDelayConfig>
@@ -68,9 +76,10 @@ struct ConduitPolymetricDelay
      */
 
     clap_process_status process(const clap_process *process) noexcept override;
-    void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override {}
+    void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override
+    {
+    }
     void handleInboundEvent(const clap_event_header_t *evt);
-
 
     bool startProcessing() noexcept override
     {
@@ -86,13 +95,12 @@ struct ConduitPolymetricDelay
 
     struct DataCopyForUI
     {
-
     };
 
     typedef std::unordered_map<int, int> PatchPluginExtension;
-  protected:
 
-    static constexpr uint32_t bufSize{1<<16};
+  protected:
+    static constexpr uint32_t bufSize{1 << 16};
     float delayBuffer[2][bufSize];
     uint32_t wp{0};
 
@@ -107,6 +115,6 @@ struct ConduitPolymetricDelay
   public:
     static constexpr uint32_t GUI_DEFAULT_W = 390, GUI_DEFAULT_H = 530;
 };
-}
+} // namespace sst::conduit::polymetric_delay
 
 #endif // CONDUIT_POLYMETRIC_DELAY_H

@@ -1,10 +1,16 @@
 /*
- * ConduitPolysynth
- * https://github.com/surge-synthesizer/clap-saw-demo
+ * Conduit - a series of demonstration and fun plugins
  *
- * Copyright 2022 Paul Walker and others as listed in the git history
+ * Copyright 2023 Paul Walker and authors in github
  *
- * Released under the MIT License. See LICENSE.md for full text.
+ * This file you are viewing now is released under the
+ * MIT license, but the assembled program which results
+ * from compiling it has GPL3 dependencies, so the total
+ * program is a GPL3 program. More details to come.
+ *
+ * Basically before I give this to folks, document this bit and
+ * replace these headers
+ *
  */
 
 #include "saw-voice.h"
@@ -252,4 +258,4 @@ void SawDemoVoice::StereoSimperSVF::init()
         ic2eq[c] = 0.f;
     }
 }
-} // namespace sst::conduit_polysynth
+} // namespace sst::conduit::polysynth
