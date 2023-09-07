@@ -112,11 +112,12 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
 
         for (int c=0; c<chans; ++c)
         {
-            delayBuffer[c][wp] = in[c][i];
             auto rp = (wp + bufSize + (int)patch.params[0]) & (bufSize - 1);
-            wp = (wp + 1) & (bufSize - 1);
-            out[c][i] = in[c][i] * 0.7 + delayBuffer[c][rp] * 0.3;
+            out[c][i] = in[c][i] * 0.9 + delayBuffer[c][rp] * 0.4;
+
+            delayBuffer[c][wp] = in[c][i] + delayBuffer[c][rp] * 0.1;
         }
+        wp = (wp + 1) & (bufSize - 1);
     }
     return CLAP_PROCESS_CONTINUE;
 }

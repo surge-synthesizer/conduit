@@ -7,6 +7,7 @@ target_link_libraries(conduit-shared PUBLIC
         clap
         clap-helpers
         fmt
+        tinyxml
         readerwriterqueue
         juce::juce_gui_basics
         sst::clap_juce_shim

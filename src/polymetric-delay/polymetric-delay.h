@@ -32,6 +32,8 @@ struct ConduitPolymetricDelayConfig
         std::atomic<uint32_t> updateCount{0};
         std::atomic<bool> isProcessing{false};
     };
+
+    static clap_plugin_descriptor *getDescription() { return &desc; }
 };
 
 
@@ -64,9 +66,6 @@ struct ConduitPolymetricDelay
      * improve it, PRs welcome! But it's just like any other read-and-write-goop
      * from-a-stream api really.
      */
-    //bool implementsState() const noexcept override { return true; }
-    //bool stateSave(const clap_ostream *) noexcept override;
-    //bool stateLoad(const clap_istream *) noexcept override;
 
     clap_process_status process(const clap_process *process) noexcept override;
     void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override {}

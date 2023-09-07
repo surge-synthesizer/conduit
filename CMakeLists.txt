@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "Build for 10.1")
+# I don't want to deal with filesystem from two places right now
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "Build for 10.1")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 project(conduit VERSION 0.9.0 LANGUAGES C CXX)
@@ -37,6 +38,8 @@ add_clap_juce_shim(JUCE_PATH ${JUCE_PATH})
 
 add_subdirectory(libs/sst/sst-jucegui)
 add_subdirectory(libs/sst/sst-basic-blocks)
+set(SST_PLUGININFRA_FILESYSTEM_FORCE_PLATFORM TRUE CACHE BOOL "Use System FS")
+add_subdirectory(libs/sst/sst-plugininfra)
 
 set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")

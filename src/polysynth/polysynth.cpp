@@ -12,12 +12,12 @@
 // FIXME jsut for now need juce component reference for unique ptr
 #include <juce_gui_basics/juce_gui_basics.h>
 
-
 #include <iomanip>
 #include <locale>
 
 namespace sst::conduit::polysynth
 {
+
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
 clap_plugin_descriptor desc = {CLAP_VERSION,
                                "org.surge-synth-team.conduit.polysynth",
@@ -33,8 +33,6 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(&desc, host)
 {
-    CNDOUT << "Constructing ConduitPolysynth" << std::endl;
-
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE | CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID |
                    CLAP_PARAM_IS_MODULATABLE_PER_KEY;
@@ -131,7 +129,6 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     configureParams();
 
     attachParam(pmUnisonCount, unisonCount);
-    CNDOUT << "Post Attach " << *unisonCount << std::endl;
     attachParam(pmUnisonSpread, unisonSpread);
     attachParam(pmOscDetune, oscDetune);
     attachParam(pmCutoff, cutoff);

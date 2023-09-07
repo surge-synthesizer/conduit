@@ -13,7 +13,10 @@
 
 #include <readerwriterqueue.h>
 
+#include <tinyxml/tinyxml.h>
+
 #include <clap/helpers/plugin.hh>
+#include <clap/ext/state.h>
 
 #include <sst/basic-blocks/params/ParamMetadata.h>
 #include <sst/clap_juce_shim/clap_juce_shim.h>
@@ -31,8 +34,9 @@ struct EmptyPatchExtension
     static constexpr bool hasExtension{false};
 
     /*
-     void toStream(const clap_ostream *stream) noexcept {}
-    void fromStream(const clap_istream *stream) noexcept {}
+     void toXml
+    void fromXml
+     document this if I use it
      */
 };
 
@@ -59,7 +63,6 @@ struct ClapBaseClass : public plugHelper_t
             paramToValue[pd.id] = &(patch.params[patchIdx]);
 
             patch.params[patchIdx] = pd.defaultVal;
-            CNDOUT << CNDVAR(patch.params[patchIdx]) << CNDVAR(patchIdx) << CNDVAR(pd.id) << std::endl;
 
             patchIdx ++;
         }
@@ -87,7 +90,6 @@ struct ClapBaseClass : public plugHelper_t
     bool paramsValue(clap_id paramId, double *value) noexcept override
     {
         *value = *paramToValue[paramId];
-        CNDOUT << paramId << " " << *value << std::endl;
         return true;
     }
     bool paramsValueToText(clap_id paramId, double value, char *display,
@@ -147,6 +149,138 @@ struct ClapBaseClass : public plugHelper_t
             to = &patch.params[ptpi->second];
         }
     }
+
+
+    static constexpr int streamingVersion{1};
+    bool implementsState() const noexcept override { return true; }
+    bool stateSave(const clap_ostream *ostream) noexcept override
+    {
+        TiXmlDocument document;
+
+        TiXmlElement conduit("conduit");
+        conduit.SetAttribute("streamingVersion", streamingVersion);
+        conduit.SetAttribute("plugin_id", TConfig::getDescription()->id);
+
+        TiXmlElement paramel("params");
+        for (const auto &a : paramDescriptions)
+        {
+            TiXmlElement par("param");
+            par.SetAttribute("id", a.id);
+            par.SetDoubleAttribute("value", *(paramToValue[a.id]));
+            par.SetAttribute("name", a.name); // just to debug;
+            paramel.InsertEndChild(par);
+        }
+        conduit.InsertEndChild(paramel);
+        document.InsertEndChild(conduit);
+
+        if constexpr (TConfig::PatchExtension::hasExtension)
+        {
+            TiXmlElement ext("extension");
+            if (!patch.extension.toXml(ext))
+                return false;
+        }
+
+        std::string xmlS;
+        xmlS << document;
+
+        auto c = xmlS.c_str();
+        auto s = xmlS.length() + 1; // write the null terminator
+        while (s > 0)
+        {
+            auto r = ostream->write(ostream, c, s);
+            if (r < 0)
+                return false;
+            s -= r;
+            c += r;
+        }
+        return true;
+    }
+    bool stateLoad(const clap_istream *istream) noexcept override
+    {
+        static constexpr uint32_t maxSize = 1 << 16, chunkSize = 1 << 8;
+        char buffer[maxSize];
+        char *bp = &(buffer[0]);
+        int64_t rd{0};
+        int64_t totalRd{0};
+
+        buffer[0] = 0;
+        while ((rd = istream->read(istream, bp, chunkSize)) > 0)
+        {
+            bp += rd;
+            totalRd += rd;
+            if (totalRd >= maxSize - chunkSize - 1)
+            {
+                CNDOUT << "Input byte stream larger than " << maxSize << "; Failing" << std::endl;
+                return false;
+            }
+        }
+
+        if (totalRd < maxSize)
+            buffer[totalRd] = 0;
+
+        auto xd = std::string(buffer);
+
+        TiXmlDocument document;
+        // I forget how to error check this.
+        document.Parse(xd.c_str());
+
+#define TINYXML_SAFE_TO_ELEMENT(expr) ((expr) ? (expr)->ToElement() : nullptr)
+
+        auto conduit = TINYXML_SAFE_TO_ELEMENT(document.FirstChild("conduit"));
+        if (!conduit)
+        {
+            CNDOUT << "Document doesn't have conduit top level note" << std::endl;
+            return false;
+        }
+
+        // TODO - check version and id
+
+        auto params = TINYXML_SAFE_TO_ELEMENT(conduit->FirstChild("params"));
+        if (!params)
+        {
+            CNDOUT << "Conduit doesn't have child note params" << std::endl;
+            return false;
+        }
+
+        auto currParam = TINYXML_SAFE_TO_ELEMENT(params->FirstChild("param"));
+        if (!currParam)
+        {
+            std::cout << "Params doesn't have first child param" << std::endl;
+            return false;
+        }
+
+
+        while(currParam)
+        {
+            double value;
+            int id;
+            if (currParam->QueryDoubleAttribute("value", &value) != TIXML_SUCCESS)
+            {
+                CNDOUT << "Param doesn't have value attribute" << std::endl;
+                return false;
+            }
+            if (currParam->QueryIntAttribute("id", &id) != TIXML_SUCCESS)
+            {
+                CNDOUT << "Param doesn't have ID attribute" << std::endl;
+                return false;
+            }
+
+            *paramToValue[(clap_id)id] = value;
+
+            currParam = TINYXML_SAFE_TO_ELEMENT(currParam->NextSiblingElement("param"));
+        }
+
+        if constexpr (TConfig::PatchExtension::hasExtension)
+        {
+            /*TiXmlElement ext("extension");
+            if (!patch.extension.toXml(ext))
+                return false;
+                */
+        }
+
+        return true;
+    }
+
 
 
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }

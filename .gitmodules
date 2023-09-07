@@ -22,3 +22,6 @@
 [submodule "libs/clap-wrapper"]
 	path = libs/clap-wrapper
 	url = https://github.com/free-audio/clap-wrapper
+[submodule "libs/sst/sst-plugininfra"]
+	path = libs/sst/sst-plugininfra
+	url = https://github.com/surge-synthesizer/sst-plugininfra

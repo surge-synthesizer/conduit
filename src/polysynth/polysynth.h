@@ -71,6 +71,8 @@ struct ConduitPolysynthConfig
         std::atomic<bool> isProcessing{false};
         std::atomic<int> polyphony{0};
     };
+
+    static clap_plugin_descriptor *getDescription() { return &desc; }
 };
 
 struct ConduitPolysynth
