@@ -22,6 +22,7 @@
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
 #include "sst/jucegui/data/Continuous.h"
+#include "conduit-shared/editor-base.h"
 
 namespace sst::conduit::polysynth::editor
 {
@@ -118,17 +119,6 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel
 
     ConduitPolysynthEditor(uicomm_t &p) : uic(p)
     {
-        sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
-        const auto &base = sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
-            sst::jucegui::style::StyleSheet::DARK);
-        base->setColour(jcmp::WindowPanel::Styles::styleClass,
-                        jcmp::WindowPanel::Styles::backgroundgradstart, juce::Colour(60, 60, 70));
-        base->setColour(jcmp::WindowPanel::Styles::styleClass,
-                        jcmp::WindowPanel::Styles::backgroundgradend, juce::Colour(20, 20, 30));
-        base->setColour(jcmp::BaseStyles::styleClass, jcmp::BaseStyles::regionBorder,
-                        juce::Colour(90, 90, 100));
-        setStyle(base);
-
         oscPanel = std::make_unique<jcmp::NamedPanel>("Oscillator");
         addAndMakeVisible(*oscPanel);
 
@@ -194,6 +184,10 @@ namespace sst::conduit::polysynth
 std::unique_ptr<juce::Component> ConduitPolysynth::createEditor()
 {
     uiComms.refreshUIValues = true;
-    return std::make_unique<sst::conduit::polysynth::editor::ConduitPolysynthEditor>(uiComms);
+    auto innards = std::make_unique<sst::conduit::polysynth::editor::ConduitPolysynthEditor>(uiComms);
+    auto editor = std::make_unique<conduit::shared::EditorBase>();
+    editor->setContentComponent(std::move(innards));
+
+    return editor;
 }
 } // namespace sst::conduit::polysynth

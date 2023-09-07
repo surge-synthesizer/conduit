@@ -1,6 +1,8 @@
 project(conduit-src)
 
-add_library(conduit-shared STATIC conduit-shared/shared-symbols.cpp)
+add_library(conduit-shared STATIC
+        conduit-shared/shared-symbols.cpp
+        conduit-shared/editor-base.cpp)
 target_include_directories(conduit-shared PUBLIC .)
 target_compile_definitions(conduit-shared PUBLIC -DCONDUIT_SOURCE_DIR=\"${CONDUIT_SOURCE_DIR}\")
 target_link_libraries(conduit-shared PUBLIC
