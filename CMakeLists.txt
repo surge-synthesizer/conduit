@@ -74,6 +74,13 @@ target_add_vst3_wrapper(TARGET ${VST3_TARGET}
         OUTPUT_NAME "Conduit"
         SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
         )
+if (WIN32)
+    # Question - do we want this default in the helpers
+    set_target_properties(${VST3_TARGET}
+            PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY VST3
+            )
+endif()
 if (${COPY_AFTER_BUILD})
     target_vst3_copy_after_build(TARGET ${VST3_TARGET})
 endif()

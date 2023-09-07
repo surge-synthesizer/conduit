@@ -163,7 +163,12 @@ function(target_library_make_clap)
         endif()
 
     else()
-        set_target_properties(${TCLP_TARGET} PROPERTIES OUTPUT_NAME ${TCLP_CLAP_NAME} SUFFIX ".clap" PREFIX "")
+        set_target_properties(${TCLP_TARGET}
+                PROPERTIES
+                OUTPUT_NAME ${TCLP_CLAP_NAME}
+                SUFFIX ".clap" PREFIX ""
+                LIBRARY_OUTPUT_DIRECTORY CLAP
+                )
     endif()
 endfunction(target_library_make_clap)
 
