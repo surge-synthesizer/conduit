@@ -72,23 +72,7 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
 
     memset(delayBuffer, 0, sizeof(delayBuffer));
 
-    auto rut = [this](clap_id &id, int ms, bool reg) {
-#if JUCE_LINUX
-        if (!_host.canUseTimerSupport())
-            return false;
-        if (reg)
-        {
-            _host.timerSupportRegister(ms, &id);
-        }
-        else
-        {
-            _host.timerSupportUnregister(id);
-        }
-#endif
-        return true;
-    };
     clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
-    //[this]() { return createEditor(); }, rut);
     clapJuceShim->setResizable(true);
 }
 
@@ -101,22 +85,26 @@ bool ConduitPolymetricDelay::audioPortsInfo(uint32_t index, bool isInput,
     if (isInput)
     {
         info->id = inId;
-        info->in_place_pair = outId;
+        info->in_place_pair = CLAP_INVALID_ID;
         strncpy(info->name, "main input", sizeof(info->name));
         info->flags = CLAP_AUDIO_PORT_IS_MAIN;
         info->channel_count = 2;
         info->port_type = CLAP_PORT_STEREO;
+
+        return true;
     }
-    if (isInput)
+    else
     {
         info->id = outId;
-        info->in_place_pair = inId;
+        info->in_place_pair = CLAP_INVALID_ID;
         strncpy(info->name, "main output", sizeof(info->name));
         info->flags = CLAP_AUDIO_PORT_IS_MAIN;
         info->channel_count = 2;
         info->port_type = CLAP_PORT_STEREO;
+
+        return true;
     }
-    return true;
+    return false;
 }
 
 clap_process_status ConduitPolymetricDelay::process(const clap_process *process) noexcept

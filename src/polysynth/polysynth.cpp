@@ -172,6 +172,7 @@ bool ConduitPolysynth::audioPortsInfo(uint32_t index, bool isInput,
     info->flags = CLAP_AUDIO_PORT_IS_MAIN;
     info->channel_count = 2;
     info->port_type = CLAP_PORT_STEREO;
+
     return true;
 }
 
