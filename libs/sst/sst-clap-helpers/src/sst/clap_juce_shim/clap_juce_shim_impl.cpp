@@ -25,7 +25,6 @@ struct Implementor
     {
         if (!guiInitializer)
         {
-            std::cout << "Creating SHGI" << std::endl;
             guiInitializer = std::make_unique<juce::ScopedJuceInitialiser_GUI>();
         }
     }
@@ -151,8 +150,6 @@ bool ClapJuceShim::guiGetSize(uint32_t *width, uint32_t *height) noexcept
         auto b = impl->editor->getBounds();
         *width = (uint32_t)b.getWidth();
         *height = (uint32_t)b.getHeight();
-        std::cout << __FILE__ << ":" << __LINE__ << " size is " << *width << " x " << *height
-                  << std::endl;
         return true;
     }
     else

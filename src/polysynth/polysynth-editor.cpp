@@ -32,93 +32,31 @@ namespace jdat = sst::jucegui::data;
 using cps_t = sst::conduit::polysynth::ConduitPolysynth;
 using uicomm_t = cps_t::UICommunicationBundle;
 
-struct DataToQueueParam : jdat::ContinunousModulatable
-{
-    // TODO - this plus begin/end
-    // FIX - this can be queues only
-    uicomm_t &uic;
-    cps_t::paramIds pid;
-    cps_t::ParamDesc pDesc{};
-
-    DataToQueueParam(uicomm_t &p, cps_t::paramIds pid) : uic(p), pid(pid)
-    {
-        pDesc = uic.getParameterDescription(pid);
-    }
-    std::string getLabel() const override { return pDesc.name; }
-
-    float f{0.f};
-    float getValue() const override { return f; }
-    void setValueFromGUI(const float &fi) override
-    {
-        f = fi;
-        uic.fromUiQ.try_enqueue(
-            {sst::conduit::polysynth::ConduitPolysynth::FromUI::MType::ADJUST_VALUE,
-             sst::conduit::polysynth::ConduitPolysynth::paramIds::pmUnisonSpread, f});
-    }
-    void setValueFromModel(const float &fi) override { f = fi; }
-    float getDefaultValue() const override { return pDesc.defaultVal; }
-    float getMin() const override { return pDesc.minVal; }
-    float getMax() const override { return pDesc.maxVal; }
-
-    float getModulationValuePM1() const override { return 0; }
-    void setModulationValuePM1(const float &f) override {}
-    bool isModulationBipolar() const override { return false; }
-};
-
 struct ConduitPolysynthEditor;
 
 struct OscPanel : public juce::Component
 {
     uicomm_t &uic;
 
-    OscPanel(uicomm_t &p, ConduitPolysynthEditor &e) : uic(p)
-    {
-        oscUnisonSpread = std::make_unique<jcmp::Knob>();
-        addAndMakeVisible(*oscUnisonSpread);
-
-        oscUnisonSource = std::make_unique<DataToQueueParam>(
-            uic, sst::conduit::polysynth::ConduitPolysynth::paramIds::pmUnisonSpread);
-        oscUnisonSpread->setSource(oscUnisonSource.get());
-
-        oscUnisonSpread->onBeginEdit = [w = juce::Component::SafePointer(this)]() {
-            w->uic.fromUiQ.try_enqueue(
-                {sst::conduit::polysynth::ConduitPolysynth::FromUI::MType::BEGIN_EDIT,
-                 sst::conduit::polysynth::ConduitPolysynth::paramIds::pmUnisonSpread, 1});
-            std::cout << "onDragStart" << std::endl;
-        };
-        oscUnisonSpread->onEndEdit = [w = juce::Component::SafePointer(this)]() {
-            w->uic.fromUiQ.try_enqueue(
-                {sst::conduit::polysynth::ConduitPolysynth::FromUI::MType::END_EDIT,
-                 sst::conduit::polysynth::ConduitPolysynth::paramIds::pmUnisonSpread, 1});
-            std::cout << "onDragEnd" << std::endl;
-        };
-
-        registerDataSources(e);
-    }
-
+    OscPanel(uicomm_t &p, ConduitPolysynthEditor &e);
     ~OscPanel() { oscUnisonSpread->setSource(nullptr); }
 
     void resized() override { oscUnisonSpread->setBounds({40, 40, 90, 90}); }
 
-    void registerDataSources(ConduitPolysynthEditor &e);
     std::unique_ptr<jcmp::Knob> oscUnisonSpread;
-    std::unique_ptr<DataToQueueParam> oscUnisonSource;
 };
 
 struct ConduitPolysynthEditor : public jcmp::WindowPanel
 {
     uicomm_t &uic;
-
-    struct IdleTimer : juce::Timer
-    {
-        ConduitPolysynthEditor &jomp;
-        IdleTimer(ConduitPolysynthEditor &j) : jomp(j) {}
-        void timerCallback() override { jomp.onIdle(); }
-    };
-    std::unique_ptr<IdleTimer> idleTimer;
+    std::unique_ptr<sst::conduit::shared::EditorCommunicationsHandler<ConduitPolysynth>> comms;
 
     ConduitPolysynthEditor(uicomm_t &p) : uic(p)
     {
+        comms =
+            std::make_unique<sst::conduit::shared::EditorCommunicationsHandler<ConduitPolysynth>>(
+                p);
+
         oscPanel = std::make_unique<jcmp::NamedPanel>("Oscillator");
         addAndMakeVisible(*oscPanel);
 
@@ -130,11 +68,10 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel
 
         setSize(500, 400);
 
-        idleTimer = std::make_unique<IdleTimer>(*this);
-        idleTimer->startTimerHz(60);
+        comms->startProcessing();
     }
 
-    ~ConduitPolysynthEditor() { idleTimer->stopTimer(); }
+    ~ConduitPolysynthEditor() { comms->stopProcessing(); }
 
     std::unique_ptr<juce::Slider> unisonSpread;
 
@@ -147,44 +84,26 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel
 
     std::unique_ptr<jcmp::NamedPanel> vcfPanel;
     std::unique_ptr<jcmp::NamedPanel> oscPanel;
-
-    std::unordered_map<uint32_t, std::pair<juce::Component *, jdat::ContinunousModulatable *>>
-        dataTargets;
-
-    void onIdle()
-    {
-        sst::conduit::polysynth::ConduitPolysynth::ToUI r;
-        while (uic.toUiQ.try_dequeue(r))
-        {
-            if (r.type == sst::conduit::polysynth::ConduitPolysynth::ToUI::MType::PARAM_VALUE)
-            {
-                auto p = dataTargets.find(r.id);
-                if (p != dataTargets.end())
-                {
-                    p->second.second->setValueFromModel(r.value);
-                    p->second.first->repaint();
-                }
-            }
-            else
-            {
-            }
-        }
-    }
 };
 
-void OscPanel::registerDataSources(ConduitPolysynthEditor &e)
+OscPanel::OscPanel(sst::conduit::polysynth::editor::uicomm_t &p,
+                   sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+    : uic(p)
 {
-    // FIXME clean this up on dtor
-    e.dataTargets[sst::conduit::polysynth::ConduitPolysynth::pmUnisonSpread] = {
-        oscUnisonSpread.get(), oscUnisonSource.get()};
+    oscUnisonSpread = std::make_unique<jcmp::Knob>();
+    addAndMakeVisible(*oscUnisonSpread);
+
+    e.comms->attachContinuousToParam(oscUnisonSpread.get(), cps_t::paramIds::pmUnisonSpread);
 }
+
 } // namespace sst::conduit::polysynth::editor
 namespace sst::conduit::polysynth
 {
 std::unique_ptr<juce::Component> ConduitPolysynth::createEditor()
 {
     uiComms.refreshUIValues = true;
-    auto innards = std::make_unique<sst::conduit::polysynth::editor::ConduitPolysynthEditor>(uiComms);
+    auto innards =
+        std::make_unique<sst::conduit::polysynth::editor::ConduitPolysynthEditor>(uiComms);
     auto editor = std::make_unique<conduit::shared::EditorBase>();
     editor->setContentComponent(std::move(innards));
 

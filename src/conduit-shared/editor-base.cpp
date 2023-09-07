@@ -1,6 +1,17 @@
-//
-// Created by Paul Walker on 9/6/23.
-//
+/*
+ * Conduit - a series of demonstration and fun plugins
+ *
+ * Copyright 2023 Paul Walker and authors in github
+ *
+ * This file you are viewing now is released under the
+ * MIT license, but the assembled program which results
+ * from compiling it has GPL3 dependencies, so the total
+ * program is a GPL3 program. More details to come.
+ *
+ * Basically before I give this to folks, document this bit and
+ * replace these headers
+ *
+ */
 
 #include "editor-base.h"
 #include "sst/jucegui/style/StyleSheet.h"
@@ -25,6 +36,8 @@ struct Background : public jcmp::WindowPanel
                         jcmp::WindowPanel::Styles::backgroundgradend, juce::Colour(20, 20, 30));
         base->setColour(jcmp::BaseStyles::styleClass, jcmp::BaseStyles::regionBorder,
                         juce::Colour(90, 90, 100));
+        base->setColour(jcmp::NamedPanel::Styles::styleClass,
+                        jcmp::NamedPanel::Styles::regionLabelCol, juce::Colour(210, 210, 230));
         setStyle(base);
     }
     void resized() override
@@ -56,8 +69,5 @@ void EditorBase::setContentComponent(std::unique_ptr<juce::Component> c)
     setSize(b.getWidth(), b.getHeight());
 }
 
-void EditorBase::resized()
-{
-    container->setBounds(getLocalBounds());
-}
-}
+void EditorBase::resized() { container->setBounds(getLocalBounds()); }
+} // namespace sst::conduit::shared
