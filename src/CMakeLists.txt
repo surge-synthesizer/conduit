@@ -21,10 +21,12 @@ target_link_libraries(conduit-shared PUBLIC
 add_subdirectory(polysynth)
 add_subdirectory(polymetric-delay)
 add_subdirectory(chord-memory)
+add_subdirectory(ring-modulator)
 
 add_library(conduit-impl INTERFACE)
 target_link_libraries(conduit-impl INTERFACE
         polysynth
         polymetric-delay
         chord-memory
+        ring-modulator
         )

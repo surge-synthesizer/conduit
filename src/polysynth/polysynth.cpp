@@ -21,18 +21,20 @@
 #include <iomanip>
 #include <locale>
 
+#include "version.h"
+
 namespace sst::conduit::polysynth
 {
 
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
 clap_plugin_descriptor desc = {CLAP_VERSION,
                                "org.surge-synth-team.conduit.polysynth",
-                               "Conduit PolySynth",
+                               "Conduit Polysynth",
                                "Surge Synth Team",
                                "https://surge-synth-team.org",
                                "",
                                "",
-                               "0.1.0",
+                               sst::conduit::build::FullVersionStr,
                                "The Conduit Polysynth is a work in progress",
                                features};
 

@@ -35,11 +35,12 @@
 #include "polysynth/polysynth.h"
 #include "polymetric-delay/polymetric-delay.h"
 #include "chord-memory/chord-memory.h"
+#include "ring-modulator/ring-modulator.h"
 
 namespace sst::conduit::pluginentry
 {
 
-uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 3; }
+uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 4; }
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
     CNDOUT << "Asking for clap plugin number " << w << std::endl;
@@ -49,6 +50,8 @@ const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_facto
         return &polymetric_delay::desc;
     if (w == 2)
         return &chord_memory::desc;
+    if (w == 3)
+        return &ring_modulator::desc;
 
     CNDOUT << "Clap Plugin not found at " << w << std::endl;
     return nullptr;
@@ -71,6 +74,11 @@ static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const
     if (strcmp(plugin_id, chord_memory::desc.id) == 0)
     {
         auto p = new chord_memory::ConduitChordMemory(host);
+        return p->clapPlugin();
+    }
+    if (strcmp(plugin_id, ring_modulator::desc.id) == 0)
+    {
+        auto p = new ring_modulator::ConduitRingModulator(host);
         return p->clapPlugin();
     }
 

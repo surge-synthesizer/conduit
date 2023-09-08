@@ -13,84 +13,72 @@
  *
  */
 
-#include "polymetric-delay.h"
+#include "ring-modulator.h"
+#include "juce_gui_basics/juce_gui_basics.h"
 #include "version.h"
 
-namespace sst::conduit::polymetric_delay
+namespace sst::conduit::ring_modulator
 {
 const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
 clap_plugin_descriptor desc = {CLAP_VERSION,
-                               "org.surge-synth-team.conduit.polymetric-delay",
-                               "Conduit Polymetric Delay",
+                               "org.surge-synth-team.conduit.ring-modulator",
+                               "Conduit Ring Modulator",
                                "Surge Synth Team",
                                "https://surge-synth-team.org",
                                "",
                                "",
                                sst::conduit::build::FullVersionStr,
-                               "The Conduit Polymetric Delay is a work in progress",
+                               "The Conduit RingModulator is a work in progress",
                                features};
 
-ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
-    : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay, ConduitPolymetricDelayConfig>(
-          &desc, host)
+ConduitRingModulator::ConduitRingModulator(const clap_host *host)
+    : sst::conduit::shared::ClapBaseClass<ConduitRingModulator, ConduitRingModulatorConfig>(&desc,
+                                                                                            host)
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
-    auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE;
-    auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
-
-    paramDescriptions.push_back(ParamDesc()
-                                    .asFloat()
-                                    .withID(pmDelayInSamples)
-                                    .withName("Delay in Samples")
-                                    .withGroupName("Delay")
-                                    .withRange(20, 48000)
-                                    .withDefault(4800)
-                                    .withLinearScaleFormatting("samples")
-                                    .withFlags(autoFlag));
 
     paramDescriptions.push_back(ParamDesc()
                                     .asPercent()
                                     .withID(pmMixLevel)
                                     .withName("Mix Level")
-                                    .withGroupName("Delay")
+                                    .withGroupName("Ring Modulator")
                                     .withDefault(0.8)
-                                    .withFlags(autoFlag));
-
-    paramDescriptions.push_back(ParamDesc()
-                                    .asPercent()
-                                    .withID(pmFeedbackLevel)
-                                    .withName("Feedback Level")
-                                    .withGroupName("Delay")
-                                    .withDefault(0.2)
                                     .withFlags(autoFlag));
 
     configureParams();
 
-    attachParam(pmDelayInSamples, sampleTime);
     attachParam(pmMixLevel, mix);
-    attachParam(pmFeedbackLevel, feedback);
-
-    memset(delayBuffer, 0, sizeof(delayBuffer));
 
     clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
     clapJuceShim->setResizable(true);
 }
 
-ConduitPolymetricDelay::~ConduitPolymetricDelay() {}
+ConduitRingModulator::~ConduitRingModulator() {}
 
-bool ConduitPolymetricDelay::audioPortsInfo(uint32_t index, bool isInput,
-                                            clap_audio_port_info *info) const noexcept
+bool ConduitRingModulator::audioPortsInfo(uint32_t index, bool isInput,
+                                          clap_audio_port_info *info) const noexcept
 {
     static constexpr uint32_t inId{16}, outId{72};
     if (isInput)
     {
-        info->id = inId;
-        info->in_place_pair = CLAP_INVALID_ID;
-        strncpy(info->name, "main input", sizeof(info->name));
-        info->flags = CLAP_AUDIO_PORT_IS_MAIN;
-        info->channel_count = 2;
-        info->port_type = CLAP_PORT_STEREO;
-
+        if (index == 0)
+        {
+            info->id = inId;
+            info->in_place_pair = CLAP_INVALID_ID;
+            strncpy(info->name, "main input", sizeof(info->name));
+            info->flags = CLAP_AUDIO_PORT_IS_MAIN;
+            info->channel_count = 2;
+            info->port_type = CLAP_PORT_STEREO;
+        }
+        else
+        {
+            info->id = inId;
+            info->in_place_pair = CLAP_INVALID_ID;
+            strncpy(info->name, "ring sidechain", sizeof(info->name));
+            info->flags = 0;
+            info->channel_count = 2;
+            info->port_type = CLAP_PORT_STEREO;
+        }
         return true;
     }
     else
@@ -107,7 +95,7 @@ bool ConduitPolymetricDelay::audioPortsInfo(uint32_t index, bool isInput,
     return false;
 }
 
-clap_process_status ConduitPolymetricDelay::process(const clap_process *process) noexcept
+clap_process_status ConduitRingModulator::process(const clap_process *process) noexcept
 {
     if (process->audio_outputs_count <= 0)
         return CLAP_PROCESS_SLEEP;
@@ -120,9 +108,14 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
     float **const in = process->audio_inputs[0].data32;
     auto ichans = process->audio_inputs->channel_count;
 
+    float **const sidechain = process->audio_inputs[1].data32;
+    auto scchans = process->audio_inputs->channel_count;
+
+    assert(ochans == 2 || ichans == 2 || scchans == 2);
+
     handleEventsFromUIQueue(process->out_events);
 
-    auto chans = std::min(ochans, ichans);
+    auto chans = std::min({ochans, ichans, scchans});
     if (chans < 2)
         return CLAP_PROCESS_SLEEP;
 
@@ -151,17 +144,14 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
 
         for (int c = 0; c < chans; ++c)
         {
-            auto rp = (wp + bufSize + (int)(*sampleTime)) & (bufSize - 1);
-            out[c][i] = in[c][i] * (1.0 - *mix) + delayBuffer[c][rp] * (*mix);
-
-            delayBuffer[c][wp] = in[c][i] + delayBuffer[c][rp] * (*feedback);
+            auto rm = in[c][i] * sidechain[c][i];
+            out[c][i] = in[c][i] * (1.0 - *mix) + rm * (*mix);
         }
-        wp = (wp + 1) & (bufSize - 1);
     }
     return CLAP_PROCESS_CONTINUE;
 }
 
-void ConduitPolymetricDelay::handleInboundEvent(const clap_event_header_t *evt)
+void ConduitRingModulator::handleInboundEvent(const clap_event_header_t *evt)
 {
     if (handleParamBaseEvents(evt))
     {
@@ -170,4 +160,4 @@ void ConduitPolymetricDelay::handleInboundEvent(const clap_event_header_t *evt)
 
     // Other events just get dropped right now
 }
-} // namespace sst::conduit::polymetric_delay
+} // namespace sst::conduit::ring_modulator

@@ -15,6 +15,7 @@
 
 #include "chord-memory.h"
 #include "juce_gui_basics/juce_gui_basics.h"
+#include "version.h"
 
 namespace sst::conduit::chord_memory
 {
@@ -26,7 +27,7 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
                                "https://surge-synth-team.org",
                                "",
                                "",
-                               "0.1.0",
+                               sst::conduit::build::FullVersionStr,
                                "The Conduit Chord Memory is a work in progress",
                                features};
 
