@@ -7,7 +7,7 @@ and to ponder how to do 'clap-first' development.
 ```bash
 git clone https://github.com/baconpaul/conduit
 cd conduit
-git submodule udpate --init --recursive
+git submodule update --init --recursive
 cmake -Bbuild -DCMAKE_BUILD_TYPE=Release
 cmake --build build --target conduit_all
 ```
