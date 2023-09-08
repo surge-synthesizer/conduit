@@ -46,11 +46,11 @@ struct ControlsPanel : juce::Component
 
     void resized() override
     {
-        auto b = getLocalBounds().reduced(5);
+        auto b = getLocalBounds();
         auto ks = std::min(b.getWidth() / 3, b.getHeight());
 
-        int yp = 0;
-        auto bx = b.withHeight(ks).withWidth(ks-18).reduced(4).translated(0,9);
+        auto dw = 18;
+        auto bx = b.withHeight(ks).withWidth(ks-dw).translated(dw / 2, 0);
         time->setBounds(bx);
         bx = bx.translated(ks, 0);
         feedback->setBounds(bx);
