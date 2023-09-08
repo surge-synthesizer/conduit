@@ -43,6 +43,7 @@ add_subdirectory(libs/sst/sst-plugininfra)
 
 set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
+set(CLAP_WRAPPER_BUILD_AUV2 TRUE CACHE BOOL "It's only logical")
 add_subdirectory(libs/clap-wrapper)
 
 set(CONDUIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE STRING "Top level source")
@@ -62,7 +63,7 @@ target_link_libraries(${CLAP_TARGET} conduit-impl)
 target_library_make_clap(TARGET ${CLAP_TARGET}
         CLAP_NAME "Conduit"
         CLAP_MACOS_BUNDLE_IDENTIFIER org.surge-synth-team.conduit.clap
-        CLAP_MACOS_BUNDLE_VERSION 0.1
+        CLAP_MACOS_BUNDLE_VERSION ${PROJECT_VERSION}
         COPY_AFTER_BUILD ${COPY_AFTER_BUILD}
         )
 
@@ -85,5 +86,32 @@ if (${COPY_AFTER_BUILD})
     target_vst3_copy_after_build(TARGET ${VST3_TARGET})
 endif()
 
+if (APPLE)
+    set(AUV2_TARGET ${PROJECT_NAME}_auv2)
+    add_library(${AUV2_TARGET} MODULE)
+    target_sources(${AUV2_TARGET} PRIVATE src/conduit-clap-entry.cpp)
+    target_link_libraries(${AUV2_TARGET} PRIVATE conduit-impl)
+    target_add_auv2_wrapper(
+            TARGET ${AUV2_TARGET}
+            OUTPUT_NAME "Conduit"
+            BUNDLE_IDENTIFIER "org.surge-synth-team.conduit.auv2"
+            BUNDLE_VERSION ${PROJECT_VERSION}
+
+            MANUFACTURER_NAME "Surge Synth Team"
+            MANUFACTURER_CODE "VmbA"
+
+            # FIXME - replace this with auto-detection
+            INSTRUMENT_TYPE "aumu"
+            SUBTYPE_CODE "cndt"
+    )
+
+    if (${COPY_AFTER_BUILD})
+        target_auv2_copy_after_build(TARGET ${VST3_TARGET})
+    endif()
+endif()
+
 add_custom_target(${PROJECT_NAME}_all)
 add_dependencies(${PROJECT_NAME}_all ${PROJECT_NAME}_clap ${PROJECT_NAME}_vst3)
+if (APPLE)
+    add_dependencies(${PROJECT_NAME}_all ${PROJECT_NAME}_auv2)
+endif()
