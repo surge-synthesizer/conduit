@@ -45,7 +45,7 @@ struct ControlsPanel : juce::Component
         auto ks = std::min(b.getWidth(), b.getHeight());
 
         int yp = 0;
-        auto bx = b.withHeight(ks).withWidth(ks).reduced(4);
+        auto bx = b.withHeight(ks).withWidth(ks - 18).reduced(4);
         time->setBounds(bx);
     }
 
