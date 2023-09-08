@@ -293,8 +293,16 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 return false;
             }
 
-            *paramToValue[(clap_id)id] = value;
-
+            auto pos = paramToValue.find((clap_id)id);
+            if (pos != paramToValue.end())
+            {
+                *paramToValue[(clap_id)id] = value;
+            }
+            else
+            {
+                CNDOUT << "Unknown parameter " << id << " in stream" << std::endl;
+                // continue anyway
+            }
             currParam = TINYXML_SAFE_TO_ELEMENT(currParam->NextSiblingElement("param"));
         }
 
