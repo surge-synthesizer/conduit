@@ -98,15 +98,14 @@ if (APPLE)
             BUNDLE_VERSION ${PROJECT_VERSION}
 
             MANUFACTURER_NAME "Surge Synth Team"
-            MANUFACTURER_CODE "VmbA"
+            MANUFACTURER_CODE "SSTx"
 
-            # FIXME - replace this with auto-detection
-            INSTRUMENT_TYPE "aumu"
-            SUBTYPE_CODE "cndt"
+            CLAP_TARGET_FOR_CONFIG ${PROJECT_NAME}_clap
     )
 
     if (${COPY_AFTER_BUILD})
-        target_auv2_copy_after_build(TARGET ${VST3_TARGET})
+        message(STATUS "conduit: will install auv2")
+        target_auv2_copy_after_build(TARGET ${AUV2_TARGET})
     endif()
 endif()
 

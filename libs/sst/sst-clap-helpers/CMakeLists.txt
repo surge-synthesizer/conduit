@@ -201,9 +201,9 @@ function(target_auv2_copy_after_build)
         message(STATUS "Will copy auv2 plugin after every build" )
         set(products_folder ${CMAKE_BINARY_DIR})
         add_custom_command(TARGET ${TCLP_TARGET} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E echo "Skipping Install ${products_folder}/$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.component to ~/Library/Audio/Plug-Ins/Components/"
-                #COMMAND ${CMAKE_COMMAND} -E make_directory "~/Library/Audio/Plug-Ins/VST3"
-                #COMMAND ${CMAKE_COMMAND} -E copy_directory "${products_folder}/$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.vst3" "~/Library/Audio/Plug-Ins/VST3/$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.vst3"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "~/Library/Audio/Plug-Ins/Components"
+                COMMAND ${CMAKE_COMMAND} -E echo installing "${products_folder}/$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.component" "~/Library/Audio/Plug-Ins/Components/$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.component"
+                COMMAND ${CMAKE_COMMAND} -E copy_directory "${products_folder}/$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.component" "~/Library/Audio/Plug-Ins/Components/$<TARGET_PROPERTY:${TCLP_TARGET},LIBRARY_OUTPUT_NAME>.component"
                 )
     elseif(UNIX)
         message(STATUS "Implement Copy after Build for VST3")
