@@ -16,7 +16,9 @@ target_link_libraries(conduit-shared PUBLIC
         juce::juce_gui_basics
         sst::clap_juce_shim
         sst-basic-blocks
-        sst-jucegui)
+        sst-jucegui
+        clap-wrapper-extensions
+        )
 
 add_subdirectory(polysynth)
 add_subdirectory(polymetric-delay)

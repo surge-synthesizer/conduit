@@ -30,6 +30,9 @@
 #include <clap/plugin.h>
 #include <clap/factory/plugin-factory.h>
 
+#include "clapwrapper/vst3.h"
+#include "clapwrapper/auv2.h"
+
 #include "conduit-shared/debug-helpers.h"
 
 #include "polysynth/polysynth.h"
@@ -43,7 +46,6 @@ namespace sst::conduit::pluginentry
 uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 4; }
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
-    CNDOUT << "Asking for clap plugin number " << w << std::endl;
     if (w == 0)
         return &polysynth::desc;
     if (w == 1)
@@ -60,7 +62,6 @@ const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_facto
 static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_host *host,
                                              const char *plugin_id)
 {
-    CNDOUT << "Creating clap plugin " << plugin_id << std::endl;
     if (strcmp(plugin_id, polysynth::desc.id) == 0)
     {
         auto p = new polysynth::ConduitPolysynth(host);
@@ -86,14 +87,58 @@ static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const
     return nullptr;
 }
 
-const struct clap_plugin_factory conduit_polysynth_factory = {
+static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint32_t index,
+                               clap_plugin_info_as_auv2_t * info)
+{
+    auto desc = clap_get_plugin_descriptor(nullptr, index); // we don't use the factory above
+    auto plugin_id = desc->id;
+
+    info->au_type[0] = 0; // use the features to determine the type
+    if (strcmp(plugin_id, polysynth::desc.id) == 0)
+    {
+        strncpy(info->au_subt, "PlyS", 4);
+        return true;
+    }
+    if (strcmp(plugin_id, polymetric_delay::desc.id) == 0)
+    {
+        strncpy(info->au_subt, "dLay", 4);
+        return true;
+    }
+    if (strcmp(plugin_id, chord_memory::desc.id) == 0)
+    {
+        strncpy(info->au_subt, "crMm", 4);
+        return true;
+    }
+    if (strcmp(plugin_id, ring_modulator::desc.id) == 0)
+    {
+        strncpy(info->au_subt, "rngM", 4);
+        return true;
+    }
+
+
+    return false;
+}
+
+const struct clap_plugin_factory conduit_clap_factory = {
     sst::conduit::pluginentry::clap_get_plugin_count,
     sst::conduit::pluginentry::clap_get_plugin_descriptor,
     sst::conduit::pluginentry::clap_create_plugin,
 };
+
+const struct clap_plugin_factory_as_auv2 conduit_auv2_factory = {
+    "SSTx",             // manu
+    "Surge Synth Team", // manu name
+    sst::conduit::pluginentry::clap_get_auv2_info};
+
 static const void *get_factory(const char *factory_id)
 {
-    return (!strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID)) ? &conduit_polysynth_factory : nullptr;
+    if (!strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID))
+        return &conduit_clap_factory;
+
+    if (!strcmp(factory_id, CLAP_PLUGIN_FACTORY_INFO_AUV2))
+        return &conduit_auv2_factory;
+
+    return nullptr;
 }
 
 // clap_init and clap_deinit are required to be fast, but we have nothing we need to do here

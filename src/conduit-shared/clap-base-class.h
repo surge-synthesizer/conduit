@@ -29,6 +29,9 @@
 #include <clap/helpers/plugin.hh>
 #include <clap/ext/state.h>
 
+// note: this is the extension if you are wrapped as a vst3; it is not any vst3 sdk
+#include <clapwrapper/vst3.h>
+
 #include <sst/basic-blocks/params/ParamMetadata.h>
 #include <sst/clap_juce_shim/clap_juce_shim.h>
 #include "debug-helpers.h"
@@ -490,6 +493,39 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         }
         return true;
     };
+
+
+    virtual bool implementsPluginAsVST3() { return true; }
+    virtual uint32_t getAsVst3NumMIDIChannels(int port) { return 16; }
+    virtual uint32_t getAsVst3SupportedNodeExpressions() { return 0; }
+
+    static uint32_t pluginAsVst3GetNumMIDIChannels(const clap_plugin* plugin, uint32_t note_port)
+    {
+        auto self = static_cast<ClapBaseClass<T, TConfig>*>(plugin->plugin_data);
+        return self->getAsVst3NumMIDIChannels(note_port);
+    }
+    static uint32_t pluginAsVst3SupportedNoteExpressions(const clap_plugin* plugin)
+    {
+        auto self = static_cast<ClapBaseClass<T, TConfig>*>(plugin->plugin_data);
+        return self->getAsVst3SupportedNodeExpressions();
+
+    }
+    const clap_plugin_as_vst3 _extensionPluginAsVST3 =
+    {
+        &pluginAsVst3GetNumMIDIChannels,
+        &pluginAsVst3SupportedNoteExpressions
+    };
+
+    const void *extension(const char *id) noexcept override
+    {
+        if (!strcmp(id, CLAP_PLUGIN_AS_VST3) && implementsPluginAsVST3())
+        {
+            return &_extensionPluginAsVST3;
+        }
+
+        return Plugin::extension(id);
+    }
+
 };
 } // namespace sst::conduit::shared
 

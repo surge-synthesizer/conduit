@@ -217,6 +217,10 @@ struct ConduitPolysynth
         uiComms.dataCopyForUI.updateCount++;
     }
 
+    uint32_t getAsVst3SupportedNodeExpressions() override {
+        return AS_VST3_NOTE_EXPRESSION_ALL;
+    }
+
   protected:
     std::unique_ptr<juce::Component> createEditor() override;
 

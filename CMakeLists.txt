@@ -73,7 +73,6 @@ target_sources(${VST3_TARGET} PRIVATE src/conduit-clap-entry.cpp)
 target_link_libraries(${VST3_TARGET} PRIVATE conduit-impl)
 target_add_vst3_wrapper(TARGET ${VST3_TARGET}
         OUTPUT_NAME "Conduit"
-        SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
         )
 if (WIN32)
     # Question - do we want this default in the helpers
@@ -96,9 +95,6 @@ if (APPLE)
             OUTPUT_NAME "Conduit"
             BUNDLE_IDENTIFIER "org.surge-synth-team.conduit.auv2"
             BUNDLE_VERSION ${PROJECT_VERSION}
-
-            MANUFACTURER_NAME "Surge Synth Team"
-            MANUFACTURER_CODE "SSTx"
 
             CLAP_TARGET_FOR_CONFIG ${PROJECT_NAME}_clap
     )
