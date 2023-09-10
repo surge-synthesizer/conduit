@@ -30,7 +30,7 @@ namespace sst::conduit::polymetric_delay
 {
 
 extern clap_plugin_descriptor desc;
-static constexpr int nParams = 3;
+static constexpr int nParams = 38;
 
 struct ConduitPolymetricDelayConfig
 {
@@ -65,11 +65,25 @@ struct ConduitPolymetricDelay
         return true;
     }
 
+    static constexpr int nTaps{4};
     enum paramIds : uint32_t
     {
-        pmDelayInSamples = 8241,
+        // These set of parameters are one-per
         pmMixLevel = 81,
-        pmFeedbackLevel = 999742
+        pmFeedbackLevel = 82,
+
+        // These set of parameters are per tap, so level on tap N = pmTapLevel + N. So you need
+        // to space them by more than nTaps
+        pmDelayTimeNTaps = 100241,
+        pmDelayTimeEveryM = 101241,
+        pmDelayTimeFineSeconds = 106241,
+        pmDelayModRate = 107241,
+        pmDelayModDepth = 108241,
+        pmTapActive = 103241,
+        pmTapLowCut = 104241,
+        pmTapHighCut = 105241,
+        pmTapLevel = 109241,
+
     };
 
     float delayInSamples{1000};
@@ -115,7 +129,7 @@ struct ConduitPolymetricDelay
     std::atomic<bool> refreshUIValues{false};
 
   public:
-    float *sampleTime, *mix, *feedback;
+    float *mix, *feedback;
 };
 } // namespace sst::conduit::polymetric_delay
 

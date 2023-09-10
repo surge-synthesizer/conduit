@@ -130,11 +130,12 @@ EditorBase::~EditorBase() = default;
 void EditorBase::setContentComponent(std::unique_ptr<juce::Component> c)
 {
     container->contents = std::move(c);
-    container->addAndMakeVisible(*container->contents);
     auto b = container->contents->getBounds();
-    b = b.expanded(0, headerSize + footerSize);
 
+    b = b.withHeight(b.getHeight() + footerSize + headerSize);
     setSize(b.getWidth(), b.getHeight());
+
+    container->addAndMakeVisible(*container->contents);
 }
 
 void EditorBase::resized() { container->setBounds(getLocalBounds()); }

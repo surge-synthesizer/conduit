@@ -39,20 +39,10 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
 
     paramDescriptions.push_back(ParamDesc()
-                                    .asFloat()
-                                    .withID(pmDelayInSamples)
-                                    .withName("Delay in Samples")
-                                    .withGroupName("Delay")
-                                    .withRange(20, 48000)
-                                    .withDefault(4800)
-                                    .withLinearScaleFormatting("samples")
-                                    .withFlags(autoFlag));
-
-    paramDescriptions.push_back(ParamDesc()
                                     .asPercent()
                                     .withID(pmMixLevel)
                                     .withName("Mix Level")
-                                    .withGroupName("Delay")
+                                    .withGroupName("Main")
                                     .withDefault(0.8)
                                     .withFlags(autoFlag));
 
@@ -60,20 +50,97 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
                                     .asPercent()
                                     .withID(pmFeedbackLevel)
                                     .withName("Feedback Level")
-                                    .withGroupName("Delay")
+                                    .withGroupName("Main")
                                     .withDefault(0.2)
                                     .withFlags(autoFlag));
 
+    for (int i = 0; i < nTaps; ++i)
+    {
+        auto gn = std::string("Tap ") + std::to_string(i + 1);
+        auto tm = std::string(" (") + std::to_string(i + 1) + ")";
+        paramDescriptions.push_back(ParamDesc()
+                                        .asInt()
+                                        .withFlags(steppedFlag)
+                                        .withID(pmDelayTimeNTaps + i)
+                                        .withName("N Taps" + tm)
+                                        .withGroupName(gn)
+                                        .withRange(1, 64)
+                                        .withDefault(3 + i)
+                                        .withLinearScaleFormatting("taps"));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asInt()
+                                        .withFlags(steppedFlag)
+                                        .withID(pmDelayTimeEveryM + i)
+                                        .withName("Every M Beats" + tm)
+                                        .withGroupName(gn)
+                                        .withRange(1, 32)
+                                        .withDefault(2 + i)
+                                        .withLinearScaleFormatting("beats"));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asFloat()
+                                        .withFlags(autoFlag)
+                                        .withID(pmDelayTimeFineSeconds + i)
+                                        .withName("Fine Adjust" + tm)
+                                        .withGroupName(gn)
+                                        .withRange(-0.1, 0.1)
+                                        .withDefault(0)
+                                        .withLinearScaleFormatting("seconds"));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asLog2SecondsRange(-3, 4)
+                                        .withFlags(autoFlag)
+                                        .withID(pmDelayModRate + i)
+                                        .withName("Mod Rate" + tm)
+                                        .withGroupName(gn)
+                                        .withDefault(0));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asFloat()
+                                        .withFlags(autoFlag)
+                                        .withID(pmDelayModDepth + i)
+                                        .withName("Mod Depth" + tm)
+                                        .withGroupName(gn)
+                                        .withRange(0, 1)
+                                        .withDefault(0)
+                                        .withLinearScaleFormatting("seconds"));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asBool()
+                                        .withFlags(steppedFlag)
+                                        .withID(pmTapActive + i)
+                                        .withName("Tap Active" + tm)
+                                        .withGroupName(gn)
+                                        .withDefault(1));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asAudibleFrequency()
+                                        .withFlags(autoFlag)
+                                        .withID(pmTapLowCut + i)
+                                        .withName("Lo Cut" + tm)
+                                        .withGroupName(gn)
+                                        .withDefault(-60));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asAudibleFrequency()
+                                        .withFlags(autoFlag)
+                                        .withID(pmTapHighCut + i)
+                                        .withName("Hi Cut" + tm)
+                                        .withGroupName(gn)
+                                        .withDefault(70));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asFloat()
+                                        .asCubicDecibelAttenuation()
+                                        .withFlags(autoFlag)
+                                        .withID(pmTapLevel + i)
+                                        .withName("Level" + tm)
+                                        .withGroupName(gn)
+                                        .withDefault(1.0f - 0.1f * i));
+    }
+
     configureParams();
 
-    attachParam(pmDelayInSamples, sampleTime);
     attachParam(pmMixLevel, mix);
     attachParam(pmFeedbackLevel, feedback);
 
     memset(delayBuffer, 0, sizeof(delayBuffer));
 
     clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
-    clapJuceShim->setResizable(true);
+    clapJuceShim->setResizable(false);
 }
 
 ConduitPolymetricDelay::~ConduitPolymetricDelay() {}
@@ -153,12 +220,8 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
 
         for (int c = 0; c < chans; ++c)
         {
-            auto rp = (wp + bufSize + (int)(*sampleTime)) & (bufSize - 1);
-            out[c][i] = in[c][i] * (1.0 - *mix) + delayBuffer[c][rp] * (*mix);
-
-            delayBuffer[c][wp] = in[c][i] + delayBuffer[c][rp] * (*feedback);
+            out[c][i] = in[c][i];
         }
-        wp = (wp + 1) & (bufSize - 1);
     }
     return CLAP_PROCESS_CONTINUE;
 }

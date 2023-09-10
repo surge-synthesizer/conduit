@@ -67,15 +67,26 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     std::vector<ParamDesc> paramDescriptions;
     std::unordered_map<uint32_t, ParamDesc> paramDescriptionMap;
 
+#define cbassert(x, y)                                                                             \
+    {                                                                                              \
+        if (!(x))                                                                                  \
+        {                                                                                          \
+            CNDOUT << #x << " " << y << std::endl;                                                 \
+            std::terminate();                                                                      \
+        }                                                                                          \
+    }
+
     void configureParams()
     {
-        assert(paramDescriptions.size() == TConfig::nParams);
+        cbassert(paramDescriptions.size() == TConfig::nParams,
+                 "Incorrect size " << TConfig::nParams << " vs " << paramDescriptions.size());
         paramDescriptionMap.clear();
         int patchIdx{0};
         for (const auto &pd : paramDescriptions)
         {
-            // If you hit this assert you have a duplicate param id
-            assert(paramDescriptionMap.find(pd.id) == paramDescriptionMap.end());
+            // If you hit this cbassert you have a duplicate param id
+            cbassert(paramDescriptionMap.find(pd.id) == paramDescriptionMap.end(),
+                     "Duplicate Param IDs");
             paramDescriptionMap[pd.id] = pd;
             paramToPatchIndex[pd.id] = patchIdx;
             paramToValue[pd.id] = &(patch.params[patchIdx]);
@@ -84,8 +95,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
             patchIdx++;
         }
-        assert(paramDescriptionMap.size() == TConfig::nParams);
-        assert(patchIdx == TConfig::nParams);
+        cbassert(paramDescriptionMap.size() == TConfig::nParams, "Bad Traversal");
+        cbassert(patchIdx == TConfig::nParams, "Bad Traversal");
     }
 
     bool implementsParams() const noexcept override { return true; }
@@ -356,8 +367,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         typedef moodycamel::ReaderWriterQueue<ToUI, 4096> SynthToUI_Queue_t;
         typedef moodycamel::ReaderWriterQueue<FromUI, 4096> UIToSynth_Queue_t;
 
-        SynthToUI_Queue_t toUiQ;
-        UIToSynth_Queue_t fromUiQ;
+        SynthToUI_Queue_t toUiQ{4096};
+        UIToSynth_Queue_t fromUiQ{4096};
         typename TConfig::DataCopyForUI dataCopyForUI;
 
         std::atomic<bool> refreshUIValues{false};
@@ -442,7 +453,10 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 r.type = ToUI::PARAM_VALUE;
                 r.id = k;
                 r.value = *v;
-                uiComms.toUiQ.try_enqueue(r);
+                if (!uiComms.toUiQ.try_enqueue(r))
+                {
+                    CNDOUT << "ERROR - failed to enqueue in uiRefresh" << std::endl;
+                }
             }
         }
 
@@ -469,7 +483,10 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 r.id = v->param_id;
                 r.value = (double)v->value;
 
-                uiComms.toUiQ.try_enqueue(r);
+                if (!uiComms.toUiQ.try_enqueue(r))
+                {
+                    CNDOUT << "Failed to enqueue in param values" << std::endl;
+                }
             }
             return true;
         }
@@ -494,27 +511,22 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         return true;
     };
 
-
     virtual bool implementsPluginAsVST3() { return true; }
     virtual uint32_t getAsVst3NumMIDIChannels(int port) { return 16; }
     virtual uint32_t getAsVst3SupportedNodeExpressions() { return 0; }
 
-    static uint32_t pluginAsVst3GetNumMIDIChannels(const clap_plugin* plugin, uint32_t note_port)
+    static uint32_t pluginAsVst3GetNumMIDIChannels(const clap_plugin *plugin, uint32_t note_port)
     {
-        auto self = static_cast<ClapBaseClass<T, TConfig>*>(plugin->plugin_data);
+        auto self = static_cast<ClapBaseClass<T, TConfig> *>(plugin->plugin_data);
         return self->getAsVst3NumMIDIChannels(note_port);
     }
-    static uint32_t pluginAsVst3SupportedNoteExpressions(const clap_plugin* plugin)
+    static uint32_t pluginAsVst3SupportedNoteExpressions(const clap_plugin *plugin)
     {
-        auto self = static_cast<ClapBaseClass<T, TConfig>*>(plugin->plugin_data);
+        auto self = static_cast<ClapBaseClass<T, TConfig> *>(plugin->plugin_data);
         return self->getAsVst3SupportedNodeExpressions();
-
     }
-    const clap_plugin_as_vst3 _extensionPluginAsVST3 =
-    {
-        &pluginAsVst3GetNumMIDIChannels,
-        &pluginAsVst3SupportedNoteExpressions
-    };
+    const clap_plugin_as_vst3 _extensionPluginAsVST3 = {&pluginAsVst3GetNumMIDIChannels,
+                                                        &pluginAsVst3SupportedNoteExpressions};
 
     const void *extension(const char *id) noexcept override
     {
@@ -525,7 +537,6 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         return Plugin::extension(id);
     }
-
 };
 } // namespace sst::conduit::shared
 

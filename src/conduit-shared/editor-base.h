@@ -19,6 +19,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "sst/jucegui/data/Continuous.h"
 #include "sst/jucegui/components/ContinuousParamEditor.h"
+#include "debug-helpers.h"
 
 namespace sst::conduit::shared
 {
@@ -69,8 +70,15 @@ template <typename T> struct EditorCommunicationsHandler
                 auto p = dataTargets.find(r.id);
                 if (p != dataTargets.end())
                 {
+                    auto pd = uic.getParameterDescription(r.id);
                     p->second.second->setValueFromModel(r.value);
                     p->second.first->repaint();
+                }
+                else
+                {
+                    auto pd = uic.getParameterDescription(r.id);
+                    CNDOUT << "WARNING - no UI element registered for " << r.id << " " << pd.name
+                           << std::endl;
                 }
             }
             else
