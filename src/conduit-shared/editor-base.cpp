@@ -74,12 +74,6 @@ struct Background : public jcmp::WindowPanel
         addAndMakeVisible(*nl);
         nameLabel = std::move(nl);
 
-        auto il = std::make_unique<juce::Label>("Plugin ID", pluginId);
-        il->setColour(juce::Label::ColourIds::textColourId, juce::Colour(220, 220, 230));
-        il->setFont(vsFont);
-        addAndMakeVisible(*il);
-        idLabel = std::move(il);
-
         auto vs = std::string(sst::conduit::build::BuildDate) + " " +
                   std::string(sst::conduit::build::BuildTime) + " " + sst::conduit::build::GitHash;
         auto vl = std::make_unique<juce::Label>("Plugin Version", vs);
@@ -99,7 +93,6 @@ struct Background : public jcmp::WindowPanel
             contents->setBounds(cb);
         }
         nameLabel->setBounds(lb.withHeight(headerSize));
-        idLabel->setBounds(lb.withTrimmedTop(lb.getHeight() - footerSize).withTrimmedBottom(2));
         versionLabel->setBounds(
             lb.withTrimmedTop(lb.getHeight() - footerSize).withTrimmedBottom(2));
     }
@@ -125,7 +118,7 @@ struct Background : public jcmp::WindowPanel
     juce::Typeface::Ptr labelsTypeface{nullptr}, versionTypeface{nullptr};
 
     std::unique_ptr<juce::Component> contents;
-    std::unique_ptr<juce::Component> nameLabel, versionLabel, idLabel;
+    std::unique_ptr<juce::Component> nameLabel, versionLabel;
 };
 EditorBase::EditorBase(const std::string &pluginName, const std::string &pluginId)
 {

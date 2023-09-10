@@ -50,6 +50,13 @@ template <typename T> struct EditorCommunicationsHandler
         assert(!idleTimer); // hit this and you never called stop or start
     }
 
+    std::unordered_map<std::string, std::function<void()>> idleHandlers;
+    void addIdleHandler(const std::string &key, std::function<void()> op)
+    {
+        idleHandlers[key] = op;
+    }
+    void removeIdleHandler(const std::string &key) { idleHandlers.erase(key); }
+
     void onIdle()
     {
         using ToUI = typename T::UICommunicationBundle::SynthToUI_Queue_t::value_type;
@@ -69,6 +76,11 @@ template <typename T> struct EditorCommunicationsHandler
             else
             {
             }
+        }
+
+        for (auto &[k, f] : idleHandlers)
+        {
+            f();
         }
     }
 

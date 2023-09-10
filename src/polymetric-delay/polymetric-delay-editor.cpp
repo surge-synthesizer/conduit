@@ -16,6 +16,8 @@
 #include "polymetric-delay.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <sstream>
+
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
@@ -31,6 +33,44 @@ using cps_t = sst::conduit::polymetric_delay::ConduitPolymetricDelay;
 using uicomm_t = cps_t::UICommunicationBundle;
 
 struct ConduitPolymetricDelayEditor;
+
+struct StatusPanel : juce::Component
+{
+    uicomm_t &uic;
+    ConduitPolymetricDelayEditor &ed;
+
+    StatusPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e);
+    ~StatusPanel();
+
+    void paint(juce::Graphics &g) override
+    {
+        {
+            std::ostringstream oss;
+            oss << "status: bpm=" << uic.dataCopyForUI.tempo
+                << " play=" << uic.dataCopyForUI.isPlayingOrRecording
+                << " sig=" << uic.dataCopyForUI.tsig_num << "/" << uic.dataCopyForUI.tsig_denom
+                << " pos=" << uic.dataCopyForUI.song_pos_beats
+                << " bs=" << uic.dataCopyForUI.bar_start << " bn=" << uic.dataCopyForUI.bar_number;
+
+            g.setColour(juce::Colours::white);
+            g.setFont(14);
+            g.drawText(oss.str(), getLocalBounds(), juce::Justification::topLeft);
+        }
+
+        {
+            std::ostringstream oss;
+            oss << "converted"
+                << " pos=" << uic.dataCopyForUI.song_pos_beats / CLAP_BEATTIME_FACTOR
+                << " bs=" << uic.dataCopyForUI.bar_start / CLAP_BEATTIME_FACTOR
+                << " bn=" << uic.dataCopyForUI.bar_number;
+
+            g.setColour(juce::Colours::white);
+            g.setFont(14);
+            g.drawText(oss.str(), getLocalBounds().withTrimmedTop(30),
+                       juce::Justification::topLeft);
+        }
+    }
+};
 
 struct ControlsPanel : juce::Component
 {
@@ -50,7 +90,7 @@ struct ControlsPanel : juce::Component
         auto ks = std::min(b.getWidth() / 3, b.getHeight());
 
         auto dw = 18;
-        auto bx = b.withHeight(ks).withWidth(ks-dw).translated(dw / 2, 0);
+        auto bx = b.withHeight(ks).withWidth(ks - dw).translated(dw / 2, 0);
         time->setBounds(bx);
         bx = bx.translated(ks, 0);
         feedback->setBounds(bx);
@@ -74,9 +114,13 @@ struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel
 
         ctrlPanel = std::make_unique<jcmp::NamedPanel>("Controls");
         addAndMakeVisible(*ctrlPanel);
-
         auto oct = std::make_unique<ControlsPanel>(uic, *this);
         ctrlPanel->setContentAreaComponent(std::move(oct));
+
+        statusPanel = std::make_unique<jcmp::NamedPanel>("Status");
+        addAndMakeVisible(*statusPanel);
+        auto spi = std::make_unique<StatusPanel>(uic, *this);
+        statusPanel->setContentAreaComponent(std::move(spi));
 
         setSize(600, 200);
 
@@ -87,15 +131,19 @@ struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel
 
     std::unique_ptr<juce::Slider> unisonSpread;
 
-    void resized() override { ctrlPanel->setBounds(getLocalBounds()); }
+    void resized() override
+    {
+        auto b = getLocalBounds();
+        auto sb = b.withHeight(100);
+        auto cb = b.withTrimmedTop(100);
+        statusPanel->setBounds(sb);
+        ctrlPanel->setBounds(cb);
+    }
 
-    std::unique_ptr<jcmp::NamedPanel> ctrlPanel;
+    std::unique_ptr<jcmp::NamedPanel> ctrlPanel, statusPanel;
 };
 
-ControlsPanel::ControlsPanel(
-    sst::conduit::polymetric_delay::editor::uicomm_t &p,
-    sst::conduit::polymetric_delay::editor::ConduitPolymetricDelayEditor &e)
-    : uic(p)
+ControlsPanel::ControlsPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e) : uic(p)
 {
     time = std::make_unique<jcmp::Knob>();
     addAndMakeVisible(*time);
@@ -109,6 +157,16 @@ ControlsPanel::ControlsPanel(
     addAndMakeVisible(*mix);
     e.comms->attachContinuousToParam(mix.get(), cps_t::paramIds::pmMixLevel);
 }
+
+StatusPanel::StatusPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e) : uic(p), ed(e)
+{
+    ed.comms->addIdleHandler("repaintStatus", [w = juce::Component::SafePointer(this)]() {
+        if (w)
+            w->repaint();
+    });
+}
+StatusPanel::~StatusPanel() { ed.comms->removeIdleHandler("repaintStatus"); }
+
 } // namespace sst::conduit::polymetric_delay::editor
 
 namespace sst::conduit::polymetric_delay

@@ -137,6 +137,8 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
         nextEvent = ev->get(ev, nextEventIndex);
     }
 
+    handleInboundEvent((const clap_event_header *)(process->transport));
+
     for (int i = 0; i < process->frames_count; ++i)
     {
         while (nextEvent && nextEvent->time == i)
@@ -169,5 +171,21 @@ void ConduitPolymetricDelay::handleInboundEvent(const clap_event_header_t *evt)
     }
 
     // Other events just get dropped right now
+    if (evt->space_id != CLAP_CORE_EVENT_SPACE_ID)
+        return;
+
+    if (evt->type == CLAP_EVENT_TRANSPORT)
+    {
+        auto tev = reinterpret_cast<const clap_event_transport_t *>(evt);
+        uiComms.dataCopyForUI.tempo = tev->tempo;
+        uiComms.dataCopyForUI.bar_start = tev->bar_start;
+        uiComms.dataCopyForUI.bar_number = tev->bar_number;
+        uiComms.dataCopyForUI.song_pos_beats = tev->song_pos_beats;
+        uiComms.dataCopyForUI.tsig_num = tev->tsig_num;
+        uiComms.dataCopyForUI.tsig_denom = tev->tsig_denom;
+
+        uiComms.dataCopyForUI.isPlayingOrRecording =
+            (tev->flags & CLAP_TRANSPORT_IS_PLAYING) || (tev->flags & CLAP_TRANSPORT_IS_RECORDING);
+    }
 }
 } // namespace sst::conduit::polymetric_delay
