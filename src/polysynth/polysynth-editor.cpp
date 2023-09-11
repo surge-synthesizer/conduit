@@ -44,16 +44,16 @@ struct OscPanel : public juce::Component
     std::unique_ptr<jcmp::Knob> oscUnisonSpread;
 };
 
-struct ConduitPolysynthEditor : public jcmp::WindowPanel
+struct ConduitPolysynthEditor : public jcmp::WindowPanel, shared::TooltipSupport
 {
     uicomm_t &uic;
-    std::unique_ptr<sst::conduit::shared::EditorCommunicationsHandler<ConduitPolysynth>> comms;
+    using comms_t =
+        sst::conduit::shared::EditorCommunicationsHandler<ConduitPolysynth, ConduitPolysynthEditor>;
+    std::unique_ptr<comms_t> comms;
 
     ConduitPolysynthEditor(uicomm_t &p) : uic(p)
     {
-        comms =
-            std::make_unique<sst::conduit::shared::EditorCommunicationsHandler<ConduitPolysynth>>(
-                p);
+        comms = std::make_unique<comms_t>(p, *this);
 
         oscPanel = std::make_unique<jcmp::NamedPanel>("Oscillator");
         addAndMakeVisible(*oscPanel);

@@ -52,15 +52,16 @@ struct ControlsPanel : juce::Component
     std::unique_ptr<jcmp::Knob> mix;
 };
 
-struct ConduitRingModulatorEditor : public jcmp::WindowPanel
+struct ConduitRingModulatorEditor : public jcmp::WindowPanel, shared::TooltipSupport
 {
     uicomm_t &uic;
-    std::unique_ptr<sst::conduit::shared::EditorCommunicationsHandler<ConduitRingModulator>> comms;
+    using comms_t = sst::conduit::shared::EditorCommunicationsHandler<ConduitRingModulator,
+                                                                      ConduitRingModulatorEditor>;
+    std::unique_ptr<comms_t> comms;
 
     ConduitRingModulatorEditor(uicomm_t &p) : uic(p)
     {
-        comms = std::make_unique<
-            sst::conduit::shared::EditorCommunicationsHandler<ConduitRingModulator>>(p);
+        comms = std::make_unique<comms_t>(p, *this);
 
         ctrlPanel = std::make_unique<jcmp::NamedPanel>("Controls");
         addAndMakeVisible(*ctrlPanel);

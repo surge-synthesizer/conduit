@@ -52,16 +52,16 @@ struct ControlsPanel : juce::Component
     std::unique_ptr<jcmp::Knob> time;
 };
 
-struct ConduitChordMemoryEditor : public jcmp::WindowPanel
+struct ConduitChordMemoryEditor : public jcmp::WindowPanel, shared::TooltipSupport
 {
     uicomm_t &uic;
-    std::unique_ptr<sst::conduit::shared::EditorCommunicationsHandler<ConduitChordMemory>> comms;
+    using comms_t = sst::conduit::shared::EditorCommunicationsHandler<ConduitChordMemory,
+                                                                      ConduitChordMemoryEditor>;
+    std::unique_ptr<comms_t> comms;
 
     ConduitChordMemoryEditor(uicomm_t &p) : uic(p)
     {
-        comms =
-            std::make_unique<sst::conduit::shared::EditorCommunicationsHandler<ConduitChordMemory>>(
-                p);
+        comms = std::make_unique<comms_t>(p, *this);
 
         ctrlPanel = std::make_unique<jcmp::NamedPanel>("Controls");
         addAndMakeVisible(*ctrlPanel);

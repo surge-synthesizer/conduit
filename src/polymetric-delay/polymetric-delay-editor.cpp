@@ -136,16 +136,16 @@ struct OutputPanel : jcmp::NamedPanel
     };
 };
 
-struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel
+struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel, shared::TooltipSupport
 {
     uicomm_t &uic;
-    std::unique_ptr<sst::conduit::shared::EditorCommunicationsHandler<ConduitPolymetricDelay>>
-        comms;
+    using comms_t = sst::conduit::shared::EditorCommunicationsHandler<ConduitPolymetricDelay,
+                                                                      ConduitPolymetricDelayEditor>;
+    std::unique_ptr<comms_t> comms;
 
     ConduitPolymetricDelayEditor(uicomm_t &p) : uic(p)
     {
-        comms = std::make_unique<
-            sst::conduit::shared::EditorCommunicationsHandler<ConduitPolymetricDelay>>(p);
+        comms = std::make_unique<comms_t>(p, *this);
 
         statusPanel = std::make_unique<jcmp::NamedPanel>("Status");
         addAndMakeVisible(*statusPanel);

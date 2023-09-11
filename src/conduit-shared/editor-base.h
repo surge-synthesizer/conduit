@@ -35,17 +35,24 @@ struct EditorBase : juce::Component
     std::unique_ptr<Background> container;
 };
 
-template <typename T> struct EditorCommunicationsHandler
+struct TooltipSupport
+{
+    void openTooltip(int p) { CNDOUT << "open tooltip for " << p << std::endl; }
+    void closeTooltip(int p) { CNDOUT << "close tooltip for " << p << std::endl; }
+};
+
+template <typename T, typename TEd> struct EditorCommunicationsHandler
 {
     struct IdleTimer : juce::Timer
     {
-        EditorCommunicationsHandler<T> &icb;
-        IdleTimer(EditorCommunicationsHandler<T> &ji) : icb(ji) {}
+        EditorCommunicationsHandler<T, TEd> &icb;
+        IdleTimer(EditorCommunicationsHandler<T, TEd> &ji) : icb(ji) {}
         void timerCallback() override { icb.onIdle(); }
     };
     std::unique_ptr<IdleTimer> idleTimer;
     typename T::UICommunicationBundle &uic;
-    EditorCommunicationsHandler(typename T::UICommunicationBundle &b) : uic(b) {}
+    TEd &ed;
+    EditorCommunicationsHandler(typename T::UICommunicationBundle &b, TEd &e) : uic(b), ed(e) {}
     ~EditorCommunicationsHandler()
     {
         assert(!idleTimer); // hit this and you never called stop or start
@@ -70,7 +77,6 @@ template <typename T> struct EditorCommunicationsHandler
                 auto p = dataTargets.find(r.id);
                 if (p != dataTargets.end())
                 {
-                    auto pd = uic.getParameterDescription(r.id);
                     p->second.second->setValueFromModel(r.value);
                     p->second.first->repaint();
                 }
@@ -150,10 +156,14 @@ template <typename T> struct EditorCommunicationsHandler
 
         comp->onBeginEdit = [this, pid]() {
             uic.fromUiQ.try_enqueue({FromUI::MType::BEGIN_EDIT, pid, 1});
+            ed.openTooltip(pid);
         };
         comp->onEndEdit = [this, pid]() {
             uic.fromUiQ.try_enqueue({FromUI::MType::END_EDIT, pid, 1});
+            ed.closeTooltip(pid);
         };
+        comp->onIdleHover = [this, pid]() { ed.openTooltip(pid); };
+        comp->onIdleHoverEnd = [this, pid]() { ed.closeTooltip(pid); };
 
         dataTargets[pid] = {comp, source.get()};
         ownedData[pid] = std::move(source);
