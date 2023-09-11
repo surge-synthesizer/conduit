@@ -39,7 +39,7 @@
 namespace sst::conduit::shared
 {
 static constexpr clap::helpers::MisbehaviourHandler misLevel =
-    clap::helpers::MisbehaviourHandler::Terminate;
+    clap::helpers::MisbehaviourHandler::Ignore;
 static constexpr clap::helpers::CheckingLevel checkLevel = clap::helpers::CheckingLevel::Maximal;
 
 using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
