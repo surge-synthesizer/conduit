@@ -333,8 +333,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
-    ADD_SHIM_IMPLEMENTATION(clapJuceShim);
-    ADD_SHIM_LINUX_TIMER(clapJuceShim);
+    ADD_SHIM_IMPLEMENTATION(clapJuceShim)
+    ADD_SHIM_LINUX_TIMER(clapJuceShim)
 
     struct ToUI
     {
@@ -397,7 +397,6 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
     uint32_t handleEventsFromUIQueue(const clap_output_events_t *ov)
     {
-        bool uiAdjustedValues{false};
         FromUI r;
 
         uint32_t adjustedCount{0};

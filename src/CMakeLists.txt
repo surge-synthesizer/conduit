@@ -31,4 +31,5 @@ target_link_libraries(conduit-impl INTERFACE
         polymetric-delay
         chord-memory
         ring-modulator
+        conduit-shared
         )

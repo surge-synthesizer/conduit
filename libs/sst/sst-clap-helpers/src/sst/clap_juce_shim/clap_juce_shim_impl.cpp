@@ -101,7 +101,9 @@ bool ClapJuceShim::guiSetParent(const clap_window *window) noexcept
     impl->guiParentAttached = true;
 #if JUCE_MAC
     extern bool guiCocoaAttach(const clap_window *, juce::Component *);
-    return guiCocoaAttach(window, impl->editor.get());
+    auto res = guiCocoaAttach(window, impl->editor.get());
+    impl->editor->repaint();
+    return res;
 #elif JUCE_LINUX
     const juce::MessageManagerLock mmLock;
     impl->editor->setVisible(false);

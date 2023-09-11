@@ -105,8 +105,35 @@ if (APPLE)
     endif()
 endif()
 
+set(SYNTH_STANDALONE_TARGET ${PROJECT_NAME}_polysynth_standalone)
+add_executable(${SYNTH_STANDALONE_TARGET})
+target_sources(${SYNTH_STANDALONE_TARGET} PRIVATE src/conduit-clap-entry.cpp)
+target_link_libraries(${SYNTH_STANDALONE_TARGET} PRIVATE conduit-impl)
+target_add_standalone_wrapper(TARGET ${SYNTH_STANDALONE_TARGET}
+        OUTPUT_NAME "Conduit Polysynth"
+        STATICALLY_LINKED_CLAP_ENTRY True
+        PLUGIN_ID "org.surge-synth-team.conduit.polysynth")
+
+
+set(DELAY_STANDALONE_TARGET ${PROJECT_NAME}_delay_standalone)
+add_executable(${DELAY_STANDALONE_TARGET})
+target_sources(${DELAY_STANDALONE_TARGET} PRIVATE src/conduit-clap-entry.cpp)
+target_link_libraries(${DELAY_STANDALONE_TARGET} PRIVATE conduit-impl)
+target_add_standalone_wrapper(TARGET ${DELAY_STANDALONE_TARGET}
+        OUTPUT_NAME "Conduit Polymetric Delay"
+        STATICALLY_LINKED_CLAP_ENTRY True
+        PLUGIN_ID "org.surge-synth-team.conduit.polymetric-delay")
+
 add_custom_target(${PROJECT_NAME}_all)
 add_dependencies(${PROJECT_NAME}_all ${PROJECT_NAME}_clap ${PROJECT_NAME}_vst3)
 if (APPLE)
     add_dependencies(${PROJECT_NAME}_all ${PROJECT_NAME}_auv2)
 endif()
+add_dependencies(${PROJECT_NAME}_all ${SYNTH_STANDALONE_TARGET} ${DELAY_STANDALONE_TARGET})
+
+
+#add_executable(csd_standalone)
+#target_add_standalone_wrapper(TARGET csd_standalone
+#    OUTPUT_NAME "Clap Saw Demo"
+#    HOSTED_CLAP_NAME "clap-saw-demo"
+#    PLUGIN_ID "org.surge-synth-team.clap-saw-demo")

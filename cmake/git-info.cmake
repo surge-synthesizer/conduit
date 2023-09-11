@@ -16,7 +16,7 @@ add_custom_target(conduit-generate-version-info
 )
 
 # Platform Specific Compile Settings
-add_library(conduit-version-info)
+add_library(conduit-version-info STATIC)
 target_sources(conduit-version-info PRIVATE ${CMAKE_BINARY_DIR}/geninclude/version.cpp)
 target_include_directories(conduit-version-info PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 target_link_libraries(conduit-version-info)

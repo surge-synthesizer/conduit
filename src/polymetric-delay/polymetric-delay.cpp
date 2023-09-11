@@ -204,7 +204,8 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
         nextEvent = ev->get(ev, nextEventIndex);
     }
 
-    handleInboundEvent((const clap_event_header *)(process->transport));
+    if (process->transport)
+        handleInboundEvent((const clap_event_header *)(process->transport));
 
     for (int i = 0; i < process->frames_count; ++i)
     {
@@ -220,7 +221,7 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
 
         for (int c = 0; c < chans; ++c)
         {
-            out[c][i] = in[c][i];
+            out[c][i] = in[c][i] * (*mix);
         }
     }
     return CLAP_PROCESS_CONTINUE;

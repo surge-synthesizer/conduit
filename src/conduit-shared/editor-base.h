@@ -82,9 +82,11 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
                 }
                 else
                 {
+#if 0
                     auto pd = uic.getParameterDescription(r.id);
-                    CNDOUT << "WARNING - no UI element registered for " << r.id << " " << pd.name
+                    CNDOUT << "WARNING - no UI element registered for pid=" << r.id << " nm=" << pd.name
                            << std::endl;
+#endif
                 }
             }
             else

@@ -88,7 +88,7 @@ static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const
 }
 
 static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint32_t index,
-                               clap_plugin_info_as_auv2_t * info)
+                               clap_plugin_info_as_auv2_t *info)
 {
     auto desc = clap_get_plugin_descriptor(nullptr, index); // we don't use the factory above
     auto plugin_id = desc->id;
@@ -96,25 +96,24 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
     info->au_type[0] = 0; // use the features to determine the type
     if (strcmp(plugin_id, polysynth::desc.id) == 0)
     {
-        strncpy(info->au_subt, "PlyS", 4);
+        strncpy(info->au_subt, "PlyS", 5);
         return true;
     }
     if (strcmp(plugin_id, polymetric_delay::desc.id) == 0)
     {
-        strncpy(info->au_subt, "dLay", 4);
+        strncpy(info->au_subt, "dLay", 5);
         return true;
     }
     if (strcmp(plugin_id, chord_memory::desc.id) == 0)
     {
-        strncpy(info->au_subt, "crMm", 4);
+        strncpy(info->au_subt, "crMm", 5);
         return true;
     }
     if (strcmp(plugin_id, ring_modulator::desc.id) == 0)
     {
-        strncpy(info->au_subt, "rngM", 4);
+        strncpy(info->au_subt, "rngM", 5);
         return true;
     }
-
 
     return false;
 }
@@ -149,6 +148,12 @@ void clap_deinit() {}
 
 extern "C"
 {
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes" // other peoples errors are outside my scope
+#endif
+
     // clang-format off
     const CLAP_EXPORT struct clap_plugin_entry clap_entry = {
         CLAP_VERSION,
@@ -157,4 +162,7 @@ extern "C"
         sst::conduit::pluginentry::get_factory
     };
     // clang-format on
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
