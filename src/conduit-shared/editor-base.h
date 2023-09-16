@@ -69,9 +69,9 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
     {
         using ToUI = typename T::UICommunicationBundle::SynthToUI_Queue_t::value_type;
 
-        while (!uic.toUiQ.isEmpty())
+        while (!uic.toUiQ.empty())
         {
-            auto r = uic.toUiQ.pop();
+            auto r = *uic.toUiQ.pop();
 
             if (r.type == ToUI::MType::PARAM_VALUE)
             {

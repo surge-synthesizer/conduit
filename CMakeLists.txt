@@ -43,6 +43,7 @@ add_subdirectory(libs/sst/sst-jucegui)
 add_subdirectory(libs/sst/sst-basic-blocks)
 set(SST_PLUGININFRA_FILESYSTEM_FORCE_PLATFORM TRUE CACHE BOOL "Use System FS")
 add_subdirectory(libs/sst/sst-plugininfra)
+add_subdirectory(libs/sst/sst-cpputils)
 
 set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")

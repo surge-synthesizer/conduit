@@ -27,7 +27,7 @@
 #include <clap/helpers/plugin.hh>
 #include <clap/ext/state.h>
 
-#include "spsc-queue.h"
+#include "sst/cpputils/ring_buffer.h"
 
 // note: this is the extension if you are wrapped as a vst3; it is not any vst3 sdk
 #include <clapwrapper/vst3.h>
@@ -364,8 +364,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     struct UICommunicationBundle
     {
         UICommunicationBundle(const ClapBaseClass<T, TConfig> &h) : cp(h) {}
-        typedef SPSCQueue<ToUI, 4096> SynthToUI_Queue_t;
-        typedef SPSCQueue<FromUI, 4096> UIToSynth_Queue_t;
+        typedef sst::cpputils::SimpleRingBuffer<ToUI, 4096> SynthToUI_Queue_t;
+        typedef sst::cpputils::SimpleRingBuffer<FromUI, 4096> UIToSynth_Queue_t;
 
         SynthToUI_Queue_t toUiQ;
         UIToSynth_Queue_t fromUiQ;
@@ -398,9 +398,9 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     uint32_t handleEventsFromUIQueue(const clap_output_events_t *ov)
     {
         uint32_t adjustedCount{0};
-        while (!uiComms.fromUiQ.isEmpty())
+        while (!uiComms.fromUiQ.empty())
         {
-            auto r = uiComms.fromUiQ.pop();
+            auto r = *uiComms.fromUiQ.pop();
             switch (r.type)
             {
             case FromUI::BEGIN_EDIT:

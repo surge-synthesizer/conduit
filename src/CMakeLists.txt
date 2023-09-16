@@ -16,6 +16,7 @@ target_link_libraries(conduit-shared PUBLIC
         juce::juce_gui_basics
         sst::clap_juce_shim
         sst-basic-blocks
+        sst-cpputils
         sst-jucegui
         clap-wrapper-extensions
         )
