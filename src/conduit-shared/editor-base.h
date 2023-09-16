@@ -1,16 +1,22 @@
 /*
- * Conduit - a series of demonstration and fun plugins
+ * Conduit - a project highlighting CLAP-first development
+ *           and exercising the surge synth team libraries.
  *
  * Copyright 2023 Paul Walker and authors in github
  *
  * This file you are viewing now is released under the
- * MIT license, but the assembled program which results
- * from compiling it has GPL3 dependencies, so the total
- * program is a GPL3 program. More details to come.
+ * MIT license as described in LICENSE.md
  *
- * Basically before I give this to folks, document this bit and
- * replace these headers
+ * The assembled program which results from compiling this
+ * project has GPL3 dependencies, so if you distribute
+ * a binary, the combined work would be a GPL3 product.
  *
+ * Roughly, that means you are welcome to copy the code and
+ * ideas in the src/ directory, but perhaps not code from elsewhere
+ * if you are closed source or non-GPL3. And if you do copy this code
+ * you will need to replace some of the dependencies. Please see
+ * the discussion in README.md for further information on what this may
+ * mean for you.
  */
 
 #ifndef CONDUIT_SRC_CONDUIT_SHARED_EDITOR_BASE_H
