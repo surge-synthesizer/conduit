@@ -14,6 +14,7 @@ if (APPLE)
     set(CMAKE_OBJCXX_VISIBILITY_PRESET hidden)
 endif()
 
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Never want shared if not specified")
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -27,7 +28,6 @@ option(COPY_AFTER_BUILD "Copy the clap to ~/Library on MACOS, ~/.clap on linux" 
 
 add_subdirectory(libs/clap EXCLUDE_FROM_ALL)
 add_subdirectory(libs/clap-helpers EXCLUDE_FROM_ALL)
-add_subdirectory(libs/readerwriterqueue EXCLUDE_FROM_ALL)
 add_subdirectory(libs/fmt EXCLUDE_FROM_ALL)
 
 add_subdirectory(libs/sst/sst-clap-helpers)
@@ -35,6 +35,9 @@ if (NOT DEFINED JUCE_PATH)
     set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 endif()
 add_clap_juce_shim(JUCE_PATH ${JUCE_PATH})
+
+add_library(simde INTERFACE)
+target_include_directories(simde INTERFACE libs/simde)
 
 add_subdirectory(libs/sst/sst-jucegui)
 add_subdirectory(libs/sst/sst-basic-blocks)

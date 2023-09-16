@@ -23,7 +23,6 @@
 
 #include "version.h"
 
-
 namespace sst::conduit::polysynth
 {
 
@@ -458,7 +457,7 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
             r.id = v->param_id;
             r.value = (double)v->value;
 
-            uiComms.toUiQ.try_enqueue(r);
+            uiComms.toUiQ.push(r);
         }
     }
     break;
@@ -683,7 +682,7 @@ void ConduitPolysynth::handleNoteOn(int port_index, int channel, int key, int no
         auto r = ToUI();
         r.type = ToUI::MIDI_NOTE_ON;
         r.id = (uint32_t)key;
-        uiComms.toUiQ.try_enqueue(r);
+        uiComms.toUiQ.push(r);
     }
 }
 
@@ -702,7 +701,7 @@ void ConduitPolysynth::handleNoteOff(int port_index, int channel, int n)
         auto r = ToUI();
         r.type = ToUI::MIDI_NOTE_OFF;
         r.id = (uint32_t)n;
-        uiComms.toUiQ.try_enqueue(r);
+        uiComms.toUiQ.push(r);
     }
 }
 

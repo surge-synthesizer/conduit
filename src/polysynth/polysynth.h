@@ -51,8 +51,6 @@
 
 #include <clap/helpers/plugin.hh>
 
-#include <readerwriterqueue.h>
-
 #include "sst/basic-blocks/params/ParamMetadata.h"
 
 #include "conduit-shared/clap-base-class.h"
@@ -217,9 +215,7 @@ struct ConduitPolysynth
         uiComms.dataCopyForUI.updateCount++;
     }
 
-    uint32_t getAsVst3SupportedNodeExpressions() override {
-        return AS_VST3_NOTE_EXPRESSION_ALL;
-    }
+    uint32_t getAsVst3SupportedNodeExpressions() override { return AS_VST3_NOTE_EXPRESSION_ALL; }
 
   protected:
     std::unique_ptr<juce::Component> createEditor() override;

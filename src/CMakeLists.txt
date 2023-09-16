@@ -12,7 +12,7 @@ target_link_libraries(conduit-shared PUBLIC
         conduit-version-info
         fmt
         tinyxml
-        readerwriterqueue
+        simde
         juce::juce_gui_basics
         sst::clap_juce_shim
         sst-basic-blocks

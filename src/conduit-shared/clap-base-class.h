@@ -22,12 +22,12 @@
 #include <type_traits>
 #include <cassert>
 
-#include <readerwriterqueue.h>
-
 #include <tinyxml/tinyxml.h>
 
 #include <clap/helpers/plugin.hh>
 #include <clap/ext/state.h>
+
+#include "spsc-queue.h"
 
 // note: this is the extension if you are wrapped as a vst3; it is not any vst3 sdk
 #include <clapwrapper/vst3.h>
@@ -364,11 +364,11 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     struct UICommunicationBundle
     {
         UICommunicationBundle(const ClapBaseClass<T, TConfig> &h) : cp(h) {}
-        typedef moodycamel::ReaderWriterQueue<ToUI, 4096> SynthToUI_Queue_t;
-        typedef moodycamel::ReaderWriterQueue<FromUI, 4096> UIToSynth_Queue_t;
+        typedef SPSCQueue<ToUI, 4096> SynthToUI_Queue_t;
+        typedef SPSCQueue<FromUI, 4096> UIToSynth_Queue_t;
 
-        SynthToUI_Queue_t toUiQ{4096};
-        UIToSynth_Queue_t fromUiQ{4096};
+        SynthToUI_Queue_t toUiQ;
+        UIToSynth_Queue_t fromUiQ;
         typename TConfig::DataCopyForUI dataCopyForUI;
 
         std::atomic<bool> refreshUIValues{false};
@@ -397,11 +397,10 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
     uint32_t handleEventsFromUIQueue(const clap_output_events_t *ov)
     {
-        FromUI r;
-
         uint32_t adjustedCount{0};
-        while (uiComms.fromUiQ.try_dequeue(r))
+        while (!uiComms.fromUiQ.isEmpty())
         {
+            auto r = uiComms.fromUiQ.pop();
             switch (r.type)
             {
             case FromUI::BEGIN_EDIT:
@@ -452,10 +451,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 r.type = ToUI::PARAM_VALUE;
                 r.id = k;
                 r.value = *v;
-                if (!uiComms.toUiQ.try_enqueue(r))
-                {
-                    CNDOUT << "ERROR - failed to enqueue in uiRefresh" << std::endl;
-                }
+                uiComms.toUiQ.push(r);
             }
         }
 
@@ -482,10 +478,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 r.id = v->param_id;
                 r.value = (double)v->value;
 
-                if (!uiComms.toUiQ.try_enqueue(r))
-                {
-                    CNDOUT << "Failed to enqueue in param values" << std::endl;
-                }
+                uiComms.toUiQ.push(r);
             }
             return true;
         }

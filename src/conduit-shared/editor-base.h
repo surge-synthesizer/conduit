@@ -69,9 +69,10 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
     {
         using ToUI = typename T::UICommunicationBundle::SynthToUI_Queue_t::value_type;
 
-        ToUI r;
-        while (uic.toUiQ.try_dequeue(r))
+        while (!uic.toUiQ.isEmpty())
         {
+            auto r = uic.toUiQ.pop();
+
             if (r.type == ToUI::MType::PARAM_VALUE)
             {
                 auto p = dataTargets.find(r.id);
@@ -136,7 +137,7 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
             using FromUI = typename T::UICommunicationBundle::UIToSynth_Queue_t::value_type;
 
             f = fi;
-            uic.fromUiQ.try_enqueue({FromUI::MType::ADJUST_VALUE, pid, f});
+            uic.fromUiQ.push({FromUI::MType::ADJUST_VALUE, pid, f});
             uic.requestHostParamFlush();
         }
         void setValueFromModel(const float &fi) override { f = fi; }
@@ -157,11 +158,11 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
         comp->setSource(source.get());
 
         comp->onBeginEdit = [this, pid]() {
-            uic.fromUiQ.try_enqueue({FromUI::MType::BEGIN_EDIT, pid, 1});
+            uic.fromUiQ.push({FromUI::MType::BEGIN_EDIT, pid, 1});
             ed.openTooltip(pid);
         };
         comp->onEndEdit = [this, pid]() {
-            uic.fromUiQ.try_enqueue({FromUI::MType::END_EDIT, pid, 1});
+            uic.fromUiQ.push({FromUI::MType::END_EDIT, pid, 1});
             ed.closeTooltip(pid);
         };
         comp->onIdleHover = [this, pid]() { ed.openTooltip(pid); };

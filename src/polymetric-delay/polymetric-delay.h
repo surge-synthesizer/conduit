@@ -23,7 +23,12 @@
 #include <memory>
 
 #include <memory>
+
+#include "conduit-shared/sse-include.h"
+
 #include "sst/basic-blocks/params/ParamMetadata.h"
+#include "sst/basic-blocks/dsp/VUPeak.h"
+
 #include "conduit-shared/clap-base-class.h"
 
 namespace sst::conduit::polymetric_delay
@@ -119,6 +124,8 @@ struct ConduitPolymetricDelay
     };
 
     typedef std::unordered_map<int, int> PatchPluginExtension;
+
+    sst::basic_blocks::dsp::VUPeak ioVU[2], tapOutVU[nTaps];
 
   protected:
     static constexpr uint32_t bufSize{1 << 16};

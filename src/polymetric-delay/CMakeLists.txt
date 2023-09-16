@@ -11,7 +11,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         conduit-shared
         clap
         clap-helpers
-        readerwriterqueue
         fmt
         juce::juce_gui_basics
         sst::clap_juce_shim

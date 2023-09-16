@@ -2,12 +2,15 @@
 
 Of course "write the plugins to not suck" has to be on the list
 
+## Polymetric Delay
+
+- 7 segment readouts
+- vu meters
+- discrete onto 7S and Power binding
+- actually be a delay!
+
 ## Shared Stuff
 - gui set scale and holder component
-
-## AUv2
-
-- AUv2 turned on
 
 ## cmake work
 - pull the built things into same directory all platforms.
