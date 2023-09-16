@@ -44,6 +44,7 @@ add_subdirectory(libs/sst/sst-basic-blocks)
 set(SST_PLUGININFRA_FILESYSTEM_FORCE_PLATFORM TRUE CACHE BOOL "Use System FS")
 add_subdirectory(libs/sst/sst-plugininfra)
 add_subdirectory(libs/sst/sst-cpputils)
+add_subdirectory(libs/sst/sst-filters)
 
 set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
@@ -128,12 +129,51 @@ target_add_standalone_wrapper(TARGET ${DELAY_STANDALONE_TARGET}
         STATICALLY_LINKED_CLAP_ENTRY True
         PLUGIN_ID "org.surge-synth-team.conduit.polymetric-delay")
 
-add_custom_target(${PROJECT_NAME}_all)
-add_dependencies(${PROJECT_NAME}_all ${PROJECT_NAME}_clap ${PROJECT_NAME}_vst3)
+set(CHORDMEM_STANDALONE_TARGET ${PROJECT_NAME}_chordmem_standalone)
+add_executable(${CHORDMEM_STANDALONE_TARGET})
+target_sources(${CHORDMEM_STANDALONE_TARGET} PRIVATE src/conduit-clap-entry.cpp)
+target_link_libraries(${CHORDMEM_STANDALONE_TARGET} PRIVATE conduit-impl)
+target_add_standalone_wrapper(TARGET ${CHORDMEM_STANDALONE_TARGET}
+        OUTPUT_NAME "Conduit Chord Memory"
+        STATICALLY_LINKED_CLAP_ENTRY True
+        PLUGIN_ID "org.surge-synth-team.conduit.chord-memory")
+
+
+## Finally set up an ALL target which builds and collects
+function(add_to_all)
+    cmake_parse_arguments(AA "" "" "TARGETS" ${ARGN} )
+
+    set(pn ${PROJECT_NAME}_all)
+    if (NOT TARGET ${pn})
+        add_custom_target(${pn})
+    endif()
+
+    add_dependencies(${pn} ${AA_TARGETS})
+
+    set(coldir "${CMAKE_BINARY_DIR}/conduit_products")
+    foreach(TGT ${AA_TARGETS})
+        if (APPLE)
+            add_custom_command(TARGET ${pn}
+                POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${coldir}
+                COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:${TGT}>/../../../$<TARGET_PROPERTY:${TGT},MACOSX_BUNDLE_BUNDLE_NAME>.$<TARGET_PROPERTY:${TGT},BUNDLE_EXTENSION>/
+                    ${coldir}/$<TARGET_PROPERTY:${TGT},MACOSX_BUNDLE_BUNDLE_NAME>.$<TARGET_PROPERTY:${TGT},BUNDLE_EXTENSION>/
+                )
+        else()
+            add_custom_command(TARGET ${pn}
+                    POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E make_directory ${coldir}
+                    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${TGT}> ${coldir}
+                    )
+        endif()
+    endforeach ()
+endfunction(add_to_all)
+
+add_to_all(TARGETS ${PROJECT_NAME}_clap ${PROJECT_NAME}_vst3)
 if (APPLE)
-    add_dependencies(${PROJECT_NAME}_all ${PROJECT_NAME}_auv2)
+    add_to_all(TARGETS ${PROJECT_NAME}_auv2)
 endif()
-add_dependencies(${PROJECT_NAME}_all ${SYNTH_STANDALONE_TARGET} ${DELAY_STANDALONE_TARGET})
+add_to_all(TARGETS ${SYNTH_STANDALONE_TARGET} ${DELAY_STANDALONE_TARGET} ${CHORDMEM_STANDALONE_TARGET})
 
 
 #add_executable(csd_standalone)

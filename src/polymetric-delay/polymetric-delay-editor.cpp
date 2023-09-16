@@ -27,7 +27,11 @@
 
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
+#include "sst/jucegui/components/ToggleButton.h"
 #include "sst/jucegui/components/Knob.h"
+#include "sst/jucegui/components/SevenSegmentControl.h"
+#include "sst/jucegui/components/VUMeter.h"
+#include "sst/jucegui/layouts/LabeledGrid.h"
 #include "sst/jucegui/data/Continuous.h"
 #include "conduit-shared/editor-base.h"
 
@@ -86,27 +90,45 @@ struct TapPanel : jcmp::NamedPanel
     int tapIdx;
 
     TapPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e, int i);
+    ~TapPanel();
     struct Content : juce::Component
     {
+        Content()
+        {
+            layout.addColGapAfter(1);
+            layout.addColGapAfter(2);
+        }
+
         ~Content()
         {
-            for (auto &k : knobs)
+            for (auto &[p, k] : knobs)
+                if (k)
+                    k->setSource(nullptr);
+
+            for (auto &[p, k] : dknobs)
                 if (k)
                     k->setSource(nullptr);
         }
         void resized() override
         {
-            auto bx = getLocalBounds().reduced(2).withWidth(getHeight() - 17);
-            for (auto &k : knobs)
-            {
-                if (k)
-                {
-                    k->setBounds(bx);
-                    bx = bx.translated(bx.getWidth() + 4, 0);
-                }
-            }
+            layout.resize(getLocalBounds());
+
+            auto vuSpace = getLocalBounds()
+                               .withTrimmedLeft(getWidth() - 20)
+                               .translated(-5, 0)
+                               .withTrimmedBottom(5);
+            vuMeter->setBounds(vuSpace);
         }
-        std::array<std::unique_ptr<jcmp::Knob>, 8> knobs;
+        void updateVUMeter(TapPanel *p)
+        {
+            vuMeter->setLevels(p->uic.dataCopyForUI.tapVu[p->tapIdx][0],
+                               p->uic.dataCopyForUI.tapVu[p->tapIdx][1]);
+        }
+        sst::jucegui::layouts::LabeledGrid<5, 2> layout;
+        std::unordered_map<uint32_t, std::unique_ptr<jcmp::ContinuousParamEditor>> knobs;
+        std::unordered_map<uint32_t, std::unique_ptr<jcmp::DiscreteParamEditor>> dknobs;
+        std::vector<std::unique_ptr<juce::Component>> labels;
+        std::unique_ptr<jcmp::VUMeter> vuMeter;
     };
 };
 
@@ -142,7 +164,8 @@ struct OutputPanel : jcmp::NamedPanel
     };
 };
 
-struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel, shared::TooltipSupport
+struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel,
+                                      shared::ToolTipMixIn<ConduitPolymetricDelayEditor>
 {
     uicomm_t &uic;
     using comms_t = sst::conduit::shared::EditorCommunicationsHandler<ConduitPolymetricDelay,
@@ -166,7 +189,7 @@ struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel, shared::TooltipS
             tapPanels[i] = std::make_unique<TapPanel>(uic, *this, i);
             addAndMakeVisible(*tapPanels[i]);
         }
-        setSize(640, 400);
+        setSize(860, 380);
 
         comms->startProcessing();
     }
@@ -177,16 +200,23 @@ struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel, shared::TooltipS
 
     void resized() override
     {
-        auto tabH = 100, tabW = 520;
+        auto tabH = getHeight() / 2, tabW = getWidth() - 100;
 
         auto b = getLocalBounds();
         // statusPanel->setBounds(sb);
 
-        auto tabs = getLocalBounds().withWidth(tabW).withHeight(tabH);
+        auto tabs = getLocalBounds().withWidth(tabW / 2).withHeight(getHeight() / 2);
         for (int i = 0; i < ConduitPolymetricDelay::nTaps; ++i)
         {
             tapPanels[i]->setBounds(tabs);
-            tabs = tabs.translated(0, tabH);
+            if (i == 0 || i == 2)
+            {
+                tabs = tabs.translated(tabW / 2, 0);
+            }
+            else
+            {
+                tabs = tabs.translated(-tabW / 2, tabH);
+            }
         }
 
         auto sb = getLocalBounds().withTrimmedLeft(tabW).withHeight(getHeight() / 2);
@@ -212,24 +242,68 @@ TapPanel::TapPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e, int i)
     : jcmp::NamedPanel("Tap " + std::to_string(i + 1)), uic(p), ed(e), tapIdx(i)
 {
     setTogglable(true);
+    e.comms->attachDiscreteToParam(toggleButton.get(),
+                                   ConduitPolymetricDelay::pmTapActive + tapIdx);
+
     auto content = std::make_unique<Content>();
 
-    int ki{0};
-    for (auto p :
-         {ConduitPolymetricDelay::pmDelayTimeNTaps, ConduitPolymetricDelay::pmDelayTimeEveryM,
-          ConduitPolymetricDelay::pmDelayTimeFineSeconds, ConduitPolymetricDelay::pmDelayModRate,
-          ConduitPolymetricDelay::pmDelayModDepth, ConduitPolymetricDelay::pmTapLowCut,
-          ConduitPolymetricDelay::pmTapHighCut, ConduitPolymetricDelay::pmTapLevel})
-    {
-        auto kb = std::make_unique<jcmp::Knob>();
+    auto add7s = [this, &content, &e](auto p, auto x, auto y) {
+        auto kb = std::make_unique<jcmp::SevenSegmentControl>();
         content->addAndMakeVisible(*kb);
+        auto gc = content->layout.addComponent(*kb, x, y);
+        gc->reduction = 4;
+        gc->yPush = 4;
+        gc->xPush = (x == 0 ? -2 : 4);
+
+        e.comms->attachDiscreteToParam(kb.get(), p + tapIdx);
+        content->dknobs[p] = std::move(kb);
+
+        return (jcmp::SevenSegmentControl *)(content->knobs[p].get());
+    };
+    add7s(ConduitPolymetricDelay::pmDelayTimeNTaps, 0, 0);
+    add7s(ConduitPolymetricDelay::pmDelayTimeEveryM, 1, 0);
+
+    auto addKb = [this, &content, &e](auto p, auto x, auto y, const std::string &label) {
+        auto kb = std::make_unique<jcmp::Knob>();
+        kb->setDrawLabel(false);
+        content->addAndMakeVisible(*kb);
+        content->layout.addComponent(*kb, x, y);
         e.comms->attachContinuousToParam(kb.get(), p + tapIdx);
-        content->knobs[ki] = std::move(kb);
-        ki++;
-    }
+        content->knobs[p] = std::move(kb);
+
+        auto lb = content->layout.addLabel(label, x, y);
+        content->addAndMakeVisible(*lb);
+        content->labels.push_back(std::move(lb));
+
+        return (jcmp::Knob *)(content->knobs[p].get());
+    };
+
+    auto mr = addKb(ConduitPolymetricDelay::pmDelayModRate, 0, 1, "Mod Rate");
+    mr->pathDrawMode = jucegui::components::Knob::ALWAYS_FROM_MIN;
+
+    addKb(ConduitPolymetricDelay::pmDelayModDepth, 1, 1, "Mod Depth");
+
+    auto kl = addKb(ConduitPolymetricDelay::pmTapLowCut, 2, 0, "Lo Cut");
+    kl->pathDrawMode = jucegui::components::Knob::ALWAYS_FROM_MIN;
+    auto kh = addKb(ConduitPolymetricDelay::pmTapHighCut, 2, 1, "Hi Cut");
+    kh->pathDrawMode = jucegui::components::Knob::ALWAYS_FROM_MAX;
+
+    addKb(ConduitPolymetricDelay::pmTapFeedback, 3, 0, "Feedback");
+    addKb(ConduitPolymetricDelay::pmTapCrossFeedback, 3, 1, "CrossFeed");
+
+    addKb(ConduitPolymetricDelay::pmTapLevel, 4, 0, "Level");
+    addKb(ConduitPolymetricDelay::pmTapOutputPan, 4, 1, "Pan");
+
+    content->vuMeter = std::make_unique<jcmp::VUMeter>();
+    content->addAndMakeVisible(*(content->vuMeter));
+
+    e.comms->addIdleHandler("vumeter" + std::to_string(tapIdx),
+                            [this, c = content.get()]() { c->updateVUMeter(this); });
 
     setContentAreaComponent(std::move(content));
 }
+
+TapPanel::~TapPanel() { ed.comms->removeIdleHandler("vumeter" + std::to_string(tapIdx)); }
 
 OutputPanel::OutputPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e)
     : jcmp::NamedPanel("Output"), uic(p), ed(e)
@@ -238,8 +312,7 @@ OutputPanel::OutputPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e)
 
     int ki{0};
     for (auto p : {
-             ConduitPolymetricDelay::pmMixLevel,
-             ConduitPolymetricDelay::pmFeedbackLevel,
+             ConduitPolymetricDelay::pmDryLevel,
          })
     {
         auto kb = std::make_unique<jcmp::Knob>();

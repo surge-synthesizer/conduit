@@ -28,3 +28,6 @@
 [submodule "libs/sst/sst-cpputils"]
 	path = libs/sst/sst-cpputils
 	url = https://github.com/surge-synthesizer/sst-cpputils
+[submodule "libs/sst/sst-filters"]
+	path = libs/sst/sst-filters
+	url = https://github.com/surge-synthesizer/sst-filters

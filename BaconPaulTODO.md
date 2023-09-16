@@ -4,17 +4,15 @@ Of course "write the plugins to not suck" has to be on the list
 
 ## Polymetric Delay
 
-- 7 segment readouts
+- hook up all the dsp
+- square vs linear panels
 - vu meters
-- discrete onto 7S and Power binding
-- actually be a delay!
+- tooltips
 
 ## Shared Stuff
 - gui set scale and holder component
 
 ## cmake work
-- pull the built things into same directory all platforms.
-  like have conduit_all be the collect stage
 - target to make a zip
 - BYOSDKs
 - set up installer targets or zip

@@ -25,7 +25,7 @@
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
-#include "sst/jucegui/data/Continuous.h"
+#include "sst/jucegui/components/MultiSwitch.h"
 #include "conduit-shared/editor-base.h"
 
 namespace sst::conduit::chord_memory::editor
@@ -55,10 +55,11 @@ struct ControlsPanel : juce::Component
         time->setBounds(bx);
     }
 
-    std::unique_ptr<jcmp::Knob> time;
+    std::unique_ptr<jcmp::DiscreteParamEditor> time;
 };
 
-struct ConduitChordMemoryEditor : public jcmp::WindowPanel, shared::TooltipSupport
+struct ConduitChordMemoryEditor : public jcmp::WindowPanel,
+                                  shared::ToolTipMixIn<ConduitChordMemoryEditor>
 {
     uicomm_t &uic;
     using comms_t = sst::conduit::shared::EditorCommunicationsHandler<ConduitChordMemory,
@@ -75,7 +76,7 @@ struct ConduitChordMemoryEditor : public jcmp::WindowPanel, shared::TooltipSuppo
         auto oct = std::make_unique<ControlsPanel>(uic, *this);
         ctrlPanel->setContentAreaComponent(std::move(oct));
 
-        setSize(600, 200);
+        setSize(600, 700);
 
         comms->startProcessing();
     }
@@ -94,9 +95,9 @@ ControlsPanel::ControlsPanel(sst::conduit::chord_memory::editor::uicomm_t &p,
     : uic(p)
 {
     // TODO: Stepped knob
-    time = std::make_unique<jcmp::Knob>();
+    time = std::make_unique<jcmp::MultiSwitch>();
     addAndMakeVisible(*time);
-    e.comms->attachContinuousToParam(time.get(), cps_t::paramIds::pmKeyShift);
+    e.comms->attachDiscreteToParam(time.get(), cps_t::paramIds::pmKeyShift);
 }
 } // namespace sst::conduit::chord_memory::editor
 

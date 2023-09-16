@@ -21,6 +21,7 @@
 
 #include "polymetric-delay.h"
 #include "version.h"
+#include "sst/basic-blocks/dsp/PanLaws.h"
 
 namespace sst::conduit::polymetric_delay
 {
@@ -45,25 +46,18 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
 
     paramDescriptions.push_back(ParamDesc()
-                                    .asPercent()
-                                    .withID(pmMixLevel)
-                                    .withName("Mix Level")
+                                    .asFloat()
+                                    .asCubicDecibelAttenuation()
+                                    .withID(pmDryLevel)
+                                    .withName("Dry Output Level")
                                     .withGroupName("Main")
-                                    .withDefault(0.8)
-                                    .withFlags(autoFlag));
-
-    paramDescriptions.push_back(ParamDesc()
-                                    .asPercent()
-                                    .withID(pmFeedbackLevel)
-                                    .withName("Feedback Level")
-                                    .withGroupName("Main")
-                                    .withDefault(0.2)
+                                    .withDefault(0.5)
                                     .withFlags(autoFlag));
 
     for (int i = 0; i < nTaps; ++i)
     {
         auto gn = std::string("Tap ") + std::to_string(i + 1);
-        auto tm = std::string(" (") + std::to_string(i + 1) + ")";
+        auto tm = std::string(" (Tap ") + std::to_string(i + 1) + ")";
         paramDescriptions.push_back(ParamDesc()
                                         .asInt()
                                         .withFlags(steppedFlag)
@@ -84,20 +78,13 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
                                         .withLinearScaleFormatting("beats"));
         paramDescriptions.push_back(ParamDesc()
                                         .asFloat()
-                                        .withFlags(autoFlag)
-                                        .withID(pmDelayTimeFineSeconds + i)
-                                        .withName("Fine Adjust" + tm)
-                                        .withGroupName(gn)
-                                        .withRange(-0.1, 0.1)
-                                        .withDefault(0)
-                                        .withLinearScaleFormatting("seconds"));
-        paramDescriptions.push_back(ParamDesc()
-                                        .asLog2SecondsRange(-3, 4)
+                                        .withRange(log2(0.05 / 440) * 12, log2(6000.f / 440) * 12)
+                                        .withDefault(log2(1.0 / 440.0) * 12)
+                                        .withSemitoneZeroAt400Formatting()
                                         .withFlags(autoFlag)
                                         .withID(pmDelayModRate + i)
                                         .withName("Mod Rate" + tm)
-                                        .withGroupName(gn)
-                                        .withDefault(0));
+                                        .withGroupName(gn));
         paramDescriptions.push_back(ParamDesc()
                                         .asFloat()
                                         .withFlags(autoFlag)
@@ -136,14 +123,52 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
                                         .withName("Level" + tm)
                                         .withGroupName(gn)
                                         .withDefault(1.0f - 0.1f * i));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asFloat()
+                                        .asCubicDecibelAttenuation()
+                                        .withFlags(autoFlag)
+                                        .withID(pmTapFeedback + i)
+                                        .withName("Feedback" + tm)
+                                        .withGroupName(gn)
+                                        .withDefault(0.2));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asFloat()
+                                        .asCubicDecibelAttenuation()
+                                        .withFlags(autoFlag)
+                                        .withID(pmTapCrossFeedback + i)
+                                        .withName("Cross Feedback " + tm)
+                                        .withGroupName(gn)
+                                        .withDefault(0.0));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asFloat()
+                                        .asPercentBipolar()
+                                        .withFlags(autoFlag)
+                                        .withID(pmTapOutputPan + i)
+                                        .withName("Pan " + tm)
+                                        .withGroupName(gn)
+                                        .withDefault(0.0));
     }
 
     configureParams();
 
-    attachParam(pmMixLevel, mix);
-    attachParam(pmFeedbackLevel, feedback);
+    attachParam(pmDryLevel, dryLev);
 
-    memset(delayBuffer, 0, sizeof(delayBuffer));
+    for (int i = 0; i < nTaps; ++i)
+    {
+        attachParam(pmDelayTimeNTaps + i, tapData[i].ntaps);
+        attachParam(pmDelayTimeEveryM + i, tapData[i].mbeats);
+        attachParam(pmTapLevel + i, tapData[i].level);
+        attachParam(pmTapFeedback + i, tapData[i].fblev);
+        attachParam(pmTapCrossFeedback + i, tapData[i].crossfblev);
+        attachParam(pmTapActive + i, tapData[i].active);
+        attachParam(pmTapOutputPan + i, tapData[i].pan);
+
+        attachParam(pmTapLowCut + i, tapData[i].locut);
+        attachParam(pmTapHighCut + i, tapData[i].hicut);
+
+        hp[i].storage = this;
+        lp[i].storage = this;
+    }
 
     clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
     clapJuceShim->setResizable(false);
@@ -193,7 +218,20 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
     float **const in = process->audio_inputs[0].data32;
     auto ichans = process->audio_inputs->channel_count;
 
-    handleEventsFromUIQueue(process->out_events);
+    while (!uiComms.fromUiQ.empty())
+    {
+        auto r = *uiComms.fromUiQ.pop();
+        generateOutputMessagesFromUI(r, process->out_events);
+        if (r.type == FromUI::ADJUST_VALUE)
+        {
+            doValueUpdate(r.id, r.value);
+            if (isTapParam(r.id, pmDelayTimeEveryM) || isTapParam(r.id, pmDelayTimeNTaps))
+            {
+                recalcTaps();
+            }
+        }
+    }
+    refreshUIIfNeeded();
 
     auto chans = std::min(ochans, ichans);
     if (chans < 2)
@@ -211,7 +249,16 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
     }
 
     if (process->transport)
+    {
         handleInboundEvent((const clap_event_header *)(process->transport));
+    }
+
+    float inMx[2]{0, 0}, outMx[2]{0, 0}, tapMx[nTaps][2]{};
+    bool active[nTaps];
+    for (int i = 0; i < nTaps; ++i)
+    {
+        active[i] = *(tapData[i].active) > 0.5;
+    }
 
     for (int i = 0; i < process->frames_count; ++i)
     {
@@ -225,28 +272,125 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
                 nextEvent = ev->get(ev, nextEventIndex);
         }
 
+        if (slowProcess >= blockSize)
+        {
+            slowProcess = 0;
+            inVU.process(inMx[0], inMx[1]);
+            outVU.process(outMx[0], outMx[1]);
+            inMx[0] = 0;
+            inMx[1] = 0;
+            outMx[0] = 0;
+            outMx[1] = 0;
+
+            for (int t = 0; t < nTaps; ++t)
+            {
+                tapOutVU[t].process(tapMx[t][0], tapMx[t][1]);
+
+                tapMx[t][0] = 0;
+                tapMx[t][1] = 0;
+
+                // Recalc pan laws
+                sst::basic_blocks::dsp::pan_laws::stereoEqualPower((tapData[t].pan.v + 1) * 0.5,
+                                                                   tapPanMatrix[t]);
+
+                setTapFilterFrequencies(t);
+            }
+        }
+        slowProcess++;
+
+        float totalTapOut[2]{};
+        float totalTapFB[2]{};
+        for (int tap = 0; tap < nTaps; ++tap)
+        {
+            if (!active[tap])
+                continue;
+
+            auto tl = tapData[tap].level.v;
+            tl = tl * tl * tl;
+            auto ftl = tapData[tap].fblev.v;
+            ftl = ftl * ftl * ftl;
+            auto cftl = tapData[tap].crossfblev.v;
+            cftl = cftl * cftl * cftl;
+
+            auto smpL = delayLine[0].read(baseTapSamples[tap]);
+            auto smpR = delayLine[1].read(baseTapSamples[tap]);
+
+            auto dL = smpL * tapPanMatrix[tap][0] + smpR * tapPanMatrix[tap][2];
+            auto dR = smpR * tapPanMatrix[tap][1] + smpL * tapPanMatrix[tap][3];
+
+            dL = dL * tl;
+            dR = dR * tl;
+
+            hp[tap].process_sample(dL, dR, dL, dR);
+            lp[tap].process_sample(dL, dR, dL, dR);
+
+            tapMx[tap][0] = std::max(tapMx[tap][0], std::abs(dL));
+            tapMx[tap][1] = std::max(tapMx[tap][1], std::abs(dR));
+
+            totalTapOut[0] += dL;
+            totalTapOut[1] += dR;
+
+            totalTapFB[0] += smpL * ftl + smpR * cftl;
+            totalTapFB[1] += smpR * ftl + smpL * cftl;
+        }
+
+        auto dl = (*dryLev);
+        dl = dl * dl * dl;
         for (int c = 0; c < chans; ++c)
         {
-            out[c][i] = in[c][i] * (*mix);
+            out[c][i] = in[c][i] * dl + totalTapOut[c];
+
+            delayLine[c].write(in[c][i] + totalTapFB[c]);
+            inMx[c] = std::max(inMx[c], std::abs(in[c][i]));
+            outMx[c] = std::max(outMx[c], std::abs(out[c][i]));
+        }
+
+        processLags();
+    }
+
+    for (int c = 0; c < 2; ++c)
+    {
+        uiComms.dataCopyForUI.inVu[c] = inVU.vu_peak[c];
+        uiComms.dataCopyForUI.outVu[c] = outVU.vu_peak[c];
+        for (int t = 0; t < nTaps; ++t)
+        {
+            uiComms.dataCopyForUI.tapVu[t][c] = tapOutVU[t].vu_peak[c];
         }
     }
+
     return CLAP_PROCESS_CONTINUE;
 }
 
 void ConduitPolymetricDelay::handleInboundEvent(const clap_event_header_t *evt)
 {
-    if (handleParamBaseEvents(evt))
-    {
-        return;
-    }
-
     // Other events just get dropped right now
     if (evt->space_id != CLAP_CORE_EVENT_SPACE_ID)
         return;
 
-    if (evt->type == CLAP_EVENT_TRANSPORT)
+    switch (evt->type)
+    {
+    case CLAP_EVENT_PARAM_VALUE:
+    {
+        auto v = reinterpret_cast<const clap_event_param_value *>(evt);
+        updateParamInPatch(v);
+
+        if (isTapParam(v->param_id, pmDelayTimeEveryM) || isTapParam(v->param_id, pmDelayTimeNTaps))
+        {
+            recalcTaps();
+        }
+    }
+    break;
+
+    case CLAP_EVENT_TRANSPORT:
     {
         auto tev = reinterpret_cast<const clap_event_transport_t *>(evt);
+        auto ptempo = tempo;
+        tempo = tev->tempo;
+        if (ptempo != tempo)
+        {
+            recalcTaps();
+        }
+
         uiComms.dataCopyForUI.tempo = tev->tempo;
         uiComms.dataCopyForUI.bar_start = tev->bar_start;
         uiComms.dataCopyForUI.bar_number = tev->bar_number;
@@ -257,5 +401,30 @@ void ConduitPolymetricDelay::handleInboundEvent(const clap_event_header_t *evt)
         uiComms.dataCopyForUI.isPlayingOrRecording =
             (tev->flags & CLAP_TRANSPORT_IS_PLAYING) || (tev->flags & CLAP_TRANSPORT_IS_RECORDING);
     }
+    break;
+    }
 }
+
+void ConduitPolymetricDelay::recalcTaps()
+{
+    // 120 beats per minute is
+    // 2 beats per second
+    // is 1/2 second per beat
+    // is sr/2 samples per beat
+    // 240 bpm is
+    // 1/4 second per beat sr/4 sample per beat
+    // so samples ber beat is sampleRate * 60 / tempo
+    double spb = sampleRate * 60.0 / tempo;
+
+    // CNDOUT << "Recalculating Taps" << std::endl;
+    for (int i = 0; i < nTaps; ++i)
+    {
+        auto n = (int)(*tapData[i].ntaps);
+        auto m = (int)(*tapData[i].mbeats);
+        baseTapSamples[i] = 1.f * spb * m / n;
+        // CNDOUT << CNDVAR(n) << CNDVAR(m) << CNDVAR(spb) << CNDVAR(baseTapSamples[i]) <<
+        // std::endl;
+    }
+}
+
 } // namespace sst::conduit::polymetric_delay

@@ -34,6 +34,9 @@
 #include <clap/ext/state.h>
 
 #include "sst/cpputils/ring_buffer.h"
+#include "sst/basic-blocks/dsp/Lag.h"
+#include "sst/basic-blocks/tables/DbToLinearProvider.h"
+#include "sst/basic-blocks/tables/EqualTuningProvider.h"
 
 // note: this is the extension if you are wrapped as a vst3; it is not any vst3 sdk
 #include <clapwrapper/vst3.h>
@@ -67,11 +70,20 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     ClapBaseClass(const clap_plugin_descriptor *desc, const clap_host *host)
         : plugHelper_t(desc, host), uiComms(*this)
     {
+        dbToLinearTable.init();
+        equalTuningTable.init();
     }
+
+    // Most things are sample accurate, but some have a slow- or block- based approach.
+    // This is the default block size for those
+    static constexpr int blockSize{16};
 
     using ParamDesc = sst::basic_blocks::params::ParamMetaData;
     std::vector<ParamDesc> paramDescriptions;
     std::unordered_map<uint32_t, ParamDesc> paramDescriptionMap;
+
+    sst::basic_blocks::tables::DbToLinearProvider dbToLinearTable;
+    sst::basic_blocks::tables::EqualTuningProvider equalTuningTable;
 
 #define cbassert(x, y)                                                                             \
     {                                                                                              \
@@ -171,6 +183,15 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     std::unordered_map<clap_id, float *> paramToValue;
     std::unordered_map<clap_id, int> paramToPatchIndex;
 
+    using lag_t = sst::basic_blocks::dsp::SurgeLag<float, true>;
+    std::unordered_map<clap_id, lag_t *> paramToLag;
+
+    void processLags()
+    {
+        for (const auto lp : paramToLag)
+            lp.second->process();
+    }
+
     void attachParam(clap_id paramId, float *&to)
     {
         auto ptpi = paramToPatchIndex.find(paramId);
@@ -182,6 +203,19 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         {
             to = &patch.params[ptpi->second];
         }
+    }
+
+    void attachParam(clap_id paramId, lag_t &to)
+    {
+        auto val = 0;
+        auto ptpi = paramToPatchIndex.find(paramId);
+        if (ptpi != paramToPatchIndex.end())
+        {
+            val = patch.params[ptpi->second];
+        }
+        paramToLag[paramId] = &to;
+        to.newValue(val);
+        to.instantize();
     }
 
   protected:
@@ -323,6 +357,12 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 CNDOUT << "Unknown parameter " << id << " in stream" << std::endl;
                 // continue anyway
             }
+            auto plv = paramToLag.find(id);
+            if (plv != paramToLag.end())
+            {
+                plv->second->newValue(value);
+                plv->second->instantize();
+            }
             currParam = TINYXML_SAFE_TO_ELEMENT(currParam->NextSiblingElement("param"));
         }
 
@@ -401,51 +441,35 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         const ClapBaseClass<T, TConfig> &cp;
     } uiComms;
 
+    void doValueUpdate(clap_id id, float value)
+    {
+        *paramToValue[id] = value;
+        auto ptl = paramToLag.find(id);
+        if (ptl != paramToLag.end())
+        {
+            ptl->second->newValue(value);
+        }
+    }
+
     uint32_t handleEventsFromUIQueue(const clap_output_events_t *ov)
     {
         uint32_t adjustedCount{0};
         while (!uiComms.fromUiQ.empty())
         {
             auto r = *uiComms.fromUiQ.pop();
-            switch (r.type)
+            adjustedCount++;
+            generateOutputMessagesFromUI(r, ov);
+            if (r.type == FromUI::ADJUST_VALUE)
             {
-            case FromUI::BEGIN_EDIT:
-            case FromUI::END_EDIT:
-            {
-                adjustedCount++;
-                auto evt = clap_event_param_gesture();
-                evt.header.size = sizeof(clap_event_param_gesture);
-                evt.header.type = (r.type == FromUI::BEGIN_EDIT ? CLAP_EVENT_PARAM_GESTURE_BEGIN
-                                                                : CLAP_EVENT_PARAM_GESTURE_END);
-                evt.header.time = 0;
-                evt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
-                evt.header.flags = 0;
-                evt.param_id = r.id;
-                ov->try_push(ov, &evt.header);
-
-                break;
-            }
-            case FromUI::ADJUST_VALUE:
-            {
-                adjustedCount++;
-                // So set my value
-                *paramToValue[r.id] = r.value;
-
-                // But we also need to generate outbound message to the host
-                auto evt = clap_event_param_value();
-                evt.header.size = sizeof(clap_event_param_value);
-                evt.header.type = (uint16_t)CLAP_EVENT_PARAM_VALUE;
-                evt.header.time = 0; // for now
-                evt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
-                evt.header.flags = 0;
-                evt.param_id = r.id;
-                evt.value = r.value;
-
-                ov->try_push(ov, &(evt.header));
-            }
+                doValueUpdate(r.id, r.value);
             }
         }
+        refreshUIIfNeeded();
+        return adjustedCount;
+    }
 
+    void refreshUIIfNeeded()
+    {
         // Similarly we need to push values to a UI on startup
         if (uiComms.refreshUIValues && clapJuceShim->isEditorAttached())
         {
@@ -460,8 +484,42 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 uiComms.toUiQ.push(r);
             }
         }
+    }
 
-        return adjustedCount;
+    void generateOutputMessagesFromUI(const FromUI &r, const clap_output_events_t *ov)
+    {
+        switch (r.type)
+        {
+        case FromUI::BEGIN_EDIT:
+        case FromUI::END_EDIT:
+        {
+            auto evt = clap_event_param_gesture();
+            evt.header.size = sizeof(clap_event_param_gesture);
+            evt.header.type = (r.type == FromUI::BEGIN_EDIT ? CLAP_EVENT_PARAM_GESTURE_BEGIN
+                                                            : CLAP_EVENT_PARAM_GESTURE_END);
+            evt.header.time = 0;
+            evt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+            evt.header.flags = 0;
+            evt.param_id = r.id;
+            ov->try_push(ov, &evt.header);
+        }
+        break;
+        case FromUI::ADJUST_VALUE:
+        {
+            // But we also need to generate outbound message to the host
+            auto evt = clap_event_param_value();
+            evt.header.size = sizeof(clap_event_param_value);
+            evt.header.type = (uint16_t)CLAP_EVENT_PARAM_VALUE;
+            evt.header.time = 0; // for now
+            evt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+            evt.header.flags = 0;
+            evt.param_id = r.id;
+            evt.value = r.value;
+
+            ov->try_push(ov, &(evt.header));
+        }
+        break;
+        }
     }
 
     bool handleParamBaseEvents(const clap_event_header *evt)
@@ -474,24 +532,27 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         case CLAP_EVENT_PARAM_VALUE:
         {
             auto v = reinterpret_cast<const clap_event_param_value *>(evt);
-
-            *paramToValue[v->param_id] = v->value;
-
-            if (clapJuceShim && clapJuceShim->isEditorAttached())
-            {
-                auto r = ToUI();
-                r.type = ToUI::PARAM_VALUE;
-                r.id = v->param_id;
-                r.value = (double)v->value;
-
-                uiComms.toUiQ.push(r);
-            }
+            updateParamInPatch(v);
             return true;
         }
         break;
         }
 
         return false;
+    }
+
+    void updateParamInPatch(const clap_event_param_value *v)
+    {
+        doValueUpdate(v->param_id, v->value);
+        if (clapJuceShim && clapJuceShim->isEditorAttached())
+        {
+            auto r = ToUI();
+            r.type = ToUI::PARAM_VALUE;
+            r.id = v->param_id;
+            r.value = (double)v->value;
+
+            uiComms.toUiQ.push(r);
+        }
     }
 
     bool registerOrUnregisterTimer(clap_id &id, int ms, bool reg) override
@@ -535,6 +596,10 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         return Plugin::extension(id);
     }
+
+    // Support for SST Biquads
+    float note_to_pitch_ignoring_tuning(float n) { return equalTuningTable.note_to_pitch(n); }
+    float dbToLinear(float n) { return dbToLinearTable.dbToLinear(n); }
 };
 } // namespace sst::conduit::shared
 

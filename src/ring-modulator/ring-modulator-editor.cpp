@@ -58,7 +58,8 @@ struct ControlsPanel : juce::Component
     std::unique_ptr<jcmp::Knob> mix;
 };
 
-struct ConduitRingModulatorEditor : public jcmp::WindowPanel, shared::TooltipSupport
+struct ConduitRingModulatorEditor : public jcmp::WindowPanel,
+                                    shared::ToolTipMixIn<ConduitRingModulatorEditor>
 {
     uicomm_t &uic;
     using comms_t = sst::conduit::shared::EditorCommunicationsHandler<ConduitRingModulator,

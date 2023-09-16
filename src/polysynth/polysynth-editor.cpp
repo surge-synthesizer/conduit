@@ -50,7 +50,8 @@ struct OscPanel : public juce::Component
     std::unique_ptr<jcmp::Knob> oscUnisonSpread;
 };
 
-struct ConduitPolysynthEditor : public jcmp::WindowPanel, shared::TooltipSupport
+struct ConduitPolysynthEditor : public jcmp::WindowPanel,
+                                shared::ToolTipMixIn<ConduitPolysynthEditor>
 {
     uicomm_t &uic;
     using comms_t =

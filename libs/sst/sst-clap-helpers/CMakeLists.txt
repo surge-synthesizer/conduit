@@ -21,58 +21,12 @@ function(add_clap_juce_shim)
             )
     cmake_parse_arguments(JSHIM "" "${oneValueArgs}" "" ${ARGN} )
 
-    set(underlib "juceshim")
-    add_library(${underlib} STATIC)
-    foreach(JM IN ITEMS juce_gui_basics juce_graphics juce_core juce_events juce_data_structures)
-        message(STATUS "sst clap juce shim: synthesizing juce::${JM}")
-        if (APPLE)
-            target_sources(${underlib} PRIVATE
-                    ${JSHIM_JUCE_PATH}/modules/${JM}/${JM}.mm)
-        else()
-            target_sources(${underlib} PRIVATE
-                    ${JSHIM_JUCE_PATH}/modules/${JM}/${JM}.cpp)
-        endif()
-        target_compile_definitions(${underlib} PUBLIC
-                JUCE_MODULE_AVAILABLE_${JM}=1)
-        add_library(singleshim_${JM} INTERFACE)
-        target_link_libraries(singleshim_${JM} INTERFACE ${underlib})
-        add_library(juce::${JM} ALIAS singleshim_${JM})
-    endforeach()
-
-    target_compile_definitions(${underlib} PUBLIC
-            NDEBUG=$<IF:$<CONFIG:Release>,1,0>
-            JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
-            JUCE_STANDALONE_APPLICATION=0
-            JUCE_USE_CURL=0
-            JUCE_WEB_BROWSER=0
-            JUCE_USE_FLAC=0
-            JUCE_USE_OGGVORBIS=0
-            JUCE_USE_WINDOWS_MEDIA_FORMAT=0
-            )
-    if (MSVC)
-        message(STATUS "Turning on bigobj for ${underlib}")
-        target_compile_options(${underlib} PRIVATE /bigobj)
+    if (NOT DEFINED JSHIM_JUCE_PATH)
+        message(FATAL_ERROR "sst-clap-helpers: add_clap_juce_shim requires a JUCE PATH")
     endif()
 
-    target_include_directories(${underlib} PUBLIC ${JUCE_PATH}/modules)
-    if (APPLE)
-        target_link_libraries(${underlib} PUBLIC
-                "-framework CoreFoundation"
-                "-framework AppKit"
-                "-framework CoreGraphics"
-                "-framework Security"
-                "-framework IOKit"
-                "-framework CoreImage"
-                "-framework CoreVideo"
-                "-framework QuartzCore")
-    elseif(UNIX)
-        include(FindFreetype)
-        message(STATUS "Using FreeType ${FREETYPE_VERSION_STRING}")
-        target_include_directories(${underlib} PUBLIC ${FREETYPE_INCLUDE_DIRS})
-        target_link_libraries(${underlib} PUBLIC ${FREETYPE_LIBRARIES})
-    endif()
-
-    add_library(sst::juceshim ALIAS ${underlib})
+    set(JUCE_MODULES_ONLY ON CACHE BOOL "Only use juce modules")
+    add_subdirectory(${JUCE_PATH} juce_for_shim EXCLUDE_FROM_ALL)
 
     add_library(clap_juce_shim STATIC ${CLAP_JUCE_SHIM_SOURCE}/src/sst/clap_juce_shim/clap_juce_shim_impl.cpp)
     if (APPLE)

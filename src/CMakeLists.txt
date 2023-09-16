@@ -18,6 +18,7 @@ target_link_libraries(conduit-shared PUBLIC
         sst-basic-blocks
         sst-cpputils
         sst-jucegui
+        sst-filters
         clap-wrapper-extensions
         )
 
