@@ -22,6 +22,5 @@ Of course "write the plugins to not suck" has to be on the list
 ## wrap up
 
 - remove this file and move to issues
-- push sst-clap-helpers to sub-repo
 - push to surge repo
 - azure
