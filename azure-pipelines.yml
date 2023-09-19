@@ -16,11 +16,7 @@ jobs:
       matrix:
         mac-x86:
           imageName: 'macos-12'
-          cmakeArgs: -D"CMAKE_OSX_ARCHITECTURES=x86_64"
-          isMac: True
-        mac-arm:
-          imageName: 'macos-12'
-          cmakeArgs: -D"CMAKE_OSX_ARCHITECTURES=arm64"
+          cmakeArgs: -D"CMAKE_OSX_ARCHITECTURES=x86_64;arm64"
           isMac: True
         win-msvc:
           imageName: 'windows-2022'
