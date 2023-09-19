@@ -4,20 +4,12 @@ Of course "write the plugins to not suck" has to be on the list
 
 ## Polymetric Delay
 
-- hook up all the dsp
-- square vs linear panels
-- vu meters
-- tooltips
+- hook up modulation
+- vu meters drawn properly
+- tooltips drawing moved to jucegui
 
 ## Shared Stuff
-- gui set scale and holder component
-
-## cmake work
-- target to make a zip
-- BYOSDKs
-- set up installer targets or zip
-- macos signing
-
+- gui set scale and holder component in clap-helpers
 
 ## wrap up
 

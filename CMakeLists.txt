@@ -71,6 +71,7 @@ target_library_make_clap(TARGET ${CLAP_TARGET}
         CLAP_MACOS_BUNDLE_VERSION ${PROJECT_VERSION}
         COPY_AFTER_BUILD ${COPY_AFTER_BUILD}
         )
+set_target_properties(${CLAP_TARGET} PROPERTIES BUNDLE TRUE MACOSX_BUNDLE TRUE)
 
 set(VST3_TARGET ${PROJECT_NAME}_vst3)
 add_library(${VST3_TARGET} MODULE)
@@ -175,9 +176,42 @@ if (APPLE)
 endif()
 add_to_all(TARGETS ${SYNTH_STANDALONE_TARGET} ${DELAY_STANDALONE_TARGET} ${CHORDMEM_STANDALONE_TARGET})
 
+add_custom_command(TARGET ${PROJECT_NAME}_all
+        POST_BUILD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy resources/README.rtf "${CMAKE_BINARY_DIR}/conduit_products"
+        COMMAND ${CMAKE_COMMAND} -E copy resources/License_GPL3.txt "${CMAKE_BINARY_DIR}/conduit_products/License.txt")
 
-#add_executable(csd_standalone)
-#target_add_standalone_wrapper(TARGET csd_standalone
-#    OUTPUT_NAME "Clap Saw Demo"
-#    HOSTED_CLAP_NAME "clap-saw-demo"
-#    PLUGIN_ID "org.surge-synth-team.clap-saw-demo")
+
+add_custom_target(${PROJECT_NAME}_installer)
+add_custom_command(TARGET ${PROJECT_NAME}_installer POST_BUILD
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/installer
+)
+
+string( TIMESTAMP NIGHTLY_TAG "%Y-%m-%d-%H-%M")
+add_dependencies(${PROJECT_NAME}_installer ${PROJECT_NAME}_all)
+if (APPLE)
+    add_custom_command(TARGET ${PROJECT_NAME}_installer POST_BUILD
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMAND ${CMAKE_SOURCE_DIR}/scripts/mac_installer.sh ${CMAKE_BINARY_DIR}/conduit_products ${CMAKE_BINARY_DIR}/installer nightly-${NIGHTLY_TAG}
+            )
+elseif (WIN32)
+    message(STATUS "Configuring for Windows installer")
+    add_custom_command(
+            TARGET ${PROJECT_NAME}_installer
+            POST_BUILD
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMAND ${CMAKE_COMMAND} -E make_directory installer
+            COMMAND 7z a -r installer/conduit-win32-x64-nightly-${NIGHTLY_TAG}.zip ${CMAKE_BINARY_DIR}/conduit_products
+            COMMAND ${CMAKE_COMMAND} -E echo "ZIP Installer in: installer/conduit-win32-x64-nightly-${NIGHTLY_TAG}.zip")
+else ()
+    message(STATUS "Basic installer: Target is installer/${SCXT_ZIP}")
+    add_custom_command(
+            TARGET ${PROJECT_NAME}_installer
+            POST_BUILD
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMAND ${CMAKE_COMMAND} -E make_directory installer
+            COMMAND ${CMAKE_COMMAND} -E tar cvf installer/conduit-lin-x64-nightly-${NIGHTLY_TAG}.zip --format=zip ${CMAKE_BINARY_DIR}/conduit_products
+            COMMAND ${CMAKE_COMMAND} -E echo "Installer in: installer/conduit-lin-x64-nightly-${NIGHTLY_TAG}.zip")
+endif ()
