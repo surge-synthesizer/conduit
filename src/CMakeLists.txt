@@ -22,16 +22,19 @@ target_link_libraries(conduit-shared PUBLIC
         clap-wrapper-extensions
         )
 
+add_library(conduit-impl STATIC)
+target_link_libraries(conduit-impl PUBLIC conduit-shared)
+
+function(add_to_conduit)
+    set(multiValArgs SOURCE INCLUDE)
+
+    cmake_parse_arguments(A2C "" "" "${multiValArgs}" ${ARGN})
+
+    target_sources(conduit-impl PRIVATE ${A2C_SOURCE})
+    target_include_directories(conduit-impl PRIVATE ${A2C_INCLUDE})
+endfunction(add_to_conduit)
+
 add_subdirectory(polysynth)
 add_subdirectory(polymetric-delay)
 add_subdirectory(chord-memory)
 add_subdirectory(ring-modulator)
-
-add_library(conduit-impl INTERFACE)
-target_link_libraries(conduit-impl INTERFACE
-        polysynth
-        polymetric-delay
-        chord-memory
-        ring-modulator
-        conduit-shared
-        )
