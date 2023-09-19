@@ -31,7 +31,7 @@ jobs:
           cmakeArgs: -A x64
           isWindowsMSVC: True
         lin:
-          imageName: 'ubuntu-20.04'
+          imageName: 'ubuntu-22.04'
           isLinux: True
           isCodeQual: True
           cmakeArgs:
@@ -109,10 +109,10 @@ jobs:
           isMac: True
         win:
           imageName: 'windows-2022'
-          cmakeArgs: -GNinja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang
+          cmakeArgs: -A x64
           isWindows: True
         lin:
-          imageName: 'ubuntu-20.04'
+          imageName: 'ubuntu-22.04'
           isLinux: True
           cmakeArgs:
 
