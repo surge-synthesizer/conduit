@@ -16,7 +16,7 @@ jobs:
       matrix:
         mac-x86:
           imageName: 'macos-12'
-          cmakeArgs: -D"CMAKE_OSX_ARCHITECTURES=x86_64;arm64"
+          cmakeArgs: -D"CMAKE_OSX_ARCHITECTURES=x86_64"
           isMac: True
         win-msvc:
           imageName: 'windows-2022'
@@ -275,7 +275,7 @@ jobs:
 
           mkdir -p releases
 
-          mv *.zip *.dmg *.exe releases
+          mv *.zip *.dmg releases
 
           ls -l $(System.DefaultWorkingDirectory)/git_info/
           echo "## ShortCircuit Nightly Build" > releases/ReleaseNotes.md
