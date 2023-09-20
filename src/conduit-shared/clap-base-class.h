@@ -374,8 +374,11 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 */
         }
 
+        onStateRestored();
         return true;
     }
+
+    virtual void onStateRestored() {}
 
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;

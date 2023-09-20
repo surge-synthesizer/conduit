@@ -88,12 +88,11 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
         paramDescriptions.push_back(ParamDesc()
                                         .asFloat()
                                         .withFlags(autoFlag)
+                                        .asPercent()
                                         .withID(pmDelayModDepth + i)
                                         .withName("Mod Depth" + tm)
                                         .withGroupName(gn)
-                                        .withRange(0, 1)
-                                        .withDefault(0)
-                                        .withLinearScaleFormatting("seconds"));
+                                        .withDefault(0));
         paramDescriptions.push_back(ParamDesc()
                                         .asBool()
                                         .withFlags(steppedFlag)
@@ -166,9 +165,15 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
         attachParam(pmTapLowCut + i, tapData[i].locut);
         attachParam(pmTapHighCut + i, tapData[i].hicut);
 
+        attachParam(pmDelayModDepth + i, tapData[i].moddepth);
+        attachParam(pmDelayModRate + i, tapData[i].modrate);
+
         hp[i].storage = this;
         lp[i].storage = this;
     }
+
+    recalcTaps();
+    recalcModulators();
 
     clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
     clapJuceShim->setResizable(false);
@@ -225,10 +230,7 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
         if (r.type == FromUI::ADJUST_VALUE)
         {
             doValueUpdate(r.id, r.value);
-            if (isTapParam(r.id, pmDelayTimeEveryM) || isTapParam(r.id, pmDelayTimeNTaps))
-            {
-                recalcTaps();
-            }
+            specificParamChange(r.id, r.value);
         }
     }
     refreshUIIfNeeded();
@@ -312,8 +314,12 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
             auto cftl = tapData[tap].crossfblev.v;
             cftl = cftl * cftl * cftl;
 
-            auto smpL = delayLine[0].read(baseTapSamples[tap]);
-            auto smpR = delayLine[1].read(baseTapSamples[tap]);
+            tapData[tap].modulator.step();
+            auto tt = baseTapSamples[tap] *
+                      (1 + modDepthScale * tapData[tap].moddepth.v * tapData[tap].modulator.u);
+
+            auto smpL = delayLine[0].read(tt);
+            auto smpR = delayLine[1].read(tt);
 
             auto dL = smpL * tapPanMatrix[tap][0] + smpR * tapPanMatrix[tap][2];
             auto dR = smpR * tapPanMatrix[tap][1] + smpL * tapPanMatrix[tap][3];
@@ -373,11 +379,7 @@ void ConduitPolymetricDelay::handleInboundEvent(const clap_event_header_t *evt)
     {
         auto v = reinterpret_cast<const clap_event_param_value *>(evt);
         updateParamInPatch(v);
-
-        if (isTapParam(v->param_id, pmDelayTimeEveryM) || isTapParam(v->param_id, pmDelayTimeNTaps))
-        {
-            recalcTaps();
-        }
+        specificParamChange(v->param_id, v->value);
     }
     break;
 
@@ -405,6 +407,19 @@ void ConduitPolymetricDelay::handleInboundEvent(const clap_event_header_t *evt)
     }
 }
 
+void ConduitPolymetricDelay::specificParamChange(clap_id id, float val)
+{
+    if (isTapParam(id, pmDelayTimeEveryM) || isTapParam(id, pmDelayTimeNTaps))
+    {
+        recalcTaps();
+    }
+
+    if (isTapParam(id, pmDelayModRate))
+    {
+        recalcModulators();
+    }
+}
+
 void ConduitPolymetricDelay::recalcTaps()
 {
     // 120 beats per minute is
@@ -424,6 +439,17 @@ void ConduitPolymetricDelay::recalcTaps()
         baseTapSamples[i] = 1.f * spb * m / n;
         // CNDOUT << CNDVAR(n) << CNDVAR(m) << CNDVAR(spb) << CNDVAR(baseTapSamples[i]) <<
         // std::endl;
+    }
+}
+
+void ConduitPolymetricDelay::recalcModulators()
+{
+    for (int i = 0; i < nTaps; ++i)
+    {
+        static constexpr double mf0{8.17579891564};
+        tapData[i].modulator.setRate(2.0 * M_PI *
+                                     note_to_pitch_ignoring_tuning(tapData[i].modrate.v + 69) *
+                                     mf0 * dsamplerate_inv);
     }
 }
 

@@ -35,6 +35,7 @@
 #include "sst/basic-blocks/params/ParamMetadata.h"
 #include "sst/basic-blocks/dsp/VUPeak.h"
 #include "sst/basic-blocks/dsp/SSESincDelayLine.h"
+#include "sst/basic-blocks/dsp/QuadratureOscillators.h"
 #include "sst/basic-blocks/tables/SincTableProvider.h"
 
 #include "sst/filters/BiquadFilter.h"
@@ -82,6 +83,7 @@ struct ConduitPolymetricDelay
         this->sampleRate = sr;
         this->dsamplerate_inv = 1.0 / sr;
         recalcTaps();
+        recalcModulators();
 
         inVU.setSampleRate(sr);
         outVU.setSampleRate(sr);
@@ -184,21 +186,34 @@ struct ConduitPolymetricDelay
 
     float tapPanMatrix[nTaps][4];
 
+    void specificParamChange(clap_id id, float val);
+
   public:
     float *dryLev;
 
     struct TapData
     {
         float *ntaps, *mbeats, *active;
-        float *modrate, *moddepth;
+
         float *locut, *hicut;
-        lag_t level, fblev, crossfblev, pan;
+        lag_t level, fblev, crossfblev, pan, moddepth, modrate;
+
+        sst::basic_blocks::dsp::QuadratureOscillator<float> modulator;
     } tapData[nTaps];
 
     float baseTapSamples[nTaps]{};
     float tempo;
 
     void recalcTaps();
+    void recalcModulators();
+
+    static constexpr float modDepthScale{0.05f};
+
+    void onStateRestored() override
+    {
+        recalcTaps();
+        recalcModulators();
+    }
 
     std::array<sst::filters::Biquad::BiquadFilter<ConduitPolymetricDelay, blockSize>, nTaps> hp, lp;
 };
