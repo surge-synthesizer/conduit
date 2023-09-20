@@ -30,13 +30,16 @@
 
 #include <memory>
 #include "sst/basic-blocks/params/ParamMetadata.h"
+#include "sst/basic-blocks/dsp/QuadratureOscillators.h"
+#include "sst/filters/HalfRateFilter.h"
+
 #include "conduit-shared/clap-base-class.h"
 
 namespace sst::conduit::ring_modulator
 {
 
 extern clap_plugin_descriptor desc;
-static constexpr int nParams = 1;
+static constexpr int nParams = 4;
 
 struct ConduitRingModulatorConfig
 {
@@ -60,12 +63,30 @@ struct ConduitRingModulator
     bool activate(double sampleRate, uint32_t minFrameCount,
                   uint32_t maxFrameCount) noexcept override
     {
+        setSampleRate(sampleRate);
         return true;
     }
 
     enum paramIds : uint32_t
     {
         pmMixLevel = 842,
+
+        pmSource = 712,
+        pmInternalSourceFrequency = 1524,
+
+        pmAlgo = 17
+    };
+
+    enum Algos : uint32_t
+    {
+        algoDigital = 0,
+        algoAnalog = 1
+    };
+
+    enum Source : uint32_t
+    {
+        srcInternal = 0,
+        srcSidechain= 1
     };
 
     float delayInSamples{1000};
@@ -96,6 +117,11 @@ struct ConduitRingModulator
         uiComms.dataCopyForUI.updateCount++;
     }
 
+  protected:
+    bool implementsLatency() const noexcept override { return true; }
+    uint32_t latencyGet() const noexcept override { return blockSize; }
+
+  public:
     struct DataCopyForUI
     {
     };
@@ -106,8 +132,23 @@ struct ConduitRingModulator
     std::unique_ptr<juce::Component> createEditor() override;
     std::atomic<bool> refreshUIValues{false};
 
-  public:
-    float *mix;
+    sst::filters::HalfRate::HalfRateFilter hr_up, hr_scup, hr_down;
+    sst::basic_blocks::dsp::QuadratureOscillator<float> internalSource;
+
+    static constexpr int blockSize{4}, blockSizeOS{blockSize << 1};
+    float inputBuf alignas(16) [2][blockSize];
+    float inputOS alignas(16) [2][blockSizeOS];
+    float sidechainBuf alignas(16) [2][blockSize];
+    float sidechainBufOS alignas(16) [2][blockSizeOS];
+
+    float outBuf[2][blockSize]{};
+    float inMixBuf[2][blockSize]{};
+
+    uint32_t pos{0};
+
+    lag_t mix, freq;
+
+    float *algo, *src;
 };
 } // namespace sst::conduit::ring_modulator
 

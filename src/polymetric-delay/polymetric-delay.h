@@ -77,11 +77,9 @@ struct ConduitPolymetricDelay
     ConduitPolymetricDelay(const clap_host *host);
     ~ConduitPolymetricDelay();
 
-    double sampleRate{0}, dsamplerate_inv{0};
     bool activate(double sr, uint32_t minFrameCount, uint32_t maxFrameCount) noexcept override
     {
-        this->sampleRate = sr;
-        this->dsamplerate_inv = 1.0 / sr;
+        setSampleRate(sr);
         recalcTaps();
         recalcModulators();
 

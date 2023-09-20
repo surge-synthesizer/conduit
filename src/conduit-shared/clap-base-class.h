@@ -189,7 +189,9 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     void processLags()
     {
         for (const auto lp : paramToLag)
+        {
             lp.second->process();
+        }
     }
 
     void attachParam(clap_id paramId, float *&to)
@@ -379,6 +381,16 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     }
 
     virtual void onStateRestored() {}
+
+    // Sample Rate Support
+    double sampleRate{0}, sampleRateInv{0}, dsamplerate_inv{0};
+    void setSampleRate(double sr)
+    {
+        sampleRate = sr;
+        sampleRateInv = 1.0 / sr;
+        dsamplerate_inv = sampleRateInv; // just an alis
+    }
+
 
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
