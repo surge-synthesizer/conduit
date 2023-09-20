@@ -111,34 +111,6 @@ if (APPLE)
     endif()
 endif()
 
-set(SYNTH_STANDALONE_TARGET ${PROJECT_NAME}_polysynth_standalone)
-add_executable(${SYNTH_STANDALONE_TARGET})
-target_sources(${SYNTH_STANDALONE_TARGET} PRIVATE src/conduit-clap-entry.cpp)
-target_link_libraries(${SYNTH_STANDALONE_TARGET} PRIVATE conduit-impl)
-target_add_standalone_wrapper(TARGET ${SYNTH_STANDALONE_TARGET}
-        OUTPUT_NAME "Conduit Polysynth"
-        STATICALLY_LINKED_CLAP_ENTRY True
-        PLUGIN_ID "org.surge-synth-team.conduit.polysynth")
-
-
-set(DELAY_STANDALONE_TARGET ${PROJECT_NAME}_delay_standalone)
-add_executable(${DELAY_STANDALONE_TARGET})
-target_sources(${DELAY_STANDALONE_TARGET} PRIVATE src/conduit-clap-entry.cpp)
-target_link_libraries(${DELAY_STANDALONE_TARGET} PRIVATE conduit-impl)
-target_add_standalone_wrapper(TARGET ${DELAY_STANDALONE_TARGET}
-        OUTPUT_NAME "Conduit Polymetric Delay"
-        STATICALLY_LINKED_CLAP_ENTRY True
-        PLUGIN_ID "org.surge-synth-team.conduit.polymetric-delay")
-
-set(CHORDMEM_STANDALONE_TARGET ${PROJECT_NAME}_chordmem_standalone)
-add_executable(${CHORDMEM_STANDALONE_TARGET})
-target_sources(${CHORDMEM_STANDALONE_TARGET} PRIVATE src/conduit-clap-entry.cpp)
-target_link_libraries(${CHORDMEM_STANDALONE_TARGET} PRIVATE conduit-impl)
-target_add_standalone_wrapper(TARGET ${CHORDMEM_STANDALONE_TARGET}
-        OUTPUT_NAME "Conduit Chord Memory"
-        STATICALLY_LINKED_CLAP_ENTRY True
-        PLUGIN_ID "org.surge-synth-team.conduit.chord-memory")
-
 
 ## Finally set up an ALL target which builds and collects
 function(add_to_all)
@@ -155,11 +127,11 @@ function(add_to_all)
     foreach(TGT ${AA_TARGETS})
         if (APPLE)
             add_custom_command(TARGET ${pn}
-                POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${coldir}
-                COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:${TGT}>/../../../$<TARGET_PROPERTY:${TGT},MACOSX_BUNDLE_BUNDLE_NAME>.$<TARGET_PROPERTY:${TGT},BUNDLE_EXTENSION>/
+                    POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E make_directory ${coldir}
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:${TGT}>/../../../$<TARGET_PROPERTY:${TGT},MACOSX_BUNDLE_BUNDLE_NAME>.$<TARGET_PROPERTY:${TGT},BUNDLE_EXTENSION>/
                     ${coldir}/$<TARGET_PROPERTY:${TGT},MACOSX_BUNDLE_BUNDLE_NAME>.$<TARGET_PROPERTY:${TGT},BUNDLE_EXTENSION>/
-                )
+                    )
         else()
             add_custom_command(TARGET ${pn}
                     POST_BUILD
@@ -170,11 +142,31 @@ function(add_to_all)
     endforeach ()
 endfunction(add_to_all)
 
+function(make_conduit_standalone)
+    set(oaf ID NAME)
+    cmake_parse_arguments(AA "" "${oaf}" "" ${ARGN})
+
+    set(sat ${PROJECT_NAME}_${AA_ID}_standalone)
+    add_executable(${sat})
+    target_sources(${sat} PRIVATE src/conduit-clap-entry.cpp)
+    target_link_libraries(${sat} PRIVATE conduit-impl)
+    target_add_standalone_wrapper(TARGET ${sat}
+            OUTPUT_NAME "Conduit ${AA_NAME}"
+            STATICALLY_LINKED_CLAP_ENTRY True
+            PLUGIN_ID "org.surge-synth-team.conduit.${AA_ID}")
+
+    add_to_all(TARGETS ${sat})
+endfunction()
+
+make_conduit_standalone(NAME "Polysynth" ID "polysynth")
+make_conduit_standalone(NAME "Polymetric Delay" ID "polymetric-delay")
+make_conduit_standalone(NAME "Ring Modulator" ID "ring-modulator")
+make_conduit_standalone(NAME "Chord Memory" ID "chord-memory")
+
 add_to_all(TARGETS ${PROJECT_NAME}_clap ${PROJECT_NAME}_vst3)
 if (APPLE)
     add_to_all(TARGETS ${PROJECT_NAME}_auv2)
 endif()
-add_to_all(TARGETS ${SYNTH_STANDALONE_TARGET} ${DELAY_STANDALONE_TARGET} ${CHORDMEM_STANDALONE_TARGET})
 
 add_custom_command(TARGET ${PROJECT_NAME}_all
         POST_BUILD

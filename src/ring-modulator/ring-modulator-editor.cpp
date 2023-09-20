@@ -25,6 +25,7 @@
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
+#include "sst/jucegui/components/MultiSwitch.h"
 #include "sst/jucegui/data/Continuous.h"
 #include "conduit-shared/editor-base.h"
 
@@ -47,15 +48,19 @@ struct ControlsPanel : juce::Component
 
     void resized() override
     {
-        auto b = getLocalBounds().reduced(5);
-        auto ks = std::min(b.getWidth(), b.getHeight());
-
-        int yp = 0;
-        auto bx = b.withHeight(ks).withWidth(ks - 14).reduced(4);
+        auto sz = 70;
+        auto bx = getLocalBounds().withWidth(70).withHeight(70);
         mix->setBounds(bx);
+        bx = bx.translated(70,0);
+        freq->setBounds(bx);
+        bx = bx.translated(70,0);
+        src->setBounds(bx);
+        bx = bx.translated(70,0);
+        model->setBounds(bx);
     }
 
-    std::unique_ptr<jcmp::Knob> mix;
+    std::unique_ptr<jcmp::Knob> mix, freq;
+    std::unique_ptr<jcmp::MultiSwitch> src, model;
 };
 
 struct ConduitRingModulatorEditor : public jcmp::WindowPanel,
@@ -97,6 +102,16 @@ ControlsPanel::ControlsPanel(sst::conduit::ring_modulator::editor::uicomm_t &p,
     mix = std::make_unique<jcmp::Knob>();
     addAndMakeVisible(*mix);
     e.comms->attachContinuousToParam(mix.get(), cps_t::paramIds::pmMixLevel);
+    freq = std::make_unique<jcmp::Knob>();
+    freq->pathDrawMode = jucegui::components::Knob::ALWAYS_FROM_MIN;
+    addAndMakeVisible(*freq);
+    e.comms->attachContinuousToParam(freq.get(), cps_t::paramIds::pmInternalSourceFrequency);
+    model = std::make_unique<jcmp::MultiSwitch>();
+    addAndMakeVisible(*model);
+    e.comms->attachDiscreteToParam(model.get(), cps_t::paramIds::pmAlgo);
+    src = std::make_unique<jcmp::MultiSwitch>();
+    addAndMakeVisible(*src);
+    e.comms->attachDiscreteToParam(src.get(), cps_t::paramIds::pmSource);
 }
 } // namespace sst::conduit::ring_modulator::editor
 
@@ -112,4 +127,5 @@ std::unique_ptr<juce::Component> ConduitRingModulator::createEditor()
 
     return editor;
 }
+
 } // namespace sst::conduit::ring_modulator

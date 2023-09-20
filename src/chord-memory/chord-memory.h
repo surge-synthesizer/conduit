@@ -60,6 +60,7 @@ struct ConduitChordMemory
     bool activate(double sampleRate, uint32_t minFrameCount,
                   uint32_t maxFrameCount) noexcept override
     {
+        setSampleRate(sampleRate);
         return true;
     }
 
