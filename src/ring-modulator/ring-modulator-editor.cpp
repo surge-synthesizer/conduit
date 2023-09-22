@@ -51,11 +51,11 @@ struct ControlsPanel : juce::Component
         auto sz = 70;
         auto bx = getLocalBounds().withWidth(70).withHeight(70);
         mix->setBounds(bx);
-        bx = bx.translated(70,0);
+        bx = bx.translated(70, 0);
         freq->setBounds(bx);
-        bx = bx.translated(70,0);
+        bx = bx.translated(70, 0);
         src->setBounds(bx);
-        bx = bx.translated(70,0);
+        bx = bx.translated(70, 0);
         model->setBounds(bx);
     }
 

@@ -40,7 +40,10 @@ struct EditorBase : juce::Component
     void setContentComponent(std::unique_ptr<juce::Component> c);
     void resized() override;
 
+    virtual void populatePluginHamburgerItems(juce::PopupMenu &m) {}
+
     std::unique_ptr<Background> container;
+    std::string pluginName, pluginId;
 };
 
 template <typename T> struct ToolTipMixIn

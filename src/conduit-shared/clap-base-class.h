@@ -391,7 +391,6 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         dsamplerate_inv = sampleRateInv; // just an alis
     }
 
-
     bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
     std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
     ADD_SHIM_IMPLEMENTATION(clapJuceShim)
