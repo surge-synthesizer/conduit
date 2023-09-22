@@ -23,6 +23,7 @@
 #include "sst/jucegui/style/StyleSheet.h"
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
+#include "sst/jucegui/components/GlyphButton.h"
 #include "sst/jucegui/components/Knob.h"
 #include "sst/jucegui/data/Continuous.h"
 #include "debug-helpers.h"
@@ -40,7 +41,8 @@ static constexpr int footerSize{18};
 namespace jcmp = sst::jucegui::components;
 struct Background : public jcmp::WindowPanel
 {
-    Background(const std::string &pluginName, const std::string &pluginId)
+    EditorBase &eb;
+    Background(const std::string &pluginName, const std::string &pluginId, EditorBase &e) : eb(e)
     {
         labelsTypeface = loadFont("Inter/static/Inter-Medium.ttf");
         versionTypeface = loadFont("Anonymous_Pro/AnonymousPro-Regular.ttf");
@@ -88,6 +90,15 @@ struct Background : public jcmp::WindowPanel
         vl->setJustificationType(juce::Justification::centredRight);
         addAndMakeVisible(*vl);
         versionLabel = std::move(vl);
+
+        auto gb = std::make_unique<jcmp::GlyphButton>(jcmp::GlyphPainter::HAMBURGER);
+        gb->setOnCallback([w = juce::Component::SafePointer(this)]() {
+            if (w)
+                w->buildBurger();
+        });
+        gb->setIsInactiveValue(true);
+        addAndMakeVisible(*gb);
+        menuButton = std::move(gb);
     }
 
     void resized() override
@@ -98,9 +109,27 @@ struct Background : public jcmp::WindowPanel
             auto cb = lb.withTrimmedTop(headerSize).withTrimmedBottom(footerSize);
             contents->setBounds(cb);
         }
-        nameLabel->setBounds(lb.withHeight(headerSize));
+        nameLabel->setBounds(lb.withHeight(headerSize).withTrimmedRight(headerSize - 4));
+        auto gb = lb.withHeight(headerSize)
+                      .withWidth(headerSize)
+                      .translated(lb.getWidth() - headerSize - 2, 0)
+                      .reduced(5);
+        menuButton->setBounds(gb);
         versionLabel->setBounds(
             lb.withTrimmedTop(lb.getHeight() - footerSize).withTrimmedBottom(2));
+    }
+
+    void buildBurger()
+    {
+        juce::PopupMenu menu;
+        menu.addSectionHeader(eb.pluginName);
+        eb.populatePluginHamburgerItems(menu);
+        menu.addSeparator();
+        menu.addItem("Save Settings To...", []() {});
+        menu.addItem("Load Settings From...", []() {});
+        menu.addItem("About", []() {});
+
+        menu.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
     }
 
     juce::Typeface::Ptr loadFont(const std::string &path)
@@ -125,10 +154,13 @@ struct Background : public jcmp::WindowPanel
 
     std::unique_ptr<juce::Component> contents;
     std::unique_ptr<juce::Component> nameLabel, versionLabel;
+
+    std::unique_ptr<jcmp::GlyphButton> menuButton;
 };
 EditorBase::EditorBase(const std::string &pluginName, const std::string &pluginId)
+    : pluginName(pluginName), pluginId(pluginId)
 {
-    container = std::make_unique<Background>(pluginName, pluginId);
+    container = std::make_unique<Background>(pluginName, pluginId, *this);
     addAndMakeVisible(*container);
 }
 EditorBase::~EditorBase() = default;

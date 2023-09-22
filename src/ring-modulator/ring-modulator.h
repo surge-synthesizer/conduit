@@ -86,7 +86,7 @@ struct ConduitRingModulator
     enum Source : uint32_t
     {
         srcInternal = 0,
-        srcSidechain= 1
+        srcSidechain = 1
     };
 
     float delayInSamples{1000};
@@ -136,10 +136,10 @@ struct ConduitRingModulator
     sst::basic_blocks::dsp::QuadratureOscillator<float> internalSource;
 
     static constexpr int blockSize{4}, blockSizeOS{blockSize << 1};
-    float inputBuf alignas(16) [2][blockSize];
-    float inputOS alignas(16) [2][blockSizeOS];
-    float sidechainBuf alignas(16) [2][blockSize];
-    float sidechainBufOS alignas(16) [2][blockSizeOS];
+    float inputBuf alignas(16)[2][blockSize];
+    float inputOS alignas(16)[2][blockSizeOS];
+    float sidechainBuf alignas(16)[2][blockSize];
+    float sidechainBufOS alignas(16)[2][blockSizeOS];
 
     float outBuf[2][blockSize]{};
     float inMixBuf[2][blockSize]{};

@@ -45,7 +45,6 @@ ConduitRingModulator::ConduitRingModulator(const clap_host *host)
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
 
-
     paramDescriptions.push_back(ParamDesc()
                                     .asPercent()
                                     .withID(pmMixLevel)
@@ -54,32 +53,35 @@ ConduitRingModulator::ConduitRingModulator(const clap_host *host)
                                     .withDefault(0.8)
                                     .withFlags(autoFlag));
 
-    paramDescriptions.push_back( ParamDesc().asInt()
-                  .withID(pmAlgo)
-                  .withName("Algorithm")
-                  .withGroupName("Ring Modulator")
-                  .withDefault(0)
-                  .withRange(0, 1)
-                  .withFlags(steppedFlag)
-                  .withUnorderedMapFormatting({{algoDigital, "Digital"}, {algoAnalog, "Analog"}}));
+    paramDescriptions.push_back(
+        ParamDesc()
+            .asInt()
+            .withID(pmAlgo)
+            .withName("Algorithm")
+            .withGroupName("Ring Modulator")
+            .withDefault(0)
+            .withRange(0, 1)
+            .withFlags(steppedFlag)
+            .withUnorderedMapFormatting({{algoDigital, "Digital"}, {algoAnalog, "Analog"}}));
 
-    paramDescriptions.push_back( ParamDesc().asInt()
-                                    .withID(pmSource)
-                                    .withName("Modulator Source")
-                                    .withGroupName("Ring Modulator")
-                                    .withDefault(0)
-                                    .withRange(0, 1)
-                                    .withFlags(steppedFlag)
-                                    .withUnorderedMapFormatting({{srcInternal, "Internal"}, {srcSidechain, "Sidechain"}}));
+    paramDescriptions.push_back(
+        ParamDesc()
+            .asInt()
+            .withID(pmSource)
+            .withName("Modulator Source")
+            .withGroupName("Ring Modulator")
+            .withDefault(0)
+            .withRange(0, 1)
+            .withFlags(steppedFlag)
+            .withUnorderedMapFormatting({{srcInternal, "Internal"}, {srcSidechain, "Sidechain"}}));
 
     paramDescriptions.push_back(ParamDesc()
-                                .asFloat()
-                                .withID(pmInternalSourceFrequency)
-                                .asAudibleFrequency()
-                                .withFlags(autoFlag)
-                                .withName("Source Frequency")
-                                .withGroupName("Ring Modulator")
-                                );
+                                    .asFloat()
+                                    .withID(pmInternalSourceFrequency)
+                                    .asAudibleFrequency()
+                                    .withFlags(autoFlag)
+                                    .withName("Source Frequency")
+                                    .withGroupName("Ring Modulator"));
     configureParams();
 
     attachParam(pmMixLevel, mix);
@@ -186,8 +188,8 @@ clap_process_status ConduitRingModulator::process(const clap_process *process) n
         sidechainBuf[0][pos] = sidechain[0][i];
         sidechainBuf[1][pos] = sidechain[1][i];
 
-        out[0][i] = outBuf[0][pos] * mix.v + inMixBuf[0][pos] * (1-mix.v);
-        out[1][i] = outBuf[1][pos] * mix.v + inMixBuf[1][pos] * (1-mix.v);
+        out[0][i] = outBuf[0][pos] * mix.v + inMixBuf[0][pos] * (1 - mix.v);
+        out[1][i] = outBuf[1][pos] * mix.v + inMixBuf[1][pos] * (1 - mix.v);
 
         pos++;
 
@@ -211,8 +213,8 @@ clap_process_status ConduitRingModulator::process(const clap_process *process) n
             }
             else
             {
-                hr_scup.process_block_U2(sidechainBuf[0], sidechainBuf[1],
-                                         sidechainBufOS[0], sidechainBufOS[1], blockSizeOS);
+                hr_scup.process_block_U2(sidechainBuf[0], sidechainBuf[1], sidechainBufOS[0],
+                                         sidechainBufOS[1], blockSizeOS);
                 for (int i = 0; i < blockSizeOS; ++i)
                 {
                     inputOS[0][i] *= 4 * sidechainBufOS[0][i];
