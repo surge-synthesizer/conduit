@@ -19,8 +19,8 @@
  * mean for you.
  */
 
-#ifndef CONDUIT_SRC_CHORD_MEMORY_CHORD_MEMORY_H
-#define CONDUIT_SRC_CHORD_MEMORY_CHORD_MEMORY_H
+#ifndef CONDUIT_SRC_CLAP_EVENT_MONITOR_CLAP_EVENT_MONITOR_H
+#define CONDUIT_SRC_CLAP_EVENT_MONITOR_CLAP_EVENT_MONITOR_H
 
 #include <clap/helpers/plugin.hh>
 #include <atomic>
@@ -30,32 +30,67 @@
 
 #include <memory>
 #include "sst/basic-blocks/params/ParamMetadata.h"
+#include "sst/cpputils/ring_buffer.h"
+
 #include "conduit-shared/clap-base-class.h"
 
-namespace sst::conduit::chord_memory
+namespace sst::conduit::clap_event_monitor
 {
 
 extern clap_plugin_descriptor desc;
-static constexpr int nParams = 1;
+static constexpr int nParams = 3;
 
-struct ConduitChordMemoryConfig
+struct ConduitClapEventMonitorConfig
 {
-    static constexpr int nParams{sst::conduit::chord_memory::nParams};
+    static constexpr int nParams{sst::conduit::clap_event_monitor::nParams};
     using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
     struct DataCopyForUI
     {
         std::atomic<uint32_t> updateCount{0};
         std::atomic<bool> isProcessing{false};
+
+        std::atomic<uint64_t> processedSamples{0};
+        static constexpr uint32_t maxEventSize{4096}, maxEvents{4096};
+
+        struct evtCopy
+        {
+            unsigned char data[maxEventSize];
+            void assign(const clap_event_header_t *e)
+            {
+                assert(e->size < maxEventSize);
+                memcpy(data, e, std::max(e->size, maxEventSize));
+            }
+
+            const clap_event_header_t *view() const
+            {
+                return reinterpret_cast<const clap_event_header_t *>(data);
+            }
+        };
+        sst::cpputils::SimpleRingBuffer<evtCopy, 4096> eventBuf;
+
+        unsigned char eventData[maxEventSize * maxEvents];
+        void writeEventTo(const clap_event_header_t *e)
+        {
+            evtCopy ec;
+            ec.assign(e);
+            eventBuf.push(ec);
+        }
+
+        // Read happens ui thread. Might be corrupted. Big queue. Copy soon.
+        const clap_event_header_t *readEventFrom(int idx)
+        {
+            return (const clap_event_header_t *)(eventData + maxEventSize * idx);
+        }
     };
 
     static clap_plugin_descriptor *getDescription() { return &desc; }
 };
 
-struct ConduitChordMemory
-    : sst::conduit::shared::ClapBaseClass<ConduitChordMemory, ConduitChordMemoryConfig>
+struct ConduitClapEventMonitor
+    : sst::conduit::shared::ClapBaseClass<ConduitClapEventMonitor, ConduitClapEventMonitorConfig>
 {
-    ConduitChordMemory(const clap_host *host);
-    ~ConduitChordMemory();
+    ConduitClapEventMonitor(const clap_host *host);
+    ~ConduitClapEventMonitor();
 
     bool activate(double sampleRate, uint32_t minFrameCount,
                   uint32_t maxFrameCount) noexcept override
@@ -66,8 +101,16 @@ struct ConduitChordMemory
 
     enum paramIds : uint32_t
     {
-        pmKeyShift = 7241
+        pmStepped = 24842,
+
+        pmAuto = 912,
+        pmMod = 2112
     };
+
+    bool implementsAudioPorts() const noexcept override { return true; }
+    uint32_t audioPortsCount(bool isInput) const noexcept override { return 1; }
+    bool audioPortsInfo(uint32_t index, bool isInput,
+                        clap_audio_port_info *info) const noexcept override;
 
     bool implementsNotePorts() const noexcept override { return true; }
     uint32_t notePortsCount(bool isInput) const noexcept override { return 1; }
@@ -81,7 +124,6 @@ struct ConduitChordMemory
      */
 
     clap_process_status process(const clap_process *process) noexcept override;
-    void handleInboundEvent(const clap_event_header_t *evt);
 
     bool startProcessing() noexcept override
     {
@@ -101,9 +143,8 @@ struct ConduitChordMemory
     std::unique_ptr<juce::Component> createEditor() override;
     std::atomic<bool> refreshUIValues{false};
 
-  public:
-    float *keyShift;
+    uint64_t samplePos{0};
 };
-} // namespace sst::conduit::chord_memory
+} // namespace sst::conduit::clap_event_monitor
 
 #endif // CONDUIT_POLYMETRIC_DELAY_H
