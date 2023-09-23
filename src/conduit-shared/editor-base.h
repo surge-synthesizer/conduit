@@ -42,6 +42,8 @@ struct EditorBase : juce::Component
 
     virtual void populatePluginHamburgerItems(juce::PopupMenu &m) {}
 
+    juce::Typeface::Ptr loadFont(const std::string &path);
+
     std::unique_ptr<Background> container;
     std::string pluginName, pluginId;
 };

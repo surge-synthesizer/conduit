@@ -44,8 +44,8 @@ struct Background : public jcmp::WindowPanel
     EditorBase &eb;
     Background(const std::string &pluginName, const std::string &pluginId, EditorBase &e) : eb(e)
     {
-        labelsTypeface = loadFont("Inter/static/Inter-Medium.ttf");
-        versionTypeface = loadFont("Anonymous_Pro/AnonymousPro-Regular.ttf");
+        labelsTypeface = eb.loadFont("Inter/static/Inter-Medium.ttf");
+        versionTypeface = eb.loadFont("Anonymous_Pro/AnonymousPro-Regular.ttf");
 
         sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
         const auto &base = sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
@@ -132,24 +132,6 @@ struct Background : public jcmp::WindowPanel
         menu.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
     }
 
-    juce::Typeface::Ptr loadFont(const std::string &path)
-    {
-        try
-        {
-            auto fs = cmrc::conduit_resources::get_filesystem();
-            auto fntf = fs.open(path);
-            std::vector<char> fontData(fntf.begin(), fntf.end());
-
-            auto res = juce::Typeface::createSystemTypefaceFor(fontData.data(), fontData.size());
-            return res;
-        }
-        catch (std::exception &e)
-        {
-        }
-        CNDOUT << "Font '" << path << "' failed to load" << std::endl;
-        return nullptr;
-    }
-
     juce::Typeface::Ptr labelsTypeface{nullptr}, versionTypeface{nullptr};
 
     std::unique_ptr<juce::Component> contents;
@@ -177,4 +159,23 @@ void EditorBase::setContentComponent(std::unique_ptr<juce::Component> c)
 }
 
 void EditorBase::resized() { container->setBounds(getLocalBounds()); }
+
+juce::Typeface::Ptr EditorBase::loadFont(const std::string &path)
+{
+    try
+    {
+        auto fs = cmrc::conduit_resources::get_filesystem();
+        auto fntf = fs.open(path);
+        std::vector<char> fontData(fntf.begin(), fntf.end());
+
+        auto res = juce::Typeface::createSystemTypefaceFor(fontData.data(), fontData.size());
+        return res;
+    }
+    catch (std::exception &e)
+    {
+    }
+    CNDOUT << "Font '" << path << "' failed to load" << std::endl;
+    return nullptr;
+}
+
 } // namespace sst::conduit::shared

@@ -122,10 +122,6 @@ struct ConduitRingModulator
     uint32_t latencyGet() const noexcept override { return blockSize; }
 
   public:
-    struct DataCopyForUI
-    {
-    };
-
     typedef std::unordered_map<int, int> PatchPluginExtension;
 
   protected:

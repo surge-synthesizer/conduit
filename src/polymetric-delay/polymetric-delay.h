@@ -162,10 +162,6 @@ struct ConduitPolymetricDelay
         lp[i].coeff_LP2B(lp[i].calc_omega(*(tapData[i].hicut) / 12.0), 0.707);
     }
 
-    struct DataCopyForUI
-    {
-    };
-
     typedef std::unordered_map<int, int> PatchPluginExtension;
 
     sst::basic_blocks::dsp::VUPeak inVU, outVU, tapOutVU[nTaps];
