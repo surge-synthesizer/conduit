@@ -51,6 +51,7 @@ static constexpr int nParams = 45;
 struct ConduitPolymetricDelayConfig
 {
     static constexpr int nParams{sst::conduit::polymetric_delay::nParams};
+    static constexpr bool baseClassProvidesMonoModSupport{true};
     using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
     struct DataCopyForUI
     {

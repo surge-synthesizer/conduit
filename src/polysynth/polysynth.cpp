@@ -29,6 +29,11 @@
 
 #include "version.h"
 
+#include "libMTSClient.h"
+
+#include "sst/cpputils/constructors.h"
+#include "sst/basic-blocks/mechanics/block-ops.h"
+
 namespace sst::conduit::polysynth
 {
 
@@ -45,94 +50,123 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
                                features};
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
-    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(&desc, host)
+    : voiceManager(*this),
+      hr_dn(6, true), sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(
+                          &desc, host),
+      voices{sst::cpputils::make_array<PolysynthVoice, max_voices>(*this)}
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE | CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID |
                    CLAP_PARAM_IS_MODULATABLE_PER_KEY;
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
 
+    auto coarseBase = ParamDesc().asFloat().withRange(-24,24).withDefault(0).withFlags(modFlag).withLinearScaleFormatting("keys");
+    auto fineBase = ParamDesc().asFloat().withRange(-100,100).withDefault(0).withFlags(modFlag).withLinearScaleFormatting("cents");
+    auto levelBase = ParamDesc().asCubicDecibelAttenuation().withDefault(1).withFlags(modFlag);
+    auto activeBase = ParamDesc().asBool().withFlags(steppedFlag).withDefault(true);
+    auto freqDivBase = ParamDesc().asInt().withRange(-3, 3).withDefault(0).withFlags(steppedFlag)
+                       .withUnorderedMapFormatting({{-3, "/8"}, {-2, "/4"}, {-1, "/2"}, {0, "x1"},
+                                                        {1, "x2"}, {2, "x4"}, {3, "x8"}});
+
+    paramDescriptions.push_back(activeBase
+                                .withID(pmSawActive)
+                                .withName("Saw Active")
+                                .withGroupName("Saw Oscillator")
+                                );
     paramDescriptions.push_back(ParamDesc()
                                     .asInt()
-                                    .withID(pmUnisonCount)
-                                    .withName("Unison Count")
-                                    .withGroupName("Oscillator")
-                                    .withRange(1, SawDemoVoice::max_uni)
+                                    .withID(pmSawUnisonCount)
+                                    .withName("Saw Unison Count")
+                                    .withGroupName("Saw Oscillator")
+                                    .withRange(1, PolysynthVoice::max_uni)
                                     .withDefault(3)
                                     .withFlags(steppedFlag)
                                     .withLinearScaleFormatting("voices"));
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
-                                    .withID(pmUnisonSpread)
-                                    .withName("Unison Spread")
-                                    .withGroupName("Oscillator")
+                                    .withID(pmSawUnisonSpread)
+                                    .withName("Saw Unison Spread")
+                                    .withGroupName("Saw Oscillator")
                                     .withLinearScaleFormatting("cents")
                                     .withRange(0, 100)
                                     .withDefault(10)
                                     .withFlags(modFlag));
+    paramDescriptions.push_back(coarseBase
+                                .withID(pmSawCoarse).withName("Saw Coarse Offset").withGroupName("Saw Oscillator"));
+    paramDescriptions.push_back(fineBase.withID(pmSawFine).withName("Saw Fine Tuning").withGroupName("Saw Oscillator"));
+    paramDescriptions.push_back(levelBase.withID(pmSawLevel).withName("Saw Level").withGroupName("Saw Oscillator"));
+
+
+    paramDescriptions.push_back(activeBase.withID(pmPWActive).withName("Pulse Width Active").withGroupName("Pulse Width"));
+    paramDescriptions.push_back(ParamDesc().asPercent().withID(pmPWWidth).withName("Pulse Width Width").withGroupName("Pulse Width").withDefault(0.5));
+    paramDescriptions.push_back(freqDivBase.withID(pmPWFrequencyDiv).withName("Pulse Width Frequency Multiple").withGroupName("Pulse Width").withDefault(-1));
+    paramDescriptions.push_back(coarseBase.withID(pmPWCoarse).withName("Pulse Width Coarse").withGroupName("Pulse Width"));
+    paramDescriptions.push_back(fineBase.withID(pmPWFine).withName("Pulse Width Fine").withGroupName("Pulse Width"));
+    paramDescriptions.push_back(levelBase.withID(pmPWLevel).withName("Pulse Width Level").withGroupName("Pulse Width"));
+
+    paramDescriptions.push_back(activeBase.withID(pmSinActive).withName("Sin Active").withGroupName("Sin").withDefault(false));
+    paramDescriptions.push_back(freqDivBase.withID(pmSinFrequencyDiv).withName("Sin Frequency Multiple").withGroupName("Sin"));
+    paramDescriptions.push_back(coarseBase.withID(pmSinCoarse).withName("Sin Coarse").withGroupName("Sin"));
+    paramDescriptions.push_back(levelBase.withID(pmSinLevel).withName("Sin Level").withGroupName("Sin"));
+
+    paramDescriptions.push_back(activeBase.withID(pmNoiseActive).withName("Noise Active").withGroupName("Noise").withDefault(false));
+    paramDescriptions.push_back(ParamDesc().asPercentBipolar().withID(pmNoiseColor).withName("Noise Color").withGroupName("Noise").withFlags(modFlag));
+    paramDescriptions.push_back(levelBase.withID(pmNoiseLevel).withName("Noise Level").withGroupName("Noise"));
+
+    paramDescriptions.push_back(activeBase.withID(pmLPFActive).withName("LPF Active").withGroupName("LPF Filter").withDefault(0));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asFloat()
+                                        .withID(pmLPFCutoff)
+                                        .withName("LPF Cutoff")
+                                        .withGroupName("LPF Filter")
+                                        .withRange(1, 127)
+                                        .withDefault(69)
+                                        .withSemitoneZeroAtMIDIZeroFormatting()
+                                        .withFlags(modFlag));
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
-                                    .withID(pmOscDetune)
-                                    .withName("Unison Detune")
-                                    .withGroupName("Oscillator")
-                                    .withLinearScaleFormatting("cents")
-                                    .withRange(-200, 200)
-                                    .withDefault(0)
+                                    .withID(pmLPFResonance)
+                                    .withName("LPF Resonance")
+                                    .withGroupName("LPF Filter")
+                                    .withRange(0, 1)
+                                    .withDefault(sqrt(2) / 2)
+                                    .withLinearScaleFormatting("")
                                     .withFlags(modFlag));
     paramDescriptions.push_back(ParamDesc()
-                                    .asFloat()
-                                    .withID(pmAmpAttack)
-                                    .withName("Amplitude Attack")
-                                    .withGroupName("AEG")
-                                    .withLinearScaleFormatting("seconds")
-                                    .withRange(0, 1)
-                                    .withDefault(0.05)
-                                    .withFlags(autoFlag));
+                                .asInt()
+                                .withID(pmLPFFilterMode)
+                                .withRange(0,5)
+                                .withDefault(0)
+                                .withFlags(steppedFlag)
+                                .withUnorderedMapFormatting({
+                                        {0, "ObXD"}, {1, "Vintage"},
+                                                                 {2, "K-35"},
+                                                                 {3, "Diode"},
+                                                                 {4, "CutWarp"},
+                                        {5, "ResWarp"}
+                                    })); // FIXME - enums
+
+    paramDescriptions.push_back(activeBase.withID(pmSVFActive).withName("SVF Active").withGroupName("SVF Filter"));
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
-                                    .withID(pmAmpRelease)
-                                    .withName("Amplitude Release")
-                                    .withGroupName("AEG")
-                                    .withLinearScaleFormatting("seconds")
-                                    .withRange(0, 1)
-                                    .withDefault(0.05)
-                                    .withFlags(autoFlag));
-    paramDescriptions.push_back(ParamDesc()
-                                    .asBool()
-                                    .withID(pmAmpIsGate)
-                                    .withName("Bypass Amp Envelope")
-                                    .withGroupName("AEG")
-                                    .withFlags(steppedFlag));
-    paramDescriptions.push_back(ParamDesc()
-                                    .asFloat()
-                                    .withID(pmCutoff)
-                                    .withName("Cutoff")
-                                    .withGroupName("Filter")
+                                    .withID(pmSVFCutoff)
+                                    .withName("SVF Cutoff")
+                                    .withGroupName("SVF Filter")
                                     .withRange(1, 127)
                                     .withDefault(69)
                                     .withSemitoneZeroAtMIDIZeroFormatting()
                                     .withFlags(modFlag));
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
-                                    .withID(pmResonance)
-                                    .withName("Resonance")
-                                    .withGroupName("Filter")
+                                    .withID(pmSVFResonance)
+                                    .withName("SVF Resonance")
+                                    .withGroupName("SVF Filter")
                                     .withRange(0, 1)
                                     .withDefault(sqrt(2) / 2)
                                     .withLinearScaleFormatting("")
                                     .withFlags(modFlag));
-    paramDescriptions.push_back(ParamDesc()
-                                    .asFloat()
-                                    .withID(pmPreFilterVCA)
-                                    .withName("PreFilter VCA")
-                                    .withGroupName("Filter")
-                                    .withRange(0, 1)
-                                    .withDefault(1)
-                                    .withLinearScaleFormatting("")
-                                    .withFlags(modFlag));
-
     std::unordered_map<int, std::string> filterModes;
-    using sv = SawDemoVoice::StereoSimperSVF;
+    using sv = PolysynthVoice::StereoSimperSVF;
     filterModes[sv::LP] = "Low Pass";
     filterModes[sv::HP] = "High Pass";
     filterModes[sv::BP] = "Band Pass";
@@ -142,33 +176,194 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     paramDescriptions.push_back(
         ParamDesc()
             .asInt()
-            .withID(pmFilterMode)
-            .withName("Filter Type")
+            .withID(pmSVFFilterMode)
+            .withName("SVF Filter Type")
             .withGroupName("Filter")
-            .withRange(SawDemoVoice::StereoSimperSVF::LP, SawDemoVoice::StereoSimperSVF::ALL)
+            .withRange(PolysynthVoice::StereoSimperSVF::LP, PolysynthVoice::StereoSimperSVF::ALL)
             .withUnorderedMapFormatting(filterModes)
             .withFlags(steppedFlag));
 
-    configureParams();
+    paramDescriptions.push_back(activeBase.withID(pmWSActive).withName("WaveShaper Active").withGroupName("WaveShaper"));
+    paramDescriptions.push_back(ParamDesc().asFloat().asLinearDecibel(-24, 24).withID(pmWSDrive).withDefault(0).withName("WaveShaper Drive").withGroupName("WaveShaper").withFlags(modFlag));
+    paramDescriptions.push_back(ParamDesc().asInt().withID(pmWSMode).withDefault(0).withRange(0,2).withName("WaveShaper Mode").withGroupName("WaveShaper")
+                                .withFlags(steppedFlag).withUnorderedMapFormatting({{0, "Sat"}, {1, "Digi"}, {2, "Fold"}})); // FIXME enums
 
-    attachParam(pmUnisonCount, unisonCount);
-    attachParam(pmUnisonSpread, unisonSpread);
-    attachParam(pmOscDetune, oscDetune);
-    attachParam(pmCutoff, cutoff);
-    attachParam(pmResonance, resonance);
-    attachParam(pmAmpAttack, ampAttack);
-    attachParam(pmAmpRelease, ampRelease);
-    attachParam(pmAmpIsGate, ampIsGate);
-    attachParam(pmPreFilterVCA, preFilterVCA);
-    attachParam(pmFilterMode, filterMode);
+    paramDescriptions.push_back(ParamDesc()
+                                .asInt()
+                                .withID(pmFilterRouting)
+                                .withDefault(0)
+                                .withRange(0,3)
+                                .withFlags(steppedFlag)
+                                .withName("Filter Routing")
+                                .withGroupName("Filters")
+                                .withUnorderedMapFormatting({{0, "LPF -> WS -> SVF"},
+                                                                 {1, "SVF -> WS -> LPF"},
+                                                                 {2, "WS -> Parallel"},
+                                                                 {3, "Parallel -> WS"}
+                                    })); // FIXME enums
+    paramDescriptions.push_back(ParamDesc()
+                                .asPercentBipolar()
+                                .withID(pmFilterFeedback)
+                                .withDefault(0)
+                                .withFlags(modFlag)
+                                .withName("Filter Feedback")
+                                .withGroupName("Filters"));
+
+
+    auto adrBase = ParamDesc()
+                       .asFloat()
+                       .withRange(0.f, 1.f)
+                       .withDefault(0.2f)
+                       .withATwoToTheBPlusCFormatting(
+                           1.f, PolysynthVoice::env_t::etMax - PolysynthVoice::env_t::etMin,
+                           PolysynthVoice::env_t::etMin, "s")
+                       .withDecimalPlaces(4);
+
+    paramDescriptions.push_back(
+        adrBase.withID(pmEnvA).withName("AEG Attack").withGroupName("AEG").withFlags(autoFlag));
+    paramDescriptions.push_back(
+        adrBase.withID(pmEnvD).withName("AEG Decay").withGroupName("AEG").withFlags(autoFlag));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercent()
+                                    .withID(pmEnvS)
+                                    .withName("AEG Sustain")
+                                    .withGroupName("AEG")
+                                    .withDefault(1)
+                                    .withFlags(modFlag));
+    paramDescriptions.push_back(
+        adrBase.withID(pmEnvR).withName("AEG Release").withGroupName("AEG").withFlags(autoFlag).withDefault(0.3));
+
+    paramDescriptions.push_back(
+                         ParamDesc().asPercent()
+                         .withID(pmAegVelocitySens)
+                         .withDefault(0.2)
+                         .withName("Velocity Sensitivity")
+                         .withGroupName("AEG")
+                         .withFlags(modFlag)
+                         );
+
+    paramDescriptions.push_back(
+        ParamDesc().asLinearDecibel(-24, 24)
+            .withID(pmAegPreFilterGain)
+            .withDefault(0.0)
+            .withName("Pre-Filter Gain")
+            .withGroupName("AEG")
+            .withFlags(modFlag)
+    );
+
+    paramDescriptions.push_back(adrBase.withID(pmEnvA + offPmFeg)
+                                    .withName("FEG Attack")
+                                    .withGroupName("FEG")
+                                    .withFlags(autoFlag));
+    paramDescriptions.push_back(adrBase.withID(pmEnvD + offPmFeg)
+                                    .withName("FEG Decay")
+                                    .withGroupName("FEG")
+                                    .withFlags(autoFlag).withDefault(0.25));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercent()
+                                    .withID(pmEnvS + offPmFeg)
+                                    .withName("FEG Sustain")
+                                    .withGroupName("FEG")
+                                    .withFlags(autoFlag));
+    paramDescriptions.push_back(adrBase.withID(pmEnvR + offPmFeg)
+                                    .withName("FEG Release")
+                                    .withGroupName("FEG")
+                                    .withFlags(autoFlag));
+
+    paramDescriptions.push_back(ParamDesc()
+                                    .asFloat()
+                                    .withID(pmFegToLPFCutoff)
+                                    .withName("FEG to LPF Depth")
+                                    .withGroupName("FEG")
+                                    .withFlags(autoFlag)
+                                    .withRange(-48, 48)
+                                    .withDefault(0)
+                                    .withLinearScaleFormatting("semitones"));
+
+    paramDescriptions.push_back(ParamDesc()
+                                    .asFloat()
+                                    .withID(pmFegToSVFCutoff)
+                                    .withName("FEG to Cutoff Depth")
+                                    .withGroupName("FEG")
+                                    .withFlags(autoFlag)
+                                    .withRange(-48, 48)
+                                    .withDefault(0)
+                                    .withLinearScaleFormatting("semitones"));
+
+    for (int i=0; i<n_lfos; ++i)
+    {
+        auto nm = std::string( "LFO ") + std::to_string(i+1);
+        paramDescriptions.push_back(ParamDesc()
+                                    .asBool()
+                                    .withID(pmLFOActive + i * offPmLFO2)
+                                    .withName(nm + " Active")
+                                    .withGroupName(nm)
+                                    .withFlags(steppedFlag));
+
+        paramDescriptions.push_back(ParamDesc()
+                                        .asPercent()
+                                        .withID(pmLFORate + i * offPmLFO2)
+                                        .withName(nm + " Rate")
+                                        .withGroupName(nm)
+                                        .withFlags(modFlag));
+
+        paramDescriptions.push_back(ParamDesc()
+                                        .asBool()
+                                        .withID(pmLFOTempoSync + i * offPmLFO2)
+                                        .withName(nm + " Temposync")
+                                        .withGroupName(nm)
+                                        .withFlags(steppedFlag));
+
+        paramDescriptions.push_back(ParamDesc()
+                                        .asPercent()
+                                        .withID(pmLFODeform + i * offPmLFO2)
+                                        .withName(nm + " Deform")
+                                        .withGroupName(nm)
+                                        .withFlags(modFlag));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asPercent()
+                                        .withID(pmLFOAmplitude + i * offPmLFO2)
+                                        .withName(nm + " Amplitude")
+                                        .withGroupName(nm)
+                                        .withFlags(modFlag));
+        paramDescriptions.push_back(ParamDesc()
+                                        .asInt()
+                                        .withID(pmLFOShape + i * offPmLFO2)
+                                        .withName(nm + " Shape")
+                                        .withGroupName(nm)
+                                        .withFlags(steppedFlag)
+                                    .withRange(0, 5)
+                                    .withUnorderedMapFormatting({
+                                            {0, "Sin"},
+                                            {1, "Square"},
+                                            {2, "Saw"},
+                                            {3, "Tri"},
+                                            {4, "Noise"},
+                                            {5, "S&H" }
+                                        })
+                                    );
+
+    }
+
+    configureParams();
 
     terminatedVoices.reserve(max_voices * 4);
 
     clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
     clapJuceShim->setResizable(true);
+
+    mtsClient = MTS_RegisterClient();
+
+    for (auto &v : voices)
+    {
+        v.attachTo(*this);
+    }
 }
 ConduitPolysynth::~ConduitPolysynth()
 {
+    if (mtsClient)
+        MTS_DeregisterClient(mtsClient);
+
     // I *think* this is a bitwig bug that they won't call guiDestroy if destroying a plugin
     // with an open window but
     if (clapJuceShim)
@@ -281,28 +476,14 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
                 nextEvent = ev->get(ev, nextEventIndex);
         }
 
-        // This is a simple accumulator of output across our active voices.
-        // See saw-voice.h for information on the individual voice.
-        for (int ch = 0; ch < chans; ++ch)
+        if (blockPos == 0)
         {
-            out[ch][i] = 0.f;
+            renderVoices();
         }
-        for (auto &v : voices)
-        {
-            if (v.isPlaying())
-            {
-                v.step();
-                if (chans >= 2)
-                {
-                    out[0][i] += v.L;
-                    out[1][i] += v.R;
-                }
-                else if (chans == 1)
-                {
-                    out[0][i] += (v.L + v.R) * 0.5;
-                }
-            }
-        }
+        out[0][i] = output[0][blockPos];
+        out[1][i] = output[1][blockPos];
+
+        blockPos = (blockPos + 1) & (PolysynthVoice::blockSize - 1);
     }
 
     /*
@@ -318,10 +499,11 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
      */
     for (auto &v : voices)
     {
-        if (v.state == SawDemoVoice::NEWLY_OFF)
+        if (v.active && !v.isPlaying())
         {
             terminatedVoices.emplace_back(v.portid, v.channel, v.key, v.note_id);
-            v.state = SawDemoVoice::OFF;
+            v.active = false;
+            voiceEndCallback(&v);
         }
     }
 
@@ -351,18 +533,25 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
     // We should have gotten all the events
     assert(!nextEvent);
 
-    // A little optimization - if we have any active voices continue
-    for (const auto &v : voices)
+    return CLAP_PROCESS_CONTINUE;
+}
+
+void ConduitPolysynth::renderVoices()
+{
+    memset(outputOS, 0, sizeof(outputOS));
+    for (auto &v : voices)
     {
-        if (v.state != SawDemoVoice::OFF)
+        if (v.isPlaying())
         {
-            return CLAP_PROCESS_CONTINUE;
+            v.processBlock();
+            sst::basic_blocks::mechanics::accumulate_from_to<PolysynthVoice::blockSizeOS>(
+                v.outputOS[0], outputOS[0]);
+            sst::basic_blocks::mechanics::accumulate_from_to<PolysynthVoice::blockSizeOS>(
+                v.outputOS[1], outputOS[1]);
         }
     }
 
-    // Otherwise we have no voices - we can return CLAP_PROCESS_SLEEP until we get the next event
-    // And our host can optionally skip processing
-    return CLAP_PROCESS_SLEEP;
+    hr_dn.process_block_D2(outputOS[0], outputOS[1], blockSize, output[0], output[1]);
 }
 
 /*
@@ -400,25 +589,22 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
         case 0x90:
         {
             // Hosts should prefer CLAP_NOTE events but if they don't
-            handleNoteOn(mevt->port_index, chan, mevt->data[1], -1);
+            voiceManager.processNoteOnEvent(mevt->port_index, chan, mevt->data[1], -1,
+                                            voiceManager.midiToFloatVelocity(mevt->data[2]), 0.f);
             break;
         }
         case 0x80:
         {
             // Hosts should prefer CLAP_NOTE events but if they don't
-            handleNoteOff(mevt->port_index, chan, mevt->data[1]);
+            voiceManager.processNoteOffEvent(mevt->port_index, chan, mevt->data[1], -1,
+                                             voiceManager.midiToFloatVelocity(mevt->data[2]));
             break;
         }
         case 0xE0:
         {
             // pitch bend
-            auto bv = (mevt->data[1] + mevt->data[2] * 128 - 8192) / 8192.0;
-
-            for (auto &v : voices)
-            {
-                v.pitchBendWheel = bv * 2; // just hardcode a pitch bend depth of 2
-                v.recalcPitch();
-            }
+            auto bv = mevt->data[1] + mevt->data[2] * 128;
+            voiceManager.routeMIDIPitchBend(mevt->port_index, chan, bv);
 
             break;
         }
@@ -434,13 +620,15 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
     case CLAP_EVENT_NOTE_ON:
     {
         auto nevt = reinterpret_cast<const clap_event_note *>(evt);
-        handleNoteOn(nevt->port_index, nevt->channel, nevt->key, nevt->note_id);
+        voiceManager.processNoteOnEvent(nevt->port_index, nevt->channel, nevt->key, nevt->note_id,
+                                        nevt->velocity, 0.f);
     }
     break;
     case CLAP_EVENT_NOTE_OFF:
     {
         auto nevt = reinterpret_cast<const clap_event_note *>(evt);
-        handleNoteOff(nevt->port_index, nevt->channel, nevt->key);
+        voiceManager.processNoteOffEvent(nevt->port_index, nevt->channel, nevt->key, nevt->note_id,
+                                         nevt->velocity);
     }
     break;
     /*
@@ -450,21 +638,9 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
      */
     case CLAP_EVENT_PARAM_VALUE:
     {
-
         auto v = reinterpret_cast<const clap_event_param_value *>(evt);
-
-        *paramToValue[v->param_id] = v->value;
+        updateParamInPatch(v);
         pushParamsToVoices();
-
-        if (clapJuceShim->isEditorAttached())
-        {
-            auto r = ToUI();
-            r.type = ToUI::PARAM_VALUE;
-            r.id = v->param_id;
-            r.value = (double)v->value;
-
-            uiComms.toUiQ.push(r);
-        }
     }
     break;
     /*
@@ -476,83 +652,12 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
     {
         auto pevt = reinterpret_cast<const clap_event_param_mod *>(evt);
 
-        // This little lambda updates a modulation slot in a voice properly
-        auto applyToVoice = [&pevt](auto &v) {
-            if (!v.isPlaying())
-                return;
-
-            auto pd = pevt->param_id;
-            switch (pd)
-            {
-            case paramIds::pmCutoff:
-            {
-                v.cutoffMod = pevt->amount;
-                v.recalcFilter();
-                break;
-            }
-            case paramIds::pmUnisonSpread:
-            {
-                v.uniSpreadMod = pevt->amount;
-                v.recalcPitch();
-                break;
-            }
-            case paramIds::pmOscDetune:
-            {
-                // CNDOUT << "Detune Mod" << CNDVAR(pevt->amount) << std::endl;
-                v.oscDetuneMod = pevt->amount;
-                v.recalcPitch();
-                break;
-            }
-            case paramIds::pmResonance:
-            {
-                v.resMod = pevt->amount;
-                v.recalcFilter();
-                break;
-            }
-            case paramIds::pmPreFilterVCA:
-            {
-                v.preFilterVCAMod = pevt->amount;
-            }
-            }
-        };
-
-        /*
-         * The real meat is here. If we have a note id, find the note and modulate it.
-         * Otherwise if we have a key (we are doing "PCK modulation" rather than "noteid
-         * modulation") find a voice and update that. Otherwise it is a monophonic modulation
-         * so update every voice.
-         */
-        if (pevt->note_id >= 0)
-        {
-            // poly by note_id
-            for (auto &v : voices)
-            {
-                if (v.note_id == pevt->note_id)
-                {
-                    applyToVoice(v);
-                }
-            }
-        }
-        else if (pevt->key >= 0 && pevt->channel >= 0 && pevt->port_index >= 0)
-        {
-            // poly by PCK
-            for (auto &v : voices)
-            {
-                if (v.key == pevt->key && v.channel == pevt->channel &&
-                    v.portid == pevt->port_index)
-                {
-                    applyToVoice(v);
-                }
-            }
-        }
-        else
-        {
-            // mono
-            for (auto &v : voices)
-            {
-                applyToVoice(v);
-            }
-        }
+        voiceManager.routePolyphonicParameterModulation(pevt->port_index,
+                                                        pevt->channel,
+                                                        pevt->key,
+                                                        pevt->note_id,
+                                                        pevt->param_id,
+                                                        pevt->amount);
     }
     break;
     /*
@@ -562,183 +667,57 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
     case CLAP_EVENT_NOTE_EXPRESSION:
     {
         auto pevt = reinterpret_cast<const clap_event_note_expression *>(evt);
-        for (auto &v : voices)
-        {
-            if (!v.isPlaying())
-                continue;
-
-            // Note expressions work on key not note id
-            if (v.key == pevt->key && v.channel == pevt->channel && v.portid == pevt->port_index)
-            {
-                switch (pevt->expression_id)
-                {
-                case CLAP_NOTE_EXPRESSION_VOLUME:
-                    // I can mod the VCA
-                    v.volumeNoteExpressionValue = pevt->value - 1.0;
-                    break;
-                case CLAP_NOTE_EXPRESSION_TUNING:
-                    v.pitchNoteExpressionValue = pevt->value;
-                    v.recalcPitch();
-                    break;
-                }
-            }
-        }
+        voiceManager.routeNoteExpression(pevt->port_index, pevt->channel,
+                                         pevt->key, pevt->note_id, pevt->expression_id,
+                                         pevt->value);
     }
     break;
     }
 }
-#if 0
-void ConduitPolysynth::handleEventsFromUIQueue(const clap_output_events_t *ov)
+
+PolysynthVoice *ConduitPolysynth::initializeVoice(uint16_t port, uint16_t channel, uint16_t key,
+                                                int32_t noteId, float velocity, float retune)
 {
-    bool uiAdjustedValues{false};
-    ConduitPolysynth::FromUI r;
-    while (uiComms.fromUiQ.try_dequeue(r))
+    for (auto &v : voices)
     {
-        switch (r.type)
+        if (!v.active)
         {
-        case FromUI::BEGIN_EDIT:
-        case FromUI::END_EDIT:
-        {
-            auto evt = clap_event_param_gesture();
-            evt.header.size = sizeof(clap_event_param_gesture);
-            evt.header.type = (r.type == FromUI::BEGIN_EDIT ? CLAP_EVENT_PARAM_GESTURE_BEGIN
-                                                            : CLAP_EVENT_PARAM_GESTURE_END);
-            evt.header.time = 0;
-            evt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
-            evt.header.flags = 0;
-            evt.param_id = r.id;
-            ov->try_push(ov, &evt.header);
+            activateVoice(v, port, channel, key, noteId);
 
-            break;
-        }
-        case FromUI::ADJUST_VALUE:
-        {
-            // So set my value
-            *paramToValue[r.id] = r.value;
+            if (clapJuceShim->isEditorAttached())
+            {
+                auto r = ToUI();
+                r.type = ToUI::MIDI_NOTE_ON;
+                r.id = (uint32_t)key;
+                uiComms.toUiQ.push(r);
+            }
 
-            // But we also need to generate outbound message to the host
-            auto evt = clap_event_param_value();
-            evt.header.size = sizeof(clap_event_param_value);
-            evt.header.type = (uint16_t)CLAP_EVENT_PARAM_VALUE;
-            evt.header.time = 0; // for now
-            evt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
-            evt.header.flags = 0;
-            evt.param_id = r.id;
-            evt.value = r.value;
-
-            ov->try_push(ov, &(evt.header));
-
-            uiAdjustedValues = true;
-        }
+            return &v;
         }
     }
+    return nullptr;
+}
 
-    // Similarly we need to push values to a UI on startup
-    if (uiComms.refreshUIValues && clapJuceShim->isEditorAttached())
+void ConduitPolysynth::releaseVoice(PolysynthVoice *sdv, float velocity)
+{
+    if (sdv)
     {
-        uiComms.refreshUIValues = false;
+        sdv->release();
 
-        for (const auto &[k, v] : paramToValue)
+        if (clapJuceShim->isEditorAttached())
         {
             auto r = ToUI();
-            r.type = ToUI::PARAM_VALUE;
-            r.id = k;
-            r.value = *v;
-            uiComms.toUiQ.try_enqueue(r);
+            r.type = ToUI::MIDI_NOTE_OFF;
+            r.id = (uint32_t)sdv->key;
+            uiComms.toUiQ.push(r);
         }
-    }
-
-    if (uiAdjustedValues)
-        pushParamsToVoices();
-}
-#endif
-
-/*
- * The note on, note off, and push params to voices implementations are, basically, completely
- * uninteresting.
- */
-void ConduitPolysynth::handleNoteOn(int port_index, int channel, int key, int noteid)
-{
-    bool foundVoice{false};
-    for (auto &v : voices)
-    {
-        if (v.state == SawDemoVoice::OFF)
-        {
-            activateVoice(v, port_index, channel, key, noteid);
-            foundVoice = true;
-            break;
-        }
-    }
-
-    if (!foundVoice)
-    {
-        // We could steal oldest. If you want to do that toss in a PR to add age
-        // to the voice I guess. This is just a demo synth though.
-        auto idx = rand() % max_voices;
-        auto &v = voices[idx];
-        terminatedVoices.emplace_back(v.portid, v.channel, v.key, v.note_id);
-        activateVoice(v, port_index, channel, key, noteid);
-    }
-
-    uiComms.dataCopyForUI.updateCount++;
-    uiComms.dataCopyForUI.polyphony++;
-
-    if (clapJuceShim->isEditorAttached())
-    {
-        auto r = ToUI();
-        r.type = ToUI::MIDI_NOTE_ON;
-        r.id = (uint32_t)key;
-        uiComms.toUiQ.push(r);
     }
 }
 
-void ConduitPolysynth::handleNoteOff(int port_index, int channel, int n)
-{
-    for (auto &v : voices)
-    {
-        if (v.isPlaying() && v.key == n && v.portid == port_index && v.channel == channel)
-        {
-            v.release();
-        }
-    }
-
-    if (clapJuceShim->isEditorAttached())
-    {
-        auto r = ToUI();
-        r.type = ToUI::MIDI_NOTE_OFF;
-        r.id = (uint32_t)n;
-        uiComms.toUiQ.push(r);
-    }
-}
-
-void ConduitPolysynth::activateVoice(SawDemoVoice &v, int port_index, int channel, int key,
+void ConduitPolysynth::activateVoice(PolysynthVoice &v, int port_index, int channel, int key,
                                      int noteid)
 {
-    v.unison = std::max(1, std::min(7, (int)*unisonCount));
-    v.filterMode = (int)static_cast<int>(*filterMode);
-    v.note_id = noteid;
-    v.portid = port_index;
-    v.channel = channel;
-
-    v.uniSpread = *unisonSpread;
-    v.oscDetune = *oscDetune;
-    v.cutoff = *cutoff;
-    v.res = *resonance;
-    v.preFilterVCA = *preFilterVCA;
-    v.ampRelease = scaleTimeParamToSeconds(*ampRelease);
-    v.ampAttack = scaleTimeParamToSeconds(*ampAttack);
-    v.ampGate = *ampIsGate > 0.5;
-
-    // reset all the modulations
-    v.cutoffMod = 0;
-    v.oscDetuneMod = 0;
-    v.resMod = 0;
-    v.preFilterVCAMod = 0;
-    v.uniSpreadMod = 0;
-    v.volumeNoteExpressionValue = 0;
-    v.pitchNoteExpressionValue = 0;
-
-    v.start(key);
+    v.start(port_index, channel, key, noteid);
 }
 
 /*
@@ -767,33 +746,6 @@ void ConduitPolysynth::paramsFlush(const clap_input_events *in,
     // output, so we are done.
 }
 
-void ConduitPolysynth::pushParamsToVoices()
-{
-    for (auto &v : voices)
-    {
-        if (v.isPlaying())
-        {
-            v.uniSpread = *unisonSpread;
-            v.oscDetune = *oscDetune;
-            v.cutoff = *cutoff;
-            v.res = *resonance;
-            v.preFilterVCA = *preFilterVCA;
-            v.ampRelease = scaleTimeParamToSeconds(*ampRelease);
-            v.ampAttack = scaleTimeParamToSeconds(*ampAttack);
-            v.ampGate = *ampIsGate > 0.5;
-            v.filterMode = *filterMode;
-
-            v.recalcPitch();
-            v.recalcFilter();
-        }
-    }
-}
-
-float ConduitPolysynth::scaleTimeParamToSeconds(float param)
-{
-    auto scaleTime = std::clamp((param - 2.0 / 3.0) * 6, -100.0, 2.0);
-    auto res = powf(2.f, scaleTime);
-    return res;
-}
+void ConduitPolysynth::pushParamsToVoices() {}
 
 } // namespace sst::conduit::polysynth

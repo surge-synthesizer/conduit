@@ -44,6 +44,7 @@ static constexpr int nParams = 4;
 struct ConduitRingModulatorConfig
 {
     static constexpr int nParams{sst::conduit::ring_modulator::nParams};
+    static constexpr bool baseClassProvidesMonoModSupport{true};
     using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
     struct DataCopyForUI
     {

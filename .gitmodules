@@ -34,3 +34,9 @@
 [submodule "libs/sst/sst-clap-helpers"]
 	path = libs/sst/sst-clap-helpers
 	url = https://github.com/surge-synthesizer/sst-clap-helpers
+[submodule "libs/sst/sst-voicemanager"]
+	path = libs/sst/sst-voicemanager
+	url = https://github.com/surge-synthesizer/sst-voicemanager
+[submodule "libs/MTS-ESP"]
+	path = libs/MTS-ESP
+	url = https://github.com/ODDSound/MTS-ESP

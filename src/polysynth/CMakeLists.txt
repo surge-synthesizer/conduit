@@ -3,5 +3,5 @@ project(polysynth)
 add_to_conduit(SOURCE
         ${PROJECT_NAME}.cpp
         ${PROJECT_NAME}-editor.cpp
-        saw-voice.cpp
+        voice.cpp
         INCLUDE .)

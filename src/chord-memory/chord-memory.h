@@ -41,6 +41,7 @@ static constexpr int nParams = 1;
 struct ConduitChordMemoryConfig
 {
     static constexpr int nParams{sst::conduit::chord_memory::nParams};
+    static constexpr bool baseClassProvidesMonoModSupport{true};
     using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
     struct DataCopyForUI
     {
