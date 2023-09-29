@@ -99,6 +99,7 @@ void PolysynthVoice::recalcFilter()
 
 void PolysynthVoice::processBlock()
 {
+    static constexpr float vScale{0.2};
     aeg.processBlock(aegValues.attack.value(), aegValues.decay.value(), aegValues.sustain.value(),
                      aegValues.release.value(), 0, 0, 0, gated);
     feg.processBlock(fegValues.attack.value(), fegValues.decay.value(), fegValues.sustain.value(),
@@ -122,8 +123,8 @@ void PolysynthVoice::processBlock()
             for (int i = 0; i < sawUnison; ++i)
             {
                 auto out = sawOsc[i].step();
-                L += 0.5 * sl * sawUniLevelNorm[i] * sawUniPanL[i] * out;
-                R += 0.5 * sl * sawUniLevelNorm[i] * sawUniPanR[i] * out;
+                L += vScale * sl * sawUniLevelNorm[i] * sawUniPanL[i] * out;
+                R += vScale * sl * sawUniLevelNorm[i] * sawUniPanR[i] * out;
             }
 
             outputOS[0][s] += L;
@@ -139,7 +140,7 @@ void PolysynthVoice::processBlock()
         {
             auto sl = pulseLevel_lipol.v;
             sl = sl * sl * sl;
-            auto V = 0.5 * sl * pulseOsc.step();
+            auto V = vScale * sl * pulseOsc.step();
 
             outputOS[0][s] += V;
             outputOS[1][s] += V;
@@ -155,7 +156,7 @@ void PolysynthVoice::processBlock()
             sinOsc.step();
             auto sl = sinLevel_lipol.v;
             sl = sl * sl * sl;
-            auto V = 0.5 * sl * sinOsc.u;
+            auto V = vScale * sl * sinOsc.u;
 
             outputOS[0][s] += V;
             outputOS[1][s] += V;
@@ -171,7 +172,7 @@ void PolysynthVoice::processBlock()
             auto sl = noiseLevel_lipol.v;
             sl = sl * sl * sl;
 
-            auto V = 0.5 * sl *
+            auto V = vScale * sl *
                      sst::basic_blocks::dsp::correlated_noise_o2mk2_supplied_value(
                          w0, w1, noiseColor.value(), urd(gen));
             outputOS[0][s] += V;
