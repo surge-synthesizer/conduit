@@ -643,9 +643,18 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
         {
         case 0x90:
         {
-            // Hosts should prefer CLAP_NOTE events but if they don't
-            voiceManager.processNoteOnEvent(mevt->port_index, chan, mevt->data[1], -1,
-                                            voiceManager.midiToFloatVelocity(mevt->data[2]), 0.f);
+            if (mevt->data[2] == 0)
+            {
+                voiceManager.processNoteOffEvent(mevt->port_index, chan, mevt->data[1], -1,
+                                                 voiceManager.midiToFloatVelocity(mevt->data[2]));
+            }
+            else
+            {
+                // Hosts should prefer CLAP_NOTE events but if they don't
+                voiceManager.processNoteOnEvent(mevt->port_index, chan, mevt->data[1], -1,
+                                                voiceManager.midiToFloatVelocity(mevt->data[2]),
+                                                0.f);
+            }
             break;
         }
         case 0x80:
