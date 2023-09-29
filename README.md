@@ -5,7 +5,7 @@ bad. So far this exists to set up the wrapper infrastructure
 and to ponder how to do 'clap-first' development.
 
 ```bash
-git clone https://github.com/baconpaul/conduit
+git clone https://github.com/surge-synthesizer/conduit
 cd conduit
 git submodule update --init --recursive
 cmake -Bbuild -DCMAKE_BUILD_TYPE=Release
@@ -21,10 +21,10 @@ My todo list is in the BaconPaulTODO.md but is a mess
 right now, hmu in the #wrappers channel on clap discord or
 if you really want in #clap-chatter in surge discord
 
-but seriously, if you aren't one of the folks active in
-the wrapeprs channel, you will be happier if you come back
-in a month, once I push this to the surge-synthesizer repo
-
+Said DSP and processing are getting incrementally less bad. But this is still 
+primarily an infrastructure project. If you're looking for good plugins this 
+still ain't quite the place. Feel free to try them but don't
+expect things like "all the parameters do something" yet. :)
 
 ## An Important Note about Licensing
 
