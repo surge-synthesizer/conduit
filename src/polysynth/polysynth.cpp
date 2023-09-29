@@ -664,6 +664,18 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
                                              voiceManager.midiToFloatVelocity(mevt->data[2]));
             break;
         }
+        case 0xA0:
+        {
+            break;
+        }
+        case 0xB0:
+        {
+            if (mevt->data[1] == 64)
+            {
+                voiceManager.updateSustainPedal(mevt->port_index, chan, mevt->data[2]);
+            }
+            break;
+        }
         case 0xE0:
         {
             // pitch bend
