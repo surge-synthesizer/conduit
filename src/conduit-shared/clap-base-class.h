@@ -110,6 +110,10 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             paramToValue[pd.id] = &(patch.params[patchIdx]);
 
             patch.params[patchIdx] = pd.defaultVal;
+            if (TConfig::baseClassProvidesMonoModSupport)
+            {
+                monoModulatedPatch.update(patchIdx, patch);
+            }
 
             patchIdx++;
         }
@@ -180,6 +184,14 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         float params[TConfig::nParams];
         typename TConfig::PatchExtension extension;
     } patch;
+
+    struct MonoModulatedPatch
+    {
+        float modulations[TConfig::nParams]{};
+        float values[TConfig::nParams]{};
+        void update(int idx, Patch &p) { values[idx] = modulations[idx] + p.params[idx]; }
+    } monoModulatedPatch;
+
     std::unordered_map<clap_id, float *> paramToValue;
     std::unordered_map<clap_id, int> paramToPatchIndex;
 
@@ -203,7 +215,14 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         }
         else
         {
-            to = &patch.params[ptpi->second];
+            if (TConfig::baseClassProvidesMonoModSupport)
+            {
+                to = &monoModulatedPatch.values[ptpi->second];
+            }
+            else
+            {
+                to = &patch.params[ptpi->second];
+            }
         }
     }
 
@@ -213,7 +232,14 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         auto ptpi = paramToPatchIndex.find(paramId);
         if (ptpi != paramToPatchIndex.end())
         {
-            val = patch.params[ptpi->second];
+            if (TConfig::baseClassProvidesMonoModSupport)
+            {
+                val = monoModulatedPatch.values[ptpi->second];
+            }
+            else
+            {
+                val = patch.params[ptpi->second];
+            }
         }
         paramToLag[paramId] = &to;
         to.newValue(val);
@@ -318,7 +344,34 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             return false;
         }
 
-        // TODO - check version and id
+        // TODO - check streamingVersion once we bump it
+        int sv;
+        if (conduit->QueryIntAttribute("streamingVersion", &sv) == TIXML_SUCCESS)
+        {
+            if (sv > streamingVersion)
+            {
+                CNDOUT << "Streaming version '" << sv << "' greater than '" << streamingVersion
+                       << "'" << std::endl;
+                return false;
+            }
+        }
+
+        std::string spid;
+        if (conduit->QueryStringAttribute("plugin_id", &spid) == TIXML_SUCCESS)
+        {
+            if (spid != TConfig::getDescription()->id)
+            {
+                // TODO - a better way to report this error to the user?
+                CNDOUT << "State file for '" << spid << "' doesn't match plugin id '"
+                       << TConfig::getDescription()->id << "'" << std::endl;
+                return false;
+            }
+        }
+        else
+        {
+            CNDOUT << "Cannot determine plugin id from stream" << std::endl;
+            return false;
+        }
 
         auto params = TINYXML_SAFE_TO_ELEMENT(conduit->FirstChild("params"));
         if (!params)
@@ -401,8 +454,10 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         enum MType
         {
             PARAM_VALUE = 0x31,
+            PARAM_MODULATION,
             MIDI_NOTE_ON,
-            MIDI_NOTE_OFF
+            MIDI_NOTE_OFF,
+            AUDIO_PAUSE_STATUS
         } type;
 
         uint32_t id;  // param-id for PARAM_VALUE, key for noteon/noteoff
@@ -415,15 +470,17 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         {
             BEGIN_EDIT = 0xF9,
             END_EDIT,
-            ADJUST_VALUE
+            ADJUST_VALUE,
+            ADJUST_AUDIO_PAUSE
         } type;
         uint32_t id;
+
         double value;
     };
 
     struct UICommunicationBundle
     {
-        UICommunicationBundle(const ClapBaseClass<T, TConfig> &h) : cp(h) {}
+        UICommunicationBundle(ClapBaseClass<T, TConfig> &h) : cp(h) {}
         typedef sst::cpputils::SimpleRingBuffer<ToUI, 4096> SynthToUI_Queue_t;
         typedef sst::cpputils::SimpleRingBuffer<FromUI, 4096> UIToSynth_Queue_t;
 
@@ -433,7 +490,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         std::atomic<bool> refreshUIValues{false};
 
-        void requestHostParamFlush()
+        void requestHostParamFlush() const
         {
             if (cp._host.canUseParams())
                 cp._host.paramsRequestFlush();
@@ -452,16 +509,53 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         }
 
       private:
-        const ClapBaseClass<T, TConfig> &cp;
+        // Used to be const but I want to save and load from the UI thread
+        // so make it private and only do that internally
+        ClapBaseClass<T, TConfig> &cp;
     } uiComms;
 
     void doValueUpdate(clap_id id, float value)
     {
-        *paramToValue[id] = value;
+        auto ptpi = paramToPatchIndex.find(id);
+        if (ptpi == paramToPatchIndex.end())
+            return;
+
+        int index = ptpi->second;
+        patch.params[index] = value;
+        if (TConfig::baseClassProvidesMonoModSupport)
+        {
+            monoModulatedPatch.update(index, patch);
+        }
         auto ptl = paramToLag.find(id);
         if (ptl != paramToLag.end())
         {
-            ptl->second->newValue(value);
+            if (TConfig::baseClassProvidesMonoModSupport)
+            {
+                ptl->second->newValue(monoModulatedPatch.values[index]);
+            }
+            else
+            {
+                ptl->second->newValue(value);
+            }
+        }
+    }
+
+    void doMonoModulationUpdate(clap_id id, float value)
+    {
+        assert(TConfig::baseClassProvidesMonoModSupport);
+        auto ptpi = paramToPatchIndex.find(id);
+        if (ptpi == paramToPatchIndex.end())
+            return;
+
+        int index = ptpi->second;
+        monoModulatedPatch.modulations[index] = value;
+        monoModulatedPatch.update(index, patch);
+        auto val = monoModulatedPatch.values[index];
+
+        auto ptl = paramToLag.find(id);
+        if (ptl != paramToLag.end())
+        {
+            ptl->second->newValue(val);
         }
     }
 
@@ -533,6 +627,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             ov->try_push(ov, &(evt.header));
         }
         break;
+        case FromUI::ADJUST_AUDIO_PAUSE:
+            break;
         }
     }
 
@@ -549,6 +645,16 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             updateParamInPatch(v);
             return true;
         }
+        case CLAP_EVENT_PARAM_MOD:
+        {
+            if (TConfig::baseClassProvidesMonoModSupport)
+            {
+                auto v = reinterpret_cast<const clap_event_param_mod *>(evt);
+                updateModulation(v);
+                return true;
+            }
+        }
+
         break;
         }
 
@@ -564,6 +670,20 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             r.type = ToUI::PARAM_VALUE;
             r.id = v->param_id;
             r.value = (double)v->value;
+
+            uiComms.toUiQ.push(r);
+        }
+    }
+
+    void updateModulation(const clap_event_param_mod *v)
+    {
+        doMonoModulationUpdate(v->param_id, v->amount);
+        if (clapJuceShim && clapJuceShim->isEditorAttached())
+        {
+            auto r = ToUI();
+            r.type = ToUI::PARAM_MODULATION;
+            r.id = v->param_id;
+            r.value = (double)v->amount;
 
             uiComms.toUiQ.push(r);
         }
@@ -612,8 +732,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     }
 
     // Support for SST Biquads
-    float note_to_pitch_ignoring_tuning(float n) { return equalTuningTable.note_to_pitch(n); }
-    float dbToLinear(float n) { return dbToLinearTable.dbToLinear(n); }
+    float note_to_pitch_ignoring_tuning(float n) const { return equalTuningTable.note_to_pitch(n); }
+    float dbToLinear(float n) const { return dbToLinearTable.dbToLinear(n); }
 };
 } // namespace sst::conduit::shared
 

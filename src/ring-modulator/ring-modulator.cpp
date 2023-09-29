@@ -44,6 +44,7 @@ ConduitRingModulator::ConduitRingModulator(const clap_host *host)
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
+    auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE;
 
     paramDescriptions.push_back(ParamDesc()
                                     .asPercent()
@@ -51,7 +52,7 @@ ConduitRingModulator::ConduitRingModulator(const clap_host *host)
                                     .withName("Mix Level")
                                     .withGroupName("Ring Modulator")
                                     .withDefault(0.8)
-                                    .withFlags(autoFlag));
+                                    .withFlags(modFlag));
 
     paramDescriptions.push_back(
         ParamDesc()
@@ -79,7 +80,7 @@ ConduitRingModulator::ConduitRingModulator(const clap_host *host)
                                     .asFloat()
                                     .withID(pmInternalSourceFrequency)
                                     .asAudibleFrequency()
-                                    .withFlags(autoFlag)
+                                    .withFlags(modFlag)
                                     .withName("Source Frequency")
                                     .withGroupName("Ring Modulator"));
     configureParams();

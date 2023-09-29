@@ -28,27 +28,6 @@
 #include <optional>
 #include "conduit-shared/debug-helpers.h"
 
-/*
- * ConduitPolysynth is the core synthesizer class. It uses the clap-helpers C++ plugin extensions
- * to present the CLAP C API as a C++ object model.
- *
- * The core features here are
- *
- * - Hold the CLAP description static object
- * - Advertise parameters and ports
- * - Provide an event handler which responds to events and returns sound
- * - Do voice management. Which is really not very sophisticated (it's just an array of 64
- *   voice objects and we choose the next free one, and if you ask for a 65th voice, nothing
- *   happens).
- * - Provide the API points to delegate UI creation to a separate editor object,
- *   coded in clap-saw-demo-editor
- *
- * This demo is coded to be relatively familiar and close to programming styles form other
- * formats where the editor and synth collaborate closely; as described in clap-saw-demo-editor
- * this object also holds the two queues the editor and synth use to communicate; and holds the
- * bundle of atomic values to which the editor holds a const &.
- */
-
 #include <atomic>
 #include <array>
 #include <unordered_map>
@@ -58,9 +37,13 @@
 #include <clap/helpers/plugin.hh>
 
 #include "sst/basic-blocks/params/ParamMetadata.h"
+#include "sst/filters/HalfRateFilter.h"
+#include "sst/voicemanager/voicemanager.h"
 
 #include "conduit-shared/clap-base-class.h"
-#include "saw-voice.h"
+#include "voice.h"
+
+struct MTSClient;
 
 namespace sst::conduit::polysynth
 {
@@ -69,11 +52,14 @@ namespace sst::conduit::polysynth
  * url etc... and is consumed by clap-saw-demo-pluginentry.cpp
  */
 extern clap_plugin_descriptor desc;
-static constexpr int nParams{10};
+static constexpr int nParams{56};
+static constexpr int numModMatrixSlots{16};
 
 struct ConduitPolysynthConfig
 {
     static constexpr int nParams{sst::conduit::polysynth::nParams};
+    static constexpr bool baseClassProvidesMonoModSupport{
+        false}; // as a synth we do voice level modulation with the VM
     using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
     struct DataCopyForUI
     {
@@ -92,58 +78,89 @@ struct ConduitPolysynth
     ConduitPolysynth(const clap_host *host);
     ~ConduitPolysynth();
 
-    /*
-     * Activate makes sure sampleRate is distributed through
-     * the data structures, in this case by stamping the sampleRate
-     * onto each pre-allocated voice object.
-     */
     bool activate(double sampleRate, uint32_t minFrameCount,
                   uint32_t maxFrameCount) noexcept override
     {
         setSampleRate(sampleRate);
         for (auto &v : voices)
-            v.sampleRate = sampleRate;
+            v.setSampleRate(sampleRate * 2); // run voices oversampled
         return true;
     }
 
-    /*
-     * Parameter Handling:
-     *
-     * Each parameter gets a unique ID which is returned by 'paramsInfo' when the plugin
-     * is instantiated (or the plugin asks the host to reset). To avoid accidental bugs where
-     * I confuse creation index with param IDs, I am using arbitrary numbers for each
-     * parameter id.
-     *
-     * The implementation of paramsInfo contains the setup of these params.
-     *
-     * The actual synth has a very simple model to update parameter values. It
-     * contains a map from these IDs to a double * which the constructor sets up
-     * as references to members.
-     *
-     * One difference from CSD is rather than put all the config in paramsInfo
-     * we set it up here as a data structure
-     */
     enum paramIds : uint32_t
     {
-        pmUnisonCount = 1378,
-        pmUnisonSpread = 2391,
-        pmOscDetune = 8675309,
+        // Oscillators - in the 1000 range
+        // Saw Oscillator
+        pmSawActive = 1100,
+        pmSawUnisonCount,
+        pmSawUnisonSpread,
+        pmSawCoarse,
+        pmSawFine,
+        pmSawLevel,
 
-        pmAmpAttack = 2874,
-        pmAmpRelease = 728,
-        pmAmpIsGate = 1942,
+        // Pulse Oscillator
+        pmPWActive = 1200,
+        pmPWWidth,
+        pmPWFrequencyDiv,
+        pmPWCoarse,
+        pmPWFine,
+        pmPWLevel,
 
-        pmPreFilterVCA = 87612,
+        // Sine Oscillator
+        pmSinActive = 1300,
+        pmSinFrequencyDiv,
+        pmSinCoarse,
+        pmSinLevel,
 
-        pmCutoff = 17,
-        pmResonance = 94,
-        pmFilterMode = 14255
+        // Noise Oscillator
+        pmNoiseActive = 1400,
+        pmNoiseColor,
+        pmNoiseLevel,
+
+        // Filters - in the 2000 range
+        pmLPFActive = 2000,
+        pmLPFCutoff,
+        pmLPFResonance,
+        pmLPFFilterMode,
+
+        pmSVFActive = 2100,
+        pmSVFCutoff,
+        pmSVFResonance,
+        pmSVFFilterMode,
+
+        pmWSActive = 2200,
+        pmWSDrive,
+        pmWSMode,
+
+        pmFilterRouting = 2300,
+        pmFilterFeedback,
+
+        // Envelopes - in the 8000 range
+        pmEnvA = 8000, // +10 for FEG
+        pmEnvD,
+        pmEnvS,
+        pmEnvR, // so don't use within 8020 or so
+
+        pmFegToLPFCutoff = 8040,
+        pmFegToSVFCutoff,
+
+        pmAegVelocitySens = 8050,
+        pmAegPreFilterGain,
+
+        // LFOs in the 9000 range
+        pmLFOActive = 9000, // + 100 for LFO2
+        pmLFORate,
+        pmLFODeform,
+        pmLFOAmplitude,
+        pmLFOShape,
+        pmLFOTempoSync
     };
 
-  public:
-    // Convert 0-1 linear into 0-4s exponential
-    float scaleTimeParamToSeconds(float param);
+    static constexpr int offPmFeg{10};
+    static constexpr int offPmLFO2{100};
+    static constexpr int n_lfos{2};
 
+  public:
     /*
      * Many CLAP plugins will want input and output audio and note ports, although
      * the spec doesn't require this. Here as a simple synth we set up a single s
@@ -175,16 +192,6 @@ struct ConduitPolysynth
     }
 
     /*
-     * I have an unacceptably crude state dump and restore. If you want to
-     * improve it, PRs welcome! But it's just like any other read-and-write-goop
-     * from-a-stream api really.
-     */
-    /*bool implementsState() const noexcept override { return true; }
-    bool stateSave(const clap_ostream *) noexcept override;
-    bool stateLoad(const clap_istream *) noexcept override;
-     */
-
-    /*
      * process is the meat of the operation. It does obvious things like trigger
      * voices but also handles all the polyphonic modulation and so on. Please see the
      * comments in the cpp file to understand it and the helper functions we have
@@ -193,9 +200,7 @@ struct ConduitPolysynth
     clap_process_status process(const clap_process *process) noexcept override;
     void handleInboundEvent(const clap_event_header_t *evt);
     void pushParamsToVoices();
-    void handleNoteOn(int port_index, int channel, int key, int noteid);
-    void handleNoteOff(int port_index, int channel, int key);
-    void activateVoice(SawDemoVoice &v, int port_index, int channel, int key, int noteid);
+    void activateVoice(PolysynthVoice &v, int port_index, int channel, int key, int noteid);
 
     /*
      * In addition to ::process, the plugin should implement ::paramsFlush. ::paramsFlush will be
@@ -227,17 +232,60 @@ struct ConduitPolysynth
   protected:
     std::unique_ptr<juce::Component> createEditor() override;
 
-  private:
-    // These items are ONLY read and written on the audio thread, so they
-    // are safe to be non-atomic doubles. We keep a map to locate them
-    // for parameter updates.
-    float *unisonCount, *unisonSpread, *oscDetune, *cutoff, *resonance, *ampAttack, *ampRelease,
-        *ampIsGate, *preFilterVCA, *filterMode;
+    friend struct PolysynthVoice;
 
+  private:
     typedef std::unordered_map<int, int> PatchPluginExtension;
 
-    // "Voice Management" is "randomly pick a voice to kill and put it in stolen voices"
-    std::array<SawDemoVoice, max_voices> voices;
+    uint16_t blockPos{0};
+    void renderVoices();
+    float output alignas(16)[2][PolysynthVoice::blockSize];
+    float outputOS alignas(16)[2][PolysynthVoice::blockSizeOS];
+    sst::filters::HalfRate::HalfRateFilter hr_dn;
+
+    // Voice Management
+    struct VMConfig
+    {
+        static constexpr size_t maxVoiceCount{max_voices};
+        using voice_t = PolysynthVoice;
+    };
+
+  public:
+    std::function<void(PolysynthVoice *)> voiceEndCallback;
+    void setVoiceEndCallback(std::function<void(PolysynthVoice *)> f) { voiceEndCallback = f; }
+
+    PolysynthVoice *initializeVoice(uint16_t port, uint16_t channel, uint16_t key, int32_t noteId,
+                                    float velocity, float retune);
+    void releaseVoice(PolysynthVoice *v, float velocity);
+    void retriggerVoiceWithNewNoteID(PolysynthVoice *v, int32_t noteid, float velocity)
+    {
+        CNDOUT << "retriggerVoice" << std::endl;
+    }
+
+    void setVoiceMIDIPitchBend(PolysynthVoice *v, uint16_t pb14bit)
+    {
+        auto bv = (pb14bit - 8192) / 8192.f;
+        v->pitchBendWheel = bv * 2; // just hardcode a pitch bend depth of 2
+        v->recalcPitch();
+    }
+
+    void setVoicePolyphonicParameterModulation(PolysynthVoice *v, uint32_t parameter, double value)
+    {
+        v->applyExternalMod(parameter, value);
+    }
+
+    void setNoteExpression(PolysynthVoice *v, int32_t expression, double value)
+    {
+        v->receiveNoteExpression(expression, value);
+    }
+
+    MTSClient *mtsClient{nullptr};
+
+  private:
+    using voiceManager_t = sst::voicemanager::VoiceManager<VMConfig, ConduitPolysynth>;
+    voiceManager_t voiceManager;
+
+    std::array<PolysynthVoice, max_voices> voices;
     std::vector<std::tuple<int, int, int, int>> terminatedVoices; // that's PCK ID
 };
 } // namespace sst::conduit::polysynth

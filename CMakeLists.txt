@@ -45,6 +45,10 @@ set(SST_PLUGININFRA_FILESYSTEM_FORCE_PLATFORM TRUE CACHE BOOL "Use System FS")
 add_subdirectory(libs/sst/sst-plugininfra)
 add_subdirectory(libs/sst/sst-cpputils)
 add_subdirectory(libs/sst/sst-filters)
+add_subdirectory(libs/sst/sst-voicemanager)
+
+add_library(mts-esp-client STATIC libs/MTS-ESP/Client/libMTSClient.cpp)
+target_include_directories(mts-esp-client PUBLIC libs/MTS-ESP/Client)
 
 set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")

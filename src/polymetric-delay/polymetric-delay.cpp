@@ -52,7 +52,7 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
                                     .withName("Dry Output Level")
                                     .withGroupName("Main")
                                     .withDefault(0.5)
-                                    .withFlags(autoFlag));
+                                    .withFlags(modFlag));
 
     for (int i = 0; i < nTaps; ++i)
     {
@@ -81,13 +81,13 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
                                         .withRange(log2(0.05 / 440) * 12, log2(6000.f / 440) * 12)
                                         .withDefault(log2(1.0 / 440.0) * 12)
                                         .withSemitoneZeroAt400Formatting()
-                                        .withFlags(autoFlag)
+                                        .withFlags(modFlag)
                                         .withID(pmDelayModRate + i)
                                         .withName("Mod Rate" + tm)
                                         .withGroupName(gn));
         paramDescriptions.push_back(ParamDesc()
                                         .asFloat()
-                                        .withFlags(autoFlag)
+                                        .withFlags(modFlag)
                                         .asPercent()
                                         .withID(pmDelayModDepth + i)
                                         .withName("Mod Depth" + tm)
@@ -102,14 +102,14 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
                                         .withDefault(1));
         paramDescriptions.push_back(ParamDesc()
                                         .asAudibleFrequency()
-                                        .withFlags(autoFlag)
+                                        .withFlags(modFlag)
                                         .withID(pmTapLowCut + i)
                                         .withName("Lo Cut" + tm)
                                         .withGroupName(gn)
                                         .withDefault(-60));
         paramDescriptions.push_back(ParamDesc()
                                         .asAudibleFrequency()
-                                        .withFlags(autoFlag)
+                                        .withFlags(modFlag)
                                         .withID(pmTapHighCut + i)
                                         .withName("Hi Cut" + tm)
                                         .withGroupName(gn)
@@ -117,7 +117,7 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
         paramDescriptions.push_back(ParamDesc()
                                         .asFloat()
                                         .asCubicDecibelAttenuation()
-                                        .withFlags(autoFlag)
+                                        .withFlags(modFlag)
                                         .withID(pmTapLevel + i)
                                         .withName("Level" + tm)
                                         .withGroupName(gn)
@@ -125,7 +125,7 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
         paramDescriptions.push_back(ParamDesc()
                                         .asFloat()
                                         .asCubicDecibelAttenuation()
-                                        .withFlags(autoFlag)
+                                        .withFlags(modFlag)
                                         .withID(pmTapFeedback + i)
                                         .withName("Feedback" + tm)
                                         .withGroupName(gn)
@@ -133,7 +133,7 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
         paramDescriptions.push_back(ParamDesc()
                                         .asFloat()
                                         .asCubicDecibelAttenuation()
-                                        .withFlags(autoFlag)
+                                        .withFlags(modFlag)
                                         .withID(pmTapCrossFeedback + i)
                                         .withName("Cross Feedback " + tm)
                                         .withGroupName(gn)
@@ -141,7 +141,7 @@ ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
         paramDescriptions.push_back(ParamDesc()
                                         .asFloat()
                                         .asPercentBipolar()
-                                        .withFlags(autoFlag)
+                                        .withFlags(modFlag)
                                         .withID(pmTapOutputPan + i)
                                         .withName("Pan " + tm)
                                         .withGroupName(gn)
@@ -380,6 +380,14 @@ void ConduitPolymetricDelay::handleInboundEvent(const clap_event_header_t *evt)
         auto v = reinterpret_cast<const clap_event_param_value *>(evt);
         updateParamInPatch(v);
         specificParamChange(v->param_id, v->value);
+    }
+    break;
+
+    case CLAP_EVENT_PARAM_MOD:
+    {
+        auto v = reinterpret_cast<const clap_event_param_mod *>(evt);
+        updateModulation(v);
+        specificParamChange(v->param_id, v->amount); // FIXME - that's unsatisfactory
     }
     break;
 

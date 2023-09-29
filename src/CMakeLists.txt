@@ -19,6 +19,8 @@ target_link_libraries(conduit-shared PUBLIC
         sst-cpputils
         sst-jucegui
         sst-filters
+        sst-voicemanager
+        mts-esp-client
         clap-wrapper-extensions
         )
 
