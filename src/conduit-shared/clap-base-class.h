@@ -189,10 +189,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     {
         float modulations[TConfig::nParams]{};
         float values[TConfig::nParams]{};
-        void update(int idx, Patch &p)
-        {
-            values[idx] = modulations[idx] + p.params[idx];
-        }
+        void update(int idx, Patch &p) { values[idx] = modulations[idx] + p.params[idx]; }
     } monoModulatedPatch;
 
     std::unordered_map<clap_id, float *> paramToValue;
@@ -353,7 +350,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         {
             if (sv > streamingVersion)
             {
-                CNDOUT << "Streaming version '" << sv << "' greater than '" << streamingVersion << "'" << std::endl;
+                CNDOUT << "Streaming version '" << sv << "' greater than '" << streamingVersion
+                       << "'" << std::endl;
                 return false;
             }
         }
@@ -364,7 +362,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             if (spid != TConfig::getDescription()->id)
             {
                 // TODO - a better way to report this error to the user?
-                CNDOUT << "State file for '" << spid << "' doesn't match plugin id '" << TConfig::getDescription()->id << "'" << std::endl;
+                CNDOUT << "State file for '" << spid << "' doesn't match plugin id '"
+                       << TConfig::getDescription()->id << "'" << std::endl;
                 return false;
             }
         }
@@ -540,7 +539,6 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             }
         }
     }
-
 
     void doMonoModulationUpdate(clap_id id, float value)
     {

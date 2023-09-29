@@ -19,8 +19,8 @@
  * mean for you.
  */
 
-#ifndef CONDUIT_SRC_POLYSYNTH_SAW_VOICE_H
-#define CONDUIT_SRC_POLYSYNTH_SAW_VOICE_H
+#ifndef CONDUIT_SRC_POLYSYNTH_VOICE_H
+#define CONDUIT_SRC_POLYSYNTH_VOICE_H
 
 #include <array>
 #include <random>
@@ -49,7 +49,10 @@ struct PolysynthVoice
     static constexpr int blockSizeOS{blockSize << 1};
 
     const ConduitPolysynth &synth;
-    PolysynthVoice(const ConduitPolysynth &sy) : synth(sy), gen((uint64_t)(this)), urd(-1.0, 1.0), aeg(this), feg(this)  {}
+    PolysynthVoice(const ConduitPolysynth &sy)
+        : synth(sy), gen((uint64_t)(this)), urd(-1.0, 1.0), aeg(this), feg(this)
+    {
+    }
 
     void setSampleRate(double sr)
     {
@@ -100,7 +103,9 @@ struct PolysynthVoice
     bool pulseActive{true};
     ModulatedValue pulseWidth, pulseOctave, pulseCoarse, pulseFine, pulseLevel;
     sst::basic_blocks::dsp::lipol<float, blockSizeOS, true> pulseLevel_lipol;
-    sst::basic_blocks::dsp::DPWPulseOscillator<sst::basic_blocks::dsp::BlockInterpSmoothingStrategy<blockSize>> pulseOsc;
+    sst::basic_blocks::dsp::DPWPulseOscillator<
+        sst::basic_blocks::dsp::BlockInterpSmoothingStrategy<blockSize>>
+        pulseOsc;
 
     // Sin Oscillator
     bool sinActive{true};
@@ -115,7 +120,6 @@ struct PolysynthVoice
     float w0, w1;
     std::default_random_engine gen;
     std::uniform_real_distribution<float> urd;
-
 
     sst::basic_blocks::dsp::lipol_sse<blockSizeOS, true> aegPFG_lipol;
     ModulatedValue aegPFG;

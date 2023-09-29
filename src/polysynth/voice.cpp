@@ -64,7 +64,9 @@ void PolysynthVoice::recalcPitch()
     {
         auto po = std::clamp((int)std::round(pulseOctave.value()) + 3, 0, 6);
         auto sbf = baseFreq * mul[po];
-        auto pf = sbf * pow(2.0, (pulseCoarse.value() + pulseFine.value()*0.01 + pitchNoteExpressionValue + pitchBendWheel) / 12.0);
+        auto pf = sbf * pow(2.0, (pulseCoarse.value() + pulseFine.value() * 0.01 +
+                                  pitchNoteExpressionValue + pitchBendWheel) /
+                                     12.0);
         pulseOsc.setFrequency(pf, srInv);
         pulseOsc.setPulseWidth(pulseWidth.value());
     }
@@ -73,7 +75,8 @@ void PolysynthVoice::recalcPitch()
     {
         auto po = std::clamp((int)std::round(sinOctave.value()) + 3, 0, 6);
         auto sbf = baseFreq * mul[po];
-        auto pf = sbf * pow(2.0, (sinCoarse.value() + pitchNoteExpressionValue + pitchBendWheel) / 12.0);
+        auto pf =
+            sbf * pow(2.0, (sinCoarse.value() + pitchNoteExpressionValue + pitchBendWheel) / 12.0);
         sinOsc.setRate(2.0 * M_PI * pf * srInv);
     }
 }
@@ -129,7 +132,6 @@ void PolysynthVoice::processBlock()
         }
     }
 
-
     if (pulseActive)
     {
         pulseLevel_lipol.newValue(pulseLevel.value());
@@ -169,7 +171,9 @@ void PolysynthVoice::processBlock()
             auto sl = noiseLevel_lipol.v;
             sl = sl * sl * sl;
 
-            auto V = 0.5 * sl * sst::basic_blocks::dsp::correlated_noise_o2mk2_supplied_value(w0, w1, noiseColor.value(), urd(gen));
+            auto V = 0.5 * sl *
+                     sst::basic_blocks::dsp::correlated_noise_o2mk2_supplied_value(
+                         w0, w1, noiseColor.value(), urd(gen));
             outputOS[0][s] += V;
             outputOS[1][s] += V;
 
@@ -371,7 +375,7 @@ void PolysynthVoice::applyExternalMod(clap_id param, float value)
 
 void PolysynthVoice::receiveNoteExpression(int expression, double value)
 {
-    switch(expression)
+    switch (expression)
     {
     case CLAP_NOTE_EXPRESSION_TUNING:
     {

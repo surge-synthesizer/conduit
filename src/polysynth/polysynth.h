@@ -55,11 +55,11 @@ extern clap_plugin_descriptor desc;
 static constexpr int nParams{56};
 static constexpr int numModMatrixSlots{16};
 
-
 struct ConduitPolysynthConfig
 {
     static constexpr int nParams{sst::conduit::polysynth::nParams};
-    static constexpr bool baseClassProvidesMonoModSupport{false}; // as a synth we do voice level modulation with the VM
+    static constexpr bool baseClassProvidesMonoModSupport{
+        false}; // as a synth we do voice level modulation with the VM
     using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
     struct DataCopyForUI
     {
@@ -255,7 +255,7 @@ struct ConduitPolysynth
     void setVoiceEndCallback(std::function<void(PolysynthVoice *)> f) { voiceEndCallback = f; }
 
     PolysynthVoice *initializeVoice(uint16_t port, uint16_t channel, uint16_t key, int32_t noteId,
-                                  float velocity, float retune);
+                                    float velocity, float retune);
     void releaseVoice(PolysynthVoice *v, float velocity);
     void retriggerVoiceWithNewNoteID(PolysynthVoice *v, int32_t noteid, float velocity)
     {
@@ -271,7 +271,7 @@ struct ConduitPolysynth
 
     void setVoicePolyphonicParameterModulation(PolysynthVoice *v, uint32_t parameter, double value)
     {
-        v->applyExternalMod(parameter,value);
+        v->applyExternalMod(parameter, value);
     }
 
     void setNoteExpression(PolysynthVoice *v, int32_t expression, double value)

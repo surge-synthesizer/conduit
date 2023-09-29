@@ -60,19 +60,31 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                    CLAP_PARAM_IS_MODULATABLE_PER_KEY;
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
 
-    auto coarseBase = ParamDesc().asFloat().withRange(-24,24).withDefault(0).withFlags(modFlag).withLinearScaleFormatting("keys");
-    auto fineBase = ParamDesc().asFloat().withRange(-100,100).withDefault(0).withFlags(modFlag).withLinearScaleFormatting("cents");
+    auto coarseBase = ParamDesc()
+                          .asFloat()
+                          .withRange(-24, 24)
+                          .withDefault(0)
+                          .withFlags(modFlag)
+                          .withLinearScaleFormatting("keys");
+    auto fineBase = ParamDesc()
+                        .asFloat()
+                        .withRange(-100, 100)
+                        .withDefault(0)
+                        .withFlags(modFlag)
+                        .withLinearScaleFormatting("cents");
     auto levelBase = ParamDesc().asCubicDecibelAttenuation().withDefault(1).withFlags(modFlag);
     auto activeBase = ParamDesc().asBool().withFlags(steppedFlag).withDefault(true);
-    auto freqDivBase = ParamDesc().asInt().withRange(-3, 3).withDefault(0).withFlags(steppedFlag)
-                       .withUnorderedMapFormatting({{-3, "/8"}, {-2, "/4"}, {-1, "/2"}, {0, "x1"},
-                                                        {1, "x2"}, {2, "x4"}, {3, "x8"}});
+    auto freqDivBase =
+        ParamDesc()
+            .asInt()
+            .withRange(-3, 3)
+            .withDefault(0)
+            .withFlags(steppedFlag)
+            .withUnorderedMapFormatting(
+                {{-3, "/8"}, {-2, "/4"}, {-1, "/2"}, {0, "x1"}, {1, "x2"}, {2, "x4"}, {3, "x8"}});
 
-    paramDescriptions.push_back(activeBase
-                                .withID(pmSawActive)
-                                .withName("Saw Active")
-                                .withGroupName("Saw Oscillator")
-                                );
+    paramDescriptions.push_back(
+        activeBase.withID(pmSawActive).withName("Saw Active").withGroupName("Saw Oscillator"));
     paramDescriptions.push_back(ParamDesc()
                                     .asInt()
                                     .withID(pmSawUnisonCount)
@@ -91,38 +103,71 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withRange(0, 100)
                                     .withDefault(10)
                                     .withFlags(modFlag));
-    paramDescriptions.push_back(coarseBase
-                                .withID(pmSawCoarse).withName("Saw Coarse Offset").withGroupName("Saw Oscillator"));
-    paramDescriptions.push_back(fineBase.withID(pmSawFine).withName("Saw Fine Tuning").withGroupName("Saw Oscillator"));
-    paramDescriptions.push_back(levelBase.withID(pmSawLevel).withName("Saw Level").withGroupName("Saw Oscillator"));
+    paramDescriptions.push_back(coarseBase.withID(pmSawCoarse)
+                                    .withName("Saw Coarse Offset")
+                                    .withGroupName("Saw Oscillator"));
+    paramDescriptions.push_back(
+        fineBase.withID(pmSawFine).withName("Saw Fine Tuning").withGroupName("Saw Oscillator"));
+    paramDescriptions.push_back(
+        levelBase.withID(pmSawLevel).withName("Saw Level").withGroupName("Saw Oscillator"));
 
+    paramDescriptions.push_back(
+        activeBase.withID(pmPWActive).withName("Pulse Width Active").withGroupName("Pulse Width"));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercent()
+                                    .withID(pmPWWidth)
+                                    .withName("Pulse Width Width")
+                                    .withGroupName("Pulse Width")
+                                    .withDefault(0.5));
+    paramDescriptions.push_back(freqDivBase.withID(pmPWFrequencyDiv)
+                                    .withName("Pulse Width Frequency Multiple")
+                                    .withGroupName("Pulse Width")
+                                    .withDefault(-1));
+    paramDescriptions.push_back(
+        coarseBase.withID(pmPWCoarse).withName("Pulse Width Coarse").withGroupName("Pulse Width"));
+    paramDescriptions.push_back(
+        fineBase.withID(pmPWFine).withName("Pulse Width Fine").withGroupName("Pulse Width"));
+    paramDescriptions.push_back(
+        levelBase.withID(pmPWLevel).withName("Pulse Width Level").withGroupName("Pulse Width"));
 
-    paramDescriptions.push_back(activeBase.withID(pmPWActive).withName("Pulse Width Active").withGroupName("Pulse Width"));
-    paramDescriptions.push_back(ParamDesc().asPercent().withID(pmPWWidth).withName("Pulse Width Width").withGroupName("Pulse Width").withDefault(0.5));
-    paramDescriptions.push_back(freqDivBase.withID(pmPWFrequencyDiv).withName("Pulse Width Frequency Multiple").withGroupName("Pulse Width").withDefault(-1));
-    paramDescriptions.push_back(coarseBase.withID(pmPWCoarse).withName("Pulse Width Coarse").withGroupName("Pulse Width"));
-    paramDescriptions.push_back(fineBase.withID(pmPWFine).withName("Pulse Width Fine").withGroupName("Pulse Width"));
-    paramDescriptions.push_back(levelBase.withID(pmPWLevel).withName("Pulse Width Level").withGroupName("Pulse Width"));
+    paramDescriptions.push_back(activeBase.withID(pmSinActive)
+                                    .withName("Sin Active")
+                                    .withGroupName("Sin")
+                                    .withDefault(false));
+    paramDescriptions.push_back(freqDivBase.withID(pmSinFrequencyDiv)
+                                    .withName("Sin Frequency Multiple")
+                                    .withGroupName("Sin"));
+    paramDescriptions.push_back(
+        coarseBase.withID(pmSinCoarse).withName("Sin Coarse").withGroupName("Sin"));
+    paramDescriptions.push_back(
+        levelBase.withID(pmSinLevel).withName("Sin Level").withGroupName("Sin"));
 
-    paramDescriptions.push_back(activeBase.withID(pmSinActive).withName("Sin Active").withGroupName("Sin").withDefault(false));
-    paramDescriptions.push_back(freqDivBase.withID(pmSinFrequencyDiv).withName("Sin Frequency Multiple").withGroupName("Sin"));
-    paramDescriptions.push_back(coarseBase.withID(pmSinCoarse).withName("Sin Coarse").withGroupName("Sin"));
-    paramDescriptions.push_back(levelBase.withID(pmSinLevel).withName("Sin Level").withGroupName("Sin"));
+    paramDescriptions.push_back(activeBase.withID(pmNoiseActive)
+                                    .withName("Noise Active")
+                                    .withGroupName("Noise")
+                                    .withDefault(false));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercentBipolar()
+                                    .withID(pmNoiseColor)
+                                    .withName("Noise Color")
+                                    .withGroupName("Noise")
+                                    .withFlags(modFlag));
+    paramDescriptions.push_back(
+        levelBase.withID(pmNoiseLevel).withName("Noise Level").withGroupName("Noise"));
 
-    paramDescriptions.push_back(activeBase.withID(pmNoiseActive).withName("Noise Active").withGroupName("Noise").withDefault(false));
-    paramDescriptions.push_back(ParamDesc().asPercentBipolar().withID(pmNoiseColor).withName("Noise Color").withGroupName("Noise").withFlags(modFlag));
-    paramDescriptions.push_back(levelBase.withID(pmNoiseLevel).withName("Noise Level").withGroupName("Noise"));
-
-    paramDescriptions.push_back(activeBase.withID(pmLPFActive).withName("LPF Active").withGroupName("LPF Filter").withDefault(0));
-        paramDescriptions.push_back(ParamDesc()
-                                        .asFloat()
-                                        .withID(pmLPFCutoff)
-                                        .withName("LPF Cutoff")
-                                        .withGroupName("LPF Filter")
-                                        .withRange(1, 127)
-                                        .withDefault(69)
-                                        .withSemitoneZeroAtMIDIZeroFormatting()
-                                        .withFlags(modFlag));
+    paramDescriptions.push_back(activeBase.withID(pmLPFActive)
+                                    .withName("LPF Active")
+                                    .withGroupName("LPF Filter")
+                                    .withDefault(0));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asFloat()
+                                    .withID(pmLPFCutoff)
+                                    .withName("LPF Cutoff")
+                                    .withGroupName("LPF Filter")
+                                    .withRange(1, 127)
+                                    .withDefault(69)
+                                    .withSemitoneZeroAtMIDIZeroFormatting()
+                                    .withFlags(modFlag));
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmLPFResonance)
@@ -133,20 +178,20 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withLinearScaleFormatting("")
                                     .withFlags(modFlag));
     paramDescriptions.push_back(ParamDesc()
-                                .asInt()
-                                .withID(pmLPFFilterMode)
-                                .withRange(0,5)
-                                .withDefault(0)
-                                .withFlags(steppedFlag)
-                                .withUnorderedMapFormatting({
-                                        {0, "ObXD"}, {1, "Vintage"},
+                                    .asInt()
+                                    .withID(pmLPFFilterMode)
+                                    .withRange(0, 5)
+                                    .withDefault(0)
+                                    .withFlags(steppedFlag)
+                                    .withUnorderedMapFormatting({{0, "ObXD"},
+                                                                 {1, "Vintage"},
                                                                  {2, "K-35"},
                                                                  {3, "Diode"},
                                                                  {4, "CutWarp"},
-                                        {5, "ResWarp"}
-                                    })); // FIXME - enums
+                                                                 {5, "ResWarp"}})); // FIXME - enums
 
-    paramDescriptions.push_back(activeBase.withID(pmSVFActive).withName("SVF Active").withGroupName("SVF Filter"));
+    paramDescriptions.push_back(
+        activeBase.withID(pmSVFActive).withName("SVF Active").withGroupName("SVF Filter"));
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmSVFCutoff)
@@ -183,32 +228,47 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
             .withUnorderedMapFormatting(filterModes)
             .withFlags(steppedFlag));
 
-    paramDescriptions.push_back(activeBase.withID(pmWSActive).withName("WaveShaper Active").withGroupName("WaveShaper"));
-    paramDescriptions.push_back(ParamDesc().asFloat().asLinearDecibel(-24, 24).withID(pmWSDrive).withDefault(0).withName("WaveShaper Drive").withGroupName("WaveShaper").withFlags(modFlag));
-    paramDescriptions.push_back(ParamDesc().asInt().withID(pmWSMode).withDefault(0).withRange(0,2).withName("WaveShaper Mode").withGroupName("WaveShaper")
-                                .withFlags(steppedFlag).withUnorderedMapFormatting({{0, "Sat"}, {1, "Digi"}, {2, "Fold"}})); // FIXME enums
-
+    paramDescriptions.push_back(
+        activeBase.withID(pmWSActive).withName("WaveShaper Active").withGroupName("WaveShaper"));
     paramDescriptions.push_back(ParamDesc()
-                                .asInt()
-                                .withID(pmFilterRouting)
-                                .withDefault(0)
-                                .withRange(0,3)
-                                .withFlags(steppedFlag)
-                                .withName("Filter Routing")
-                                .withGroupName("Filters")
-                                .withUnorderedMapFormatting({{0, "LPF -> WS -> SVF"},
-                                                                 {1, "SVF -> WS -> LPF"},
-                                                                 {2, "WS -> Parallel"},
-                                                                 {3, "Parallel -> WS"}
-                                    })); // FIXME enums
-    paramDescriptions.push_back(ParamDesc()
-                                .asPercentBipolar()
-                                .withID(pmFilterFeedback)
-                                .withDefault(0)
-                                .withFlags(modFlag)
-                                .withName("Filter Feedback")
-                                .withGroupName("Filters"));
+                                    .asFloat()
+                                    .asLinearDecibel(-24, 24)
+                                    .withID(pmWSDrive)
+                                    .withDefault(0)
+                                    .withName("WaveShaper Drive")
+                                    .withGroupName("WaveShaper")
+                                    .withFlags(modFlag));
+    paramDescriptions.push_back(
+        ParamDesc()
+            .asInt()
+            .withID(pmWSMode)
+            .withDefault(0)
+            .withRange(0, 2)
+            .withName("WaveShaper Mode")
+            .withGroupName("WaveShaper")
+            .withFlags(steppedFlag)
+            .withUnorderedMapFormatting({{0, "Sat"}, {1, "Digi"}, {2, "Fold"}})); // FIXME enums
 
+    paramDescriptions.push_back(
+        ParamDesc()
+            .asInt()
+            .withID(pmFilterRouting)
+            .withDefault(0)
+            .withRange(0, 3)
+            .withFlags(steppedFlag)
+            .withName("Filter Routing")
+            .withGroupName("Filters")
+            .withUnorderedMapFormatting({{0, "LPF -> WS -> SVF"},
+                                         {1, "SVF -> WS -> LPF"},
+                                         {2, "WS -> Parallel"},
+                                         {3, "Parallel -> WS"}})); // FIXME enums
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercentBipolar()
+                                    .withID(pmFilterFeedback)
+                                    .withDefault(0)
+                                    .withFlags(modFlag)
+                                    .withName("Filter Feedback")
+                                    .withGroupName("Filters"));
 
     auto adrBase = ParamDesc()
                        .asFloat()
@@ -230,26 +290,27 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withGroupName("AEG")
                                     .withDefault(1)
                                     .withFlags(modFlag));
-    paramDescriptions.push_back(
-        adrBase.withID(pmEnvR).withName("AEG Release").withGroupName("AEG").withFlags(autoFlag).withDefault(0.3));
+    paramDescriptions.push_back(adrBase.withID(pmEnvR)
+                                    .withName("AEG Release")
+                                    .withGroupName("AEG")
+                                    .withFlags(autoFlag)
+                                    .withDefault(0.3));
 
-    paramDescriptions.push_back(
-                         ParamDesc().asPercent()
-                         .withID(pmAegVelocitySens)
-                         .withDefault(0.2)
-                         .withName("Velocity Sensitivity")
-                         .withGroupName("AEG")
-                         .withFlags(modFlag)
-                         );
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercent()
+                                    .withID(pmAegVelocitySens)
+                                    .withDefault(0.2)
+                                    .withName("Velocity Sensitivity")
+                                    .withGroupName("AEG")
+                                    .withFlags(modFlag));
 
-    paramDescriptions.push_back(
-        ParamDesc().asLinearDecibel(-24, 24)
-            .withID(pmAegPreFilterGain)
-            .withDefault(0.0)
-            .withName("Pre-Filter Gain")
-            .withGroupName("AEG")
-            .withFlags(modFlag)
-    );
+    paramDescriptions.push_back(ParamDesc()
+                                    .asLinearDecibel(-24, 24)
+                                    .withID(pmAegPreFilterGain)
+                                    .withDefault(0.0)
+                                    .withName("Pre-Filter Gain")
+                                    .withGroupName("AEG")
+                                    .withFlags(modFlag));
 
     paramDescriptions.push_back(adrBase.withID(pmEnvA + offPmFeg)
                                     .withName("FEG Attack")
@@ -258,7 +319,8 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     paramDescriptions.push_back(adrBase.withID(pmEnvD + offPmFeg)
                                     .withName("FEG Decay")
                                     .withGroupName("FEG")
-                                    .withFlags(autoFlag).withDefault(0.25));
+                                    .withFlags(autoFlag)
+                                    .withDefault(0.25));
     paramDescriptions.push_back(ParamDesc()
                                     .asPercent()
                                     .withID(pmEnvS + offPmFeg)
@@ -290,15 +352,15 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withDefault(0)
                                     .withLinearScaleFormatting("semitones"));
 
-    for (int i=0; i<n_lfos; ++i)
+    for (int i = 0; i < n_lfos; ++i)
     {
-        auto nm = std::string( "LFO ") + std::to_string(i+1);
+        auto nm = std::string("LFO ") + std::to_string(i + 1);
         paramDescriptions.push_back(ParamDesc()
-                                    .asBool()
-                                    .withID(pmLFOActive + i * offPmLFO2)
-                                    .withName(nm + " Active")
-                                    .withGroupName(nm)
-                                    .withFlags(steppedFlag));
+                                        .asBool()
+                                        .withID(pmLFOActive + i * offPmLFO2)
+                                        .withName(nm + " Active")
+                                        .withGroupName(nm)
+                                        .withFlags(steppedFlag));
 
         paramDescriptions.push_back(ParamDesc()
                                         .asPercent()
@@ -326,23 +388,16 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                         .withName(nm + " Amplitude")
                                         .withGroupName(nm)
                                         .withFlags(modFlag));
-        paramDescriptions.push_back(ParamDesc()
-                                        .asInt()
-                                        .withID(pmLFOShape + i * offPmLFO2)
-                                        .withName(nm + " Shape")
-                                        .withGroupName(nm)
-                                        .withFlags(steppedFlag)
-                                    .withRange(0, 5)
-                                    .withUnorderedMapFormatting({
-                                            {0, "Sin"},
-                                            {1, "Square"},
-                                            {2, "Saw"},
-                                            {3, "Tri"},
-                                            {4, "Noise"},
-                                            {5, "S&H" }
-                                        })
-                                    );
-
+        paramDescriptions.push_back(
+            ParamDesc()
+                .asInt()
+                .withID(pmLFOShape + i * offPmLFO2)
+                .withName(nm + " Shape")
+                .withGroupName(nm)
+                .withFlags(steppedFlag)
+                .withRange(0, 5)
+                .withUnorderedMapFormatting(
+                    {{0, "Sin"}, {1, "Square"}, {2, "Saw"}, {3, "Tri"}, {4, "Noise"}, {5, "S&H"}}));
     }
 
     configureParams();
@@ -652,11 +707,8 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
     {
         auto pevt = reinterpret_cast<const clap_event_param_mod *>(evt);
 
-        voiceManager.routePolyphonicParameterModulation(pevt->port_index,
-                                                        pevt->channel,
-                                                        pevt->key,
-                                                        pevt->note_id,
-                                                        pevt->param_id,
+        voiceManager.routePolyphonicParameterModulation(pevt->port_index, pevt->channel, pevt->key,
+                                                        pevt->note_id, pevt->param_id,
                                                         pevt->amount);
     }
     break;
@@ -667,16 +719,15 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
     case CLAP_EVENT_NOTE_EXPRESSION:
     {
         auto pevt = reinterpret_cast<const clap_event_note_expression *>(evt);
-        voiceManager.routeNoteExpression(pevt->port_index, pevt->channel,
-                                         pevt->key, pevt->note_id, pevt->expression_id,
-                                         pevt->value);
+        voiceManager.routeNoteExpression(pevt->port_index, pevt->channel, pevt->key, pevt->note_id,
+                                         pevt->expression_id, pevt->value);
     }
     break;
     }
 }
 
 PolysynthVoice *ConduitPolysynth::initializeVoice(uint16_t port, uint16_t channel, uint16_t key,
-                                                int32_t noteId, float velocity, float retune)
+                                                  int32_t noteId, float velocity, float retune)
 {
     for (auto &v : voices)
     {

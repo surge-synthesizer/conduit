@@ -42,13 +42,9 @@ using uicomm_t = cps_t::UICommunicationBundle;
 
 struct ConduitPolysynthEditor;
 
-template<typename editor_t, int lx, int ly>
-struct GridContentBase : juce::Component
+template <typename editor_t, int lx, int ly> struct GridContentBase : juce::Component
 {
-    GridContentBase()
-    {
-        layout.setControlCellSize(60,60);
-    }
+    GridContentBase() { layout.setControlCellSize(60, 60); }
     ~GridContentBase()
     {
         for (auto &[p, k] : knobs)
@@ -59,13 +55,11 @@ struct GridContentBase : juce::Component
             if (k)
                 k->setSource(nullptr);
     }
-    void resized() override
-    {
-        layout.resize(getLocalBounds());
-    }
+    void resized() override { layout.resize(getLocalBounds()); }
 
-    template<typename T>
-    T *addContinousT(editor_t &e, clap_id p, int x, int y, const std::string &label) {
+    template <typename T>
+    T *addContinousT(editor_t &e, clap_id p, int x, int y, const std::string &label)
+    {
         auto kb = std::make_unique<T>();
         addAndMakeVisible(*kb);
         this->layout.addComponent(*kb, x, y);
@@ -79,8 +73,9 @@ struct GridContentBase : juce::Component
         return (T *)(knobs[p].get());
     };
 
-    template<typename T>
-    T *addDiscreteT(editor_t &e, clap_id p, int x, int y, const std::string &label) {
+    template <typename T>
+    T *addDiscreteT(editor_t &e, clap_id p, int x, int y, const std::string &label)
+    {
         auto kb = std::make_unique<T>();
         addAndMakeVisible(*kb);
         this->layout.addComponent(*kb, x, y);
@@ -107,12 +102,13 @@ struct GridContentBase : juce::Component
         return addContinousT<jcmp::VSlider>(e, p, x, y, label);
     }
 
-    jcmp::MultiSwitch *addMultiSwitch(editor_t &e, clap_id p, int x, int y, const std::string &label)
+    jcmp::MultiSwitch *addMultiSwitch(editor_t &e, clap_id p, int x, int y,
+                                      const std::string &label)
     {
         return addDiscreteT<jcmp::MultiSwitch>(e, p, x, y, label);
     }
 
-    sst::jucegui::layouts::LabeledGrid<lx,ly> layout;
+    sst::jucegui::layouts::LabeledGrid<lx, ly> layout;
     std::unordered_map<uint32_t, std::unique_ptr<jcmp::ContinuousParamEditor>> knobs;
     std::unordered_map<uint32_t, std::unique_ptr<jcmp::DiscreteParamEditor>> dknobs;
     std::vector<std::unique_ptr<juce::Component>> labels;
@@ -126,7 +122,6 @@ struct SawPanel : jcmp::NamedPanel
     SawPanel(uicomm_t &p, ConduitPolysynthEditor &e);
 };
 
-
 struct PulsePanel : jcmp::NamedPanel
 {
     uicomm_t &uic;
@@ -134,7 +129,6 @@ struct PulsePanel : jcmp::NamedPanel
 
     PulsePanel(uicomm_t &p, ConduitPolysynthEditor &e);
 };
-
 
 struct SinPanel : jcmp::NamedPanel
 {
@@ -144,7 +138,6 @@ struct SinPanel : jcmp::NamedPanel
     SinPanel(uicomm_t &p, ConduitPolysynthEditor &e);
 };
 
-
 struct NoisePanel : jcmp::NamedPanel
 {
     uicomm_t &uic;
@@ -152,7 +145,6 @@ struct NoisePanel : jcmp::NamedPanel
 
     NoisePanel(uicomm_t &p, ConduitPolysynthEditor &e);
 };
-
 
 struct AEGPanel : jcmp::NamedPanel
 {
@@ -232,7 +224,6 @@ struct StatusPanel : jcmp::NamedPanel
 
     StatusPanel(uicomm_t &p, ConduitPolysynthEditor &e);
 };
-
 
 struct ConduitPolysynthEditor : public jcmp::WindowPanel,
                                 shared::ToolTipMixIn<ConduitPolysynthEditor>
@@ -318,16 +309,15 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel,
         wsPanel->setBounds(wsXPos, 0, wsWidth, oscHeight);
         routingPanel->setBounds(wsXPos, oscHeight, wsWidth, oscHeight);
 
-        static constexpr int lfoWidth{(oscWidth + envWidth)/2};
-        lfo1Panel->setBounds(0, 3*oscHeight, lfoWidth, oscHeight);
-        lfo2Panel->setBounds(lfoWidth, 3*oscHeight, lfoWidth, oscHeight);
+        static constexpr int lfoWidth{(oscWidth + envWidth) / 2};
+        lfo1Panel->setBounds(0, 3 * oscHeight, lfoWidth, oscHeight);
+        lfo2Panel->setBounds(lfoWidth, 3 * oscHeight, lfoWidth, oscHeight);
 
         static constexpr int outputWidth{wsWidth};
         outputPanel->setBounds(wsXPos + wsWidth, 0, outputWidth, 3 * oscHeight);
         statusPanel->setBounds(wsXPos + wsWidth, 3 * oscHeight, outputWidth, oscHeight);
         modMatrixPanel->setBounds(oscWidth + envWidth, 2 * oscHeight, filterWidth + wsWidth,
                                   2 * oscHeight);
-
     }
 
     std::unique_ptr<jcmp::NamedPanel> sawPanel, pulsePanel, sinPanel, noisePanel;
@@ -336,7 +326,6 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel,
     std::unique_ptr<jcmp::NamedPanel> lpfPanel, svfPanel, wsPanel, routingPanel;
     std::unique_ptr<jcmp::NamedPanel> modMatrixPanel;
     std::unique_ptr<jcmp::NamedPanel> outputPanel, statusPanel;
-
 };
 
 SawPanel::SawPanel(sst::conduit::polysynth::editor::uicomm_t &p,
@@ -357,9 +346,8 @@ SawPanel::SawPanel(sst::conduit::polysynth::editor::uicomm_t &p,
     setContentAreaComponent(std::move(content));
 }
 
-
 PulsePanel::PulsePanel(sst::conduit::polysynth::editor::uicomm_t &p,
-                   sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+                       sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Pusle Width Osc"), uic(p), ed(e)
 {
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 5, 1>>();
@@ -376,9 +364,8 @@ PulsePanel::PulsePanel(sst::conduit::polysynth::editor::uicomm_t &p,
     setContentAreaComponent(std::move(content));
 }
 
-
 SinPanel::SinPanel(sst::conduit::polysynth::editor::uicomm_t &p,
-                       sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+                   sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Sin Osc"), uic(p), ed(e)
 {
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 3, 1>>();
@@ -393,9 +380,8 @@ SinPanel::SinPanel(sst::conduit::polysynth::editor::uicomm_t &p,
     setContentAreaComponent(std::move(content));
 }
 
-
 NoisePanel::NoisePanel(sst::conduit::polysynth::editor::uicomm_t &p,
-                   sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+                       sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Noise OSC"), uic(p), ed(e)
 {
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 2, 1>>();
@@ -410,7 +396,7 @@ NoisePanel::NoisePanel(sst::conduit::polysynth::editor::uicomm_t &p,
 }
 
 AEGPanel::AEGPanel(sst::conduit::polysynth::editor::uicomm_t &p,
-                       sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+                   sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Amplitude EG"), uic(p), ed(e)
 {
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 6, 1>>();
@@ -478,7 +464,7 @@ SVFPanel::SVFPanel(sst::conduit::polysynth::editor::uicomm_t &p,
 }
 
 WSPanel::WSPanel(sst::conduit::polysynth::editor::uicomm_t &p,
-                   sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+                 sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Waveshaper"), uic(p), ed(e)
 {
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 2, 1>>();
@@ -493,7 +479,7 @@ WSPanel::WSPanel(sst::conduit::polysynth::editor::uicomm_t &p,
 }
 
 FilterRoutingPanel::FilterRoutingPanel(sst::conduit::polysynth::editor::uicomm_t &p,
-                 sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+                                       sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Filter Routing"), uic(p), ed(e)
 {
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 2, 1>>();
@@ -504,31 +490,33 @@ FilterRoutingPanel::FilterRoutingPanel(sst::conduit::polysynth::editor::uicomm_t
     setContentAreaComponent(std::move(content));
 }
 
-
 LFOPanel::LFOPanel(sst::conduit::polysynth::editor::uicomm_t &p,
-                                       sst::conduit::polysynth::editor::ConduitPolysynthEditor &e,
-                   int which)
+                   sst::conduit::polysynth::editor::ConduitPolysynthEditor &e, int which)
     : jcmp::NamedPanel("LFO " + std::to_string(which + 1)), uic(p), ed(e)
 {
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 4, 1>>();
 
-    content->addMultiSwitch(e, ConduitPolysynth::pmLFOShape + which * ConduitPolysynth::offPmLFO2, 0, 0, "");
-    content->addKnob(e, ConduitPolysynth::pmLFORate + which * ConduitPolysynth::offPmLFO2, 1, 0, "Rate");
-    content->addKnob(e, ConduitPolysynth::pmLFOAmplitude + which * ConduitPolysynth::offPmLFO2, 2, 0, "Amp");
-    content->addKnob(e, ConduitPolysynth::pmLFODeform + which * ConduitPolysynth::offPmLFO2, 3, 0, "Deform");
+    content->addMultiSwitch(e, ConduitPolysynth::pmLFOShape + which * ConduitPolysynth::offPmLFO2,
+                            0, 0, "");
+    content->addKnob(e, ConduitPolysynth::pmLFORate + which * ConduitPolysynth::offPmLFO2, 1, 0,
+                     "Rate");
+    content->addKnob(e, ConduitPolysynth::pmLFOAmplitude + which * ConduitPolysynth::offPmLFO2, 2,
+                     0, "Amp");
+    content->addKnob(e, ConduitPolysynth::pmLFODeform + which * ConduitPolysynth::offPmLFO2, 3, 0,
+                     "Deform");
 
     setContentAreaComponent(std::move(content));
 }
 
 ModMatrixPanel::ModMatrixPanel(sst::conduit::polysynth::editor::uicomm_t &p,
-                                       sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+                               sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Mod Matrix"), uic(p), ed(e)
 {
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 2, 1>>();
 }
 
 OutputPanel::OutputPanel(sst::conduit::polysynth::editor::uicomm_t &p,
-                               sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+                         sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Main Output"), uic(p), ed(e)
 {
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 2, 1>>();
