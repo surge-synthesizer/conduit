@@ -25,6 +25,8 @@
 #include <array>
 #include <random>
 #include <unordered_map>
+#include <functional>
+
 #include <clap/clap.h>
 
 #include "conduit-shared/debug-helpers.h"
@@ -52,6 +54,10 @@ struct PolysynthVoice
     PolysynthVoice(const ConduitPolysynth &sy)
         : synth(sy), gen((uint64_t)(this)), urd(-1.0, 1.0), aeg(this), feg(this)
     {
+        for (int i = 0; i < 128; ++i)
+        {
+            baseFrequencyByMidiKey[i] = 440.0 * pow(2.0, (i - 69.0) / 12.0);
+        }
     }
 
     void setSampleRate(double sr)
@@ -153,6 +159,7 @@ struct PolysynthVoice
     void start(int16_t port, int16_t channel, int16_t key, int32_t noteid);
     void release();
 
+    float baseFrequencyByMidiKey[128];
     void recalcPitch();
     void recalcFilter();
 
@@ -165,8 +172,11 @@ struct PolysynthVoice
 
     struct StereoSimperSVF // thanks to urs @ u-he and andy simper @ cytomic
     {
-        float ic1eq[2]{0.f, 0.f}, ic2eq[2]{0.f, 0.f};
-        float g{0.f}, k{0.f}, gk{0.f}, a1{0.f}, a2{0.f}, a3{0.f}, ak{0.f};
+        __m128 ic1eq{_mm_setzero_ps()}, ic2eq{_mm_setzero_ps()};
+        __m128 g, k, gk, a1, a2, a3, ak;
+
+        __m128 oneSSE{_mm_set1_ps(1.0)};
+        __m128 twoSSE{_mm_set1_ps(2.0)};
         enum Mode
         {
             LP,
@@ -175,13 +185,15 @@ struct PolysynthVoice
             NOTCH,
             PEAK,
             ALL
-        } mode{LP};
+        };
 
-        float low[2], band[2], high[2], notch[2], peak[2], all[2];
         void setCoeff(float key, float res, float srInv);
-        void step(float &L, float &R);
+
+        template <int Mode> static void step(StereoSimperSVF &that, float &L, float &R);
+
         void init();
     } svfImpl;
+    std::function<void(StereoSimperSVF &, float &, float &)> svfFilterOp;
 
   private:
     double baseFreq{440.0};

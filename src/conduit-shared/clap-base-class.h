@@ -37,6 +37,7 @@
 #include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/basic-blocks/tables/DbToLinearProvider.h"
 #include "sst/basic-blocks/tables/EqualTuningProvider.h"
+#include "sst/basic-blocks/tables/TwoToTheXProvider.h"
 
 // note: this is the extension if you are wrapped as a vst3; it is not any vst3 sdk
 #include <clapwrapper/vst3.h>
@@ -72,6 +73,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     {
         dbToLinearTable.init();
         equalTuningTable.init();
+        twoToXTable.init();
     }
 
     // Most things are sample accurate, but some have a slow- or block- based approach.
@@ -84,6 +86,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
     sst::basic_blocks::tables::DbToLinearProvider dbToLinearTable;
     sst::basic_blocks::tables::EqualTuningProvider equalTuningTable;
+    sst::basic_blocks::tables::TwoToTheXProvider twoToXTable;
 
 #define cbassert(x, y)                                                                             \
     {                                                                                              \
