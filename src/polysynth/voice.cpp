@@ -28,6 +28,7 @@
 
 #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
 #include "sst/basic-blocks/mechanics/block-ops.h"
+#include "sst/basic-blocks/dsp/FastMath.h"
 
 namespace sst::conduit::polysynth
 {
@@ -42,7 +43,7 @@ void PolysynthVoice::recalcPitch()
     }
     else
     {
-        baseFreq = 440.0 * pow(2.0, (key - 69.0) / 12.0);
+        baseFreq = baseFrequencyByMidiKey[std::clamp(key, 0, 127)];
     }
 
     if (sawActive)
@@ -51,9 +52,10 @@ void PolysynthVoice::recalcPitch()
         {
             auto uf =
                 baseFreq *
-                pow(2.0, ((sawUnisonDetune.value() * sawUniVoiceDetune[i] + sawFine.value()) / 100 +
-                          sawCoarse.value() + pitchNoteExpressionValue + pitchBendWheel) /
-                             12.0);
+                synth.twoToXTable.twoToThe(
+                    ((sawUnisonDetune.value() * sawUniVoiceDetune[i] + sawFine.value()) / 100 +
+                     sawCoarse.value() + pitchNoteExpressionValue + pitchBendWheel) /
+                    12.0);
             sawOsc[i].setFrequency(uf, srInv);
         }
     }
@@ -64,9 +66,9 @@ void PolysynthVoice::recalcPitch()
     {
         auto po = std::clamp((int)std::round(pulseOctave.value()) + 3, 0, 6);
         auto sbf = baseFreq * mul[po];
-        auto pf = sbf * pow(2.0, (pulseCoarse.value() + pulseFine.value() * 0.01 +
-                                  pitchNoteExpressionValue + pitchBendWheel) /
-                                     12.0);
+        auto pf = sbf * synth.twoToXTable.twoToThe((pulseCoarse.value() + pulseFine.value() * 0.01 +
+                                                    pitchNoteExpressionValue + pitchBendWheel) /
+                                                   12.0);
         pulseOsc.setFrequency(pf, srInv);
         pulseOsc.setPulseWidth(pulseWidth.value());
     }
@@ -75,8 +77,8 @@ void PolysynthVoice::recalcPitch()
     {
         auto po = std::clamp((int)std::round(sinOctave.value()) + 3, 0, 6);
         auto sbf = baseFreq * mul[po];
-        auto pf =
-            sbf * pow(2.0, (sinCoarse.value() + pitchNoteExpressionValue + pitchBendWheel) / 12.0);
+        auto pf = sbf * synth.twoToXTable.twoToThe(
+                            (sinCoarse.value() + pitchNoteExpressionValue + pitchBendWheel) / 12.0);
         sinOsc.setRate(2.0 * M_PI * pf * srInv);
     }
 }
@@ -87,12 +89,6 @@ void PolysynthVoice::recalcFilter()
     {
         auto co = svfCutoff.value();
         auto rm = svfResonance.value();
-
-        auto newfm = (StereoSimperSVF::Mode)svfMode;
-
-        if (newfm != svfImpl.mode)
-            svfImpl.init();
-        svfImpl.mode = newfm;
         svfImpl.setCoeff(co, rm, srInv);
     }
 }
@@ -190,7 +186,7 @@ void PolysynthVoice::processBlock()
     {
         for (auto s = 0U; s < blockSizeOS; ++s)
         {
-            svfImpl.step(outputOS[0][s], outputOS[1][s]);
+            svfFilterOp(svfImpl, outputOS[0][s], outputOS[1][s]);
         }
     }
 
@@ -213,6 +209,28 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     noiseActive = static_cast<bool>(*synth.paramToValue.at(ConduitPolysynth::pmNoiseActive));
 
     svfMode = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmSVFFilterMode));
+    switch (svfMode)
+    {
+    case StereoSimperSVF::LP:
+        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::LP>;
+        break;
+    case StereoSimperSVF::HP:
+        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::HP>;
+        break;
+    case StereoSimperSVF::BP:
+        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::BP>;
+        break;
+    case StereoSimperSVF::NOTCH:
+        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::NOTCH>;
+        break;
+    case StereoSimperSVF::PEAK:
+        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::PEAK>;
+        break;
+    case StereoSimperSVF::ALL:
+        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::ALL>;
+        break;
+    }
+
     svfActive = static_cast<bool>(*synth.paramToValue.at(ConduitPolysynth::pmSVFActive));
 
     gated = true;
@@ -257,56 +275,63 @@ void PolysynthVoice::StereoSimperSVF::setCoeff(float key, float res, float srInv
     auto co = 440.0 * pow(2.0, (key - 69.0) / 12);
     co = std::clamp(co, 10.0, 25000.0); // just to be safe/lazy
     res = std::clamp(res, 0.01f, 0.99f);
-    g = std::tan(pival * co * srInv);
-    k = 2.0 - 2.0 * res;
-    gk = g + k;
-    a1 = 1.0 / (1.0 + g * gk);
-    a2 = g * a1;
-    a3 = g * a2;
-    ak = gk * a1;
+    g = _mm_set1_ps(sst::basic_blocks::dsp::fasttan(pival * co * srInv));
+    k = _mm_set1_ps(2.0 - 2.0 * res);
+    gk = _mm_add_ps(g, k);
+    a1 = _mm_div_ps(oneSSE, _mm_add_ps(oneSSE, _mm_mul_ps(g, gk)));
+    a2 = _mm_mul_ps(g, a1);
+    a3 = _mm_mul_ps(g, a2);
+    ak = _mm_mul_ps(gk, a1);
 }
 
-void PolysynthVoice::StereoSimperSVF::step(float &L, float &R)
+template <int FilterMode>
+void PolysynthVoice::StereoSimperSVF::step(StereoSimperSVF &that, float &L, float &R)
 {
-    float vin[2]{L, R};
-    float res[2]{0, 0};
-    for (int c = 0; c < 2; ++c)
+    auto vin = _mm_set_ps(0, 0, R, L);
+    __m128 res;
+
+    // auto v3 = vin[c] - ic2eq[c];
+    auto v3 = _mm_sub_ps(vin, that.ic2eq);
+    // auto v0 = a1 * v3 - ak * ic1eq[c];
+    auto v0 = _mm_sub_ps(_mm_mul_ps(that.a1, v3), _mm_mul_ps(that.ak, that.ic1eq));
+    // auto v1 = a2 * v3 + a1 * ic1eq[c];
+    auto v1 = _mm_add_ps(_mm_mul_ps(that.a2, v3), _mm_mul_ps(that.a1, that.ic1eq));
+
+    // auto v2 = a3 * v3 + a2 * ic1eq[c] + ic2eq[c];
+    auto v2 = _mm_add_ps(_mm_add_ps(_mm_mul_ps(that.a3, v3), _mm_mul_ps(that.a2, that.ic1eq)),
+                         that.ic2eq);
+
+    // ic1eq[c] = 2 * v1 - ic1eq[c];
+    that.ic1eq = _mm_sub_ps(_mm_mul_ps(that.twoSSE, v1), that.ic1eq);
+    // ic2eq[c] = 2 * v2 - ic2eq[c];
+    that.ic2eq = _mm_sub_ps(_mm_mul_ps(that.twoSSE, v2), that.ic2eq);
+
+    switch (FilterMode)
     {
-        auto v3 = vin[c] - ic2eq[c];
-        auto v0 = a1 * v3 - ak * ic1eq[c];
-        auto v1 = a2 * v3 + a1 * ic1eq[c];
-        auto v2 = a3 * v3 + a2 * ic1eq[c] + ic2eq[c];
-
-        ic1eq[c] = 2 * v1 - ic1eq[c];
-        ic2eq[c] = 2 * v2 - ic2eq[c];
-
-        // I know that a branch in this loop is inefficient and so on
-        // remember this is mostly showing you how it hangs together.
-        switch (mode)
-        {
-        case LP:
-            res[c] = v2;
-            break;
-        case BP:
-            res[c] = v1;
-            break;
-        case HP:
-            res[c] = v0;
-            break;
-        case NOTCH:
-            res[c] = v2 + v0; // low + high
-            break;
-        case PEAK:
-            res[c] = v2 - v0; // low - high;
-            break;
-        case ALL:
-            res[c] = v2 + v0 - k * v1; // low + high - k * band
-            break;
-        }
+    case LP:
+        res = v2;
+        break;
+    case BP:
+        res = v1;
+        break;
+    case HP:
+        res = v0;
+        break;
+    case NOTCH:
+        res = _mm_add_ps(v2, v0);
+        break;
+    case PEAK:
+        res = _mm_sub_ps(v2, v0);
+        break;
+    case ALL:
+        res = _mm_sub_ps(_mm_add_ps(v2, v0), _mm_mul_ps(that.k, v1));
+        break;
     }
 
-    L = res[0];
-    R = res[1];
+    float r4 alignas(16)[4];
+    _mm_store_ps(r4, res);
+    L = r4[0];
+    R = r4[1];
 }
 
 void PolysynthVoice::StereoSimperSVF::init()
