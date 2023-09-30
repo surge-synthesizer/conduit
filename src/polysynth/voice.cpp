@@ -336,11 +336,8 @@ void PolysynthVoice::StereoSimperSVF::step(StereoSimperSVF &that, float &L, floa
 
 void PolysynthVoice::StereoSimperSVF::init()
 {
-    for (int c = 0; c < 2; ++c)
-    {
-        ic1eq[c] = 0.f;
-        ic2eq[c] = 0.f;
-    }
+    ic1eq = _mm_setzero_ps();
+    ic2eq = _mm_setzero_ps();
 }
 
 void PolysynthVoice::attachTo(sst::conduit::polysynth::ConduitPolysynth &p)
