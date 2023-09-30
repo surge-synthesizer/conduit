@@ -27,8 +27,12 @@
 #include <clap/helpers/host-proxy.hh>
 #include <clap/helpers/host-proxy.hxx>
 
+#include <cmrc/cmrc.hpp>
+
+CMRC_DECLARE(conduit_resources);
+
 namespace csh = sst::conduit::shared;
 namespace chlp = clap::helpers;
-template struct chlp::Plugin<csh::misLevel, csh::checkLevel>;
-template struct chlp::HostProxy<csh::misLevel, csh::checkLevel>;
+template class chlp::Plugin<csh::misLevel, csh::checkLevel>;
+template class chlp::HostProxy<csh::misLevel, csh::checkLevel>;
 static_assert(std::is_same_v<csh::plugHelper_t, chlp::Plugin<csh::misLevel, csh::checkLevel>>);

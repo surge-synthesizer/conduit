@@ -27,6 +27,8 @@
 #include <unordered_map>
 #include <type_traits>
 #include <cassert>
+#include <fstream>
+#include <filesystem>
 
 #include <tinyxml/tinyxml.h>
 
@@ -38,6 +40,7 @@
 #include "sst/basic-blocks/tables/DbToLinearProvider.h"
 #include "sst/basic-blocks/tables/EqualTuningProvider.h"
 #include "sst/basic-blocks/tables/TwoToTheXProvider.h"
+#include "sst/plugininfra/paths.h"
 
 // note: this is the extension if you are wrapped as a vst3; it is not any vst3 sdk
 #include <clapwrapper/vst3.h>
@@ -74,6 +77,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         dbToLinearTable.init();
         equalTuningTable.init();
         twoToXTable.init();
+        guaranteeDocumentsPath();
     }
 
     // Most things are sample accurate, but some have a slow- or block- based approach.
@@ -261,7 +265,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             handleParamBaseEvents(nextEvent);
         }
 
-        auto ct = handleEventsFromUIQueue(out);
+        handleEventsFromUIQueue(out);
     }
 
   public:
@@ -459,8 +463,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             PARAM_VALUE = 0x31,
             PARAM_MODULATION,
             MIDI_NOTE_ON,
-            MIDI_NOTE_OFF,
-            AUDIO_PAUSE_STATUS
+            MIDI_NOTE_OFF
         } type;
 
         uint32_t id;  // param-id for PARAM_VALUE, key for noteon/noteoff
@@ -474,12 +477,121 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             BEGIN_EDIT = 0xF9,
             END_EDIT,
             ADJUST_VALUE,
-            ADJUST_AUDIO_PAUSE
+            LOAD_PATCH,
+            SAVE_PATCH,
         } type;
         uint32_t id;
 
         double value;
+
+        union
+        {
+            char *strPointer;
+            int16_t intMessage[8];
+        } extended{(char *)nullptr};
     };
+
+    /* In the future we will want this off audio thread with a tiny
+     * fade and stuff but not yet. Anticipating that though at least
+     * make a class that does the doohickies so later we can do asynch
+     * of thread etc...
+     *
+     * This implementation misses many basic things including error
+     * handling
+     */
+    struct PatchIOHandler
+    {
+        enum Op
+        {
+            SAVE,
+            LOAD
+        };
+        // but for now its a hack that just does it directly
+        void enqueueOperation(ClapBaseClass<T, TConfig> &that, Op operation, char *pointerToPath)
+        {
+            try
+            {
+                std::filesystem::path fsp{pointerToPath};
+                delete pointerToPath;
+
+                if (operation == SAVE)
+                {
+                    std::ofstream ofs(fsp, std::ios::out | std::ios::binary);
+                    if (!ofs.is_open())
+                    {
+                        CNDOUT << "Unable to open for writing " << fsp.u8string() << std::endl;
+                        return;
+                    }
+                    CNDOUT << "Writing patch to " << fsp.u8string() << std::endl;
+                    clap_ostream cos{};
+                    cos.ctx = &ofs;
+                    cos.write = clapwrite;
+                    that.stateSave(&cos);
+                    ofs.close();
+                }
+                else
+                {
+                    std::ifstream ifs(fsp, std::ios::in | std::ios::binary);
+                    if (!ifs.is_open())
+                    {
+                        CNDOUT << "Unable to open for reading " << fsp.u8string() << std::endl;
+                        return;
+                    }
+                    CNDOUT << "Reading patch from " << fsp.u8string() << std::endl;
+                    clap_istream cis{};
+                    cis.ctx = &ifs;
+                    cis.read = clapread;
+                    that.stateLoad(&cis);
+                    ifs.close();
+
+                    that.uiComms.refreshUIValues = true;
+                    if (that._host.canUseParams())
+                    {
+                        that.onMainAction |= OnMainAction::RESCAN;
+                        that._host.requestCallback();
+                    }
+                }
+            }
+            catch (const std::filesystem::filesystem_error &e)
+            {
+            }
+        }
+
+        static int64_t clapwrite(const clap_ostream *s, const void *buffer, uint64_t size)
+        {
+            auto ofs = static_cast<std::ofstream *>(s->ctx);
+            ofs->write((const char *)buffer, size);
+            return size;
+        }
+
+        static int64_t clapread(const struct clap_istream *s, void *buffer, uint64_t size)
+        {
+            auto ifs = static_cast<std::ifstream *>(s->ctx);
+
+            // Oh this API is so terrible. I think this is right?
+            ifs->read(static_cast<char *>(buffer), size);
+            if (ifs->rdstate() == std::ios::goodbit || ifs->rdstate() == std::ios::eofbit)
+                return ifs->gcount();
+
+            return -1;
+        }
+
+    } patchIOHandler;
+
+    enum OnMainAction
+    {
+        RESCAN = 1
+    };
+    int onMainAction{0};
+    void onMainThread() noexcept override
+    {
+        if (onMainAction & OnMainAction::RESCAN)
+        {
+            _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
+        }
+        onMainAction = 0;
+        Plugin::onMainThread();
+    }
 
     struct UICommunicationBundle
     {
@@ -511,11 +623,30 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             return fp->second;
         }
 
+        std::filesystem::path getDocumentsPath() const { return cp.documentsPath; }
+
       private:
         // Used to be const but I want to save and load from the UI thread
         // so make it private and only do that internally
         ClapBaseClass<T, TConfig> &cp;
     } uiComms;
+
+    std::filesystem::path documentsPath;
+    void guaranteeDocumentsPath()
+    {
+        try
+        {
+            auto bp = sst::plugininfra::paths::bestDocumentsFolderPathFor("Conduit");
+            if (!std::filesystem::exists(bp))
+            {
+                std::filesystem::create_directories(bp);
+            }
+            documentsPath = bp;
+        }
+        catch (const std::filesystem::filesystem_error &e)
+        {
+        }
+    }
 
     void doValueUpdate(clap_id id, float value)
     {
@@ -630,7 +761,13 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             ov->try_push(ov, &(evt.header));
         }
         break;
-        case FromUI::ADJUST_AUDIO_PAUSE:
+        case FromUI::LOAD_PATCH:
+            // For now just do this. See comment on IO Handler
+            patchIOHandler.enqueueOperation(*this, PatchIOHandler::LOAD, r.extended.strPointer);
+            break;
+        case FromUI::SAVE_PATCH:
+            // For now just do this. See comment on IO Handler
+            patchIOHandler.enqueueOperation(*this, PatchIOHandler::SAVE, r.extended.strPointer);
             break;
         }
     }

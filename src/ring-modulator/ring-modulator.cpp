@@ -172,7 +172,7 @@ clap_process_status ConduitRingModulator::process(const clap_process *process) n
         nextEvent = ev->get(ev, nextEventIndex);
     }
 
-    for (int i = 0; i < process->frames_count; ++i)
+    for (auto i = 0U; i < process->frames_count; ++i)
     {
         while (nextEvent && nextEvent->time == i)
         {

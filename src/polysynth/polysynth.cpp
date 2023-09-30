@@ -50,10 +50,9 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
                                features};
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
-    : voiceManager(*this),
-      hr_dn(6, true), sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(
-                          &desc, host),
-      voices{sst::cpputils::make_array<PolysynthVoice, max_voices>(*this)}
+    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(&desc, host),
+      hr_dn(6, true),
+      voiceManager(*this), voices{sst::cpputils::make_array<PolysynthVoice, max_voices>(*this)}
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE | CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID |
@@ -503,6 +502,10 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
      */
     float **out = process->audio_outputs[0].data32;
     auto chans = process->audio_outputs->channel_count;
+    if (chans != 2)
+    {
+        return CLAP_PROCESS_SLEEP;
+    }
 
     auto ev = process->in_events;
     auto sz = ev->size(ev);
@@ -515,7 +518,7 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
         nextEvent = ev->get(ev, nextEventIndex);
     }
 
-    for (int i = 0; i < process->frames_count; ++i)
+    for (auto i = 0U; i < process->frames_count; ++i)
     {
         // Do I have an event to process. Note that multiple events
         // can occur on the same sample, hence 'while' not 'if'

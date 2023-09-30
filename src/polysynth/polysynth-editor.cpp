@@ -473,7 +473,7 @@ WSPanel::WSPanel(sst::conduit::polysynth::editor::uicomm_t &p,
     e.comms->attachDiscreteToParam(toggleButton.get(), ConduitPolysynth::pmWSActive);
 
     content->addMultiSwitch(e, ConduitPolysynth::pmWSMode, 0, 0, "");
-    content->addKnob(e, ConduitPolysynth::pmWSDrive, 1, 0, "Feedback");
+    content->addKnob(e, ConduitPolysynth::pmWSDrive, 1, 0, "Drive");
 
     setContentAreaComponent(std::move(content));
 }
@@ -537,7 +537,8 @@ std::unique_ptr<juce::Component> ConduitPolysynth::createEditor()
     uiComms.refreshUIValues = true;
     auto innards =
         std::make_unique<sst::conduit::polysynth::editor::ConduitPolysynthEditor>(uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase>(desc.name, desc.id);
+    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitPolysynth>>(
+        uiComms, desc.name, desc.id);
     editor->setContentComponent(std::move(innards));
 
     return editor;

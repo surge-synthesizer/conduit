@@ -232,7 +232,8 @@ std::unique_ptr<juce::Component> ConduitClapEventMonitor::createEditor()
     auto innards =
         std::make_unique<sst::conduit::clap_event_monitor::editor::ConduitClapEventMonitorEditor>(
             uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase>(desc.name, desc.id);
+    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitClapEventMonitor>>(
+        uiComms, desc.name, desc.id);
     innards->fixedFace = editor->loadFont("Anonymous_Pro/AnonymousPro-Regular.ttf");
     editor->setContentComponent(std::move(innards));
 

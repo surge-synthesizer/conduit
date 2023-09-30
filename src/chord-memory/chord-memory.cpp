@@ -99,7 +99,7 @@ clap_process_status ConduitChordMemory::process(const clap_process *process) noe
         return CLAP_PROCESS_CONTINUE;
 
     // We know the input list is sorted
-    for (int i = 0; i < sz; ++i)
+    for (auto i = 0U; i < sz; ++i)
     {
         auto evt = ev->get(ev, i);
 

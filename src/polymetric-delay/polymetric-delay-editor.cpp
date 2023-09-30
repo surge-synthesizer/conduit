@@ -202,9 +202,6 @@ struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel,
     {
         auto tabH = getHeight() / 2, tabW = getWidth() - 100;
 
-        auto b = getLocalBounds();
-        // statusPanel->setBounds(sb);
-
         auto tabs = getLocalBounds().withWidth(tabW / 2).withHeight(getHeight() / 2);
         for (int i = 0; i < ConduitPolymetricDelay::nTaps; ++i)
         {
@@ -334,7 +331,8 @@ std::unique_ptr<juce::Component> ConduitPolymetricDelay::createEditor()
     auto innards =
         std::make_unique<sst::conduit::polymetric_delay::editor::ConduitPolymetricDelayEditor>(
             uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase>(desc.name, desc.id);
+    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitPolymetricDelay>>(
+        uiComms, desc.name, desc.id);
     editor->setContentComponent(std::move(innards));
 
     uiComms.refreshUIValues = true;

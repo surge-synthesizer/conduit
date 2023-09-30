@@ -262,7 +262,7 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
         active[i] = *(tapData[i].active) > 0.5;
     }
 
-    for (int i = 0; i < process->frames_count; ++i)
+    for (auto i = 0U; i < process->frames_count; ++i)
     {
         while (nextEvent && nextEvent->time == i)
         {
@@ -342,7 +342,7 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
 
         auto dl = (*dryLev);
         dl = dl * dl * dl;
-        for (int c = 0; c < chans; ++c)
+        for (auto c = 0U; c < chans; ++c)
         {
             out[c][i] = in[c][i] * dl + totalTapOut[c];
 
