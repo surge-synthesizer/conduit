@@ -25,6 +25,8 @@
 #include <array>
 #include <random>
 #include <unordered_map>
+#include <functional>
+
 #include <clap/clap.h>
 
 #include "conduit-shared/debug-helpers.h"
