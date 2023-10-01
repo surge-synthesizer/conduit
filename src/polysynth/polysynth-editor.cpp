@@ -71,7 +71,7 @@ template <typename editor_t, int lx, int ly> struct GridContentBase : juce::Comp
         labels.push_back(std::move(lb));
 
         return (T *)(knobs[p].get());
-    };
+    }
 
     template <typename T>
     T *addDiscreteT(editor_t &e, clap_id p, int x, int y, const std::string &label)
@@ -89,7 +89,8 @@ template <typename editor_t, int lx, int ly> struct GridContentBase : juce::Comp
             labels.push_back(std::move(lb));
         }
         return (T *)(dknobs[p].get());
-    };
+    }
+
     jcmp::Knob *addKnob(editor_t &e, clap_id p, int x, int y, const std::string &label)
     {
         auto kb = addContinousT<jcmp::Knob>(e, p, x, y, label);
