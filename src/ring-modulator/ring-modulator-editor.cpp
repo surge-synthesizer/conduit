@@ -49,13 +49,13 @@ struct ControlsPanel : juce::Component
     void resized() override
     {
         auto sz = 70;
-        auto bx = getLocalBounds().withWidth(70).withHeight(70);
+        auto bx = getLocalBounds().withWidth(sz).withHeight(sz);
         mix->setBounds(bx);
-        bx = bx.translated(70, 0);
+        bx = bx.translated(sz, 0);
         freq->setBounds(bx);
-        bx = bx.translated(70, 0);
+        bx = bx.translated(sz, 0);
         src->setBounds(bx);
-        bx = bx.translated(70, 0);
+        bx = bx.translated(sz, 0);
         model->setBounds(bx);
     }
 
@@ -122,7 +122,8 @@ std::unique_ptr<juce::Component> ConduitRingModulator::createEditor()
     uiComms.refreshUIValues = true;
     auto innards =
         std::make_unique<sst::conduit::ring_modulator::editor::ConduitRingModulatorEditor>(uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase>(desc.name, desc.id);
+    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitRingModulator>>(
+        uiComms, desc.name, desc.id);
     editor->setContentComponent(std::move(innards));
 
     return editor;

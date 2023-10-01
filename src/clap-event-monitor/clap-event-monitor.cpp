@@ -121,7 +121,7 @@ clap_process_status ConduitClapEventMonitor::process(const clap_process *process
     auto ov = process->out_events;
     auto sz = ev->size(ev);
 
-    for (int i = 0; i < sz; ++i)
+    for (auto i = 0U; i < sz; ++i)
     {
         auto et = ev->get(ev, i);
         uiComms.dataCopyForUI.writeEventTo(et);

@@ -27,24 +27,68 @@
 #include "sst/jucegui/data/Discrete.h"
 #include "sst/jucegui/components/ContinuousParamEditor.h"
 #include "sst/jucegui/components/DiscreteParamEditor.h"
+#include "sst/jucegui/components/GlyphButton.h"
+#include "sst/jucegui/components/WindowPanel.h"
 #include "debug-helpers.h"
+#include "version.h"
+#include "cmrc/cmrc.hpp"
+
+CMRC_DECLARE(conduit_resources);
 
 namespace sst::conduit::shared
 {
-struct Background;
-struct EditorBase : juce::Component
-{
-    EditorBase(const std::string &pluginName, const std::string &pluginId);
-    ~EditorBase();
 
-    void setContentComponent(std::unique_ptr<juce::Component> c);
+static constexpr int headerSize{35};
+static constexpr int footerSize{18};
+
+template <typename Content> struct EditorBase;
+
+template <typename Content> struct Background : sst::jucegui::components::WindowPanel
+{
+    EditorBase<Content> &eb;
+    Background(const std::string &pluginName, const std::string &pluginId, EditorBase<Content> &e);
     void resized() override;
+
+    void buildBurger();
+    juce::Typeface::Ptr labelsTypeface{nullptr}, versionTypeface{nullptr};
+
+    std::unique_ptr<juce::Component> contents;
+    std::unique_ptr<juce::Component> nameLabel, versionLabel;
+
+    std::unique_ptr<sst::jucegui::components::GlyphButton> menuButton;
+
+    void loadsave(bool doSave);
+    std::unique_ptr<juce::FileChooser> fileChooser;
+};
+
+template <typename Content> struct EditorBase : juce::Component
+{
+    typename Content::UICommunicationBundle &uic;
+    EditorBase(typename Content::UICommunicationBundle &, const std::string &pluginName,
+               const std::string &pluginId);
+    ~EditorBase() = default;
+
+    void setContentComponent(std::unique_ptr<juce::Component> c)
+    {
+        container->contents = std::move(c);
+        auto b = container->contents->getBounds();
+
+        b = b.withHeight(b.getHeight() + footerSize + headerSize);
+        setSize(b.getWidth(), b.getHeight());
+
+        container->addAndMakeVisible(*container->contents);
+    }
+    void resized() override
+    {
+        if (container)
+            container->setBounds(getLocalBounds());
+    }
 
     virtual void populatePluginHamburgerItems(juce::PopupMenu &m) {}
 
     juce::Typeface::Ptr loadFont(const std::string &path);
 
-    std::unique_ptr<Background> container;
+    std::unique_ptr<Background<Content>> container;
     std::string pluginName, pluginId;
 };
 
@@ -228,7 +272,7 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
         TEd &editor;
 
         D2QContinuousParam(TEd &ed, typename T::UICommunicationBundle &p, uint32_t pid)
-            : editor(ed), uic(p), pid(pid)
+            : uic(p), pid(pid), editor(ed)
         {
             pDesc = uic.getParameterDescription(pid);
         }
@@ -263,7 +307,7 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
         TEd &editor;
 
         D2QDiscreteParam(TEd &ed, typename T::UICommunicationBundle &p, uint32_t pid)
-            : editor(ed), uic(p), pid(pid)
+            : uic(p), pid(pid), editor(ed)
         {
             pDesc = uic.getParameterDescription(pid);
         }
@@ -358,5 +402,185 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
     std::unordered_map<uint32_t, std::unique_ptr<D2QContinuousParam>> ownedData;
     std::unordered_map<uint32_t, std::unique_ptr<D2QDiscreteParam>> ownedDataDiscrete;
 };
+
+namespace jcmp = sst::jucegui::components;
+template <typename Content>
+Background<Content>::Background(const std::string &pluginName, const std::string &pluginId,
+                                EditorBase<Content> &e)
+    : eb(e)
+
+{
+    labelsTypeface = eb.loadFont("Inter/static/Inter-Medium.ttf");
+    versionTypeface = eb.loadFont("Anonymous_Pro/AnonymousPro-Regular.ttf");
+
+    sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
+    const auto &base = sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
+        sst::jucegui::style::StyleSheet::DARK);
+    base->setColour(jcmp::WindowPanel::Styles::styleClass,
+                    jcmp::WindowPanel::Styles::backgroundgradstart, juce::Colour(60, 60, 70));
+    base->setColour(jcmp::WindowPanel::Styles::styleClass,
+                    jcmp::WindowPanel::Styles::backgroundgradend, juce::Colour(20, 20, 30));
+    base->setColour(jcmp::BaseStyles::styleClass, jcmp::BaseStyles::regionBorder,
+                    juce::Colour(90, 90, 100));
+    base->setColour(jcmp::NamedPanel::Styles::styleClass, jcmp::NamedPanel::Styles::regionLabelCol,
+                    juce::Colour(210, 210, 230));
+
+    base->replaceFontsWithTypeface(labelsTypeface);
+
+    setStyle(base);
+
+    auto lbFont = juce::Font(24);
+    auto vsFont = juce::Font(12);
+
+    if (labelsTypeface)
+    {
+        lbFont = juce::Font(labelsTypeface).withHeight(24);
+    }
+    if (versionTypeface)
+    {
+        vsFont = juce::Font(versionTypeface).withHeight(13);
+    }
+
+    // FIXME do this with sst labels and a style class
+    auto nl = std::make_unique<juce::Label>("Plugin Name", pluginName);
+    nl->setColour(juce::Label::ColourIds::textColourId, juce::Colour(220, 220, 230));
+    nl->setFont(lbFont);
+    addAndMakeVisible(*nl);
+    nameLabel = std::move(nl);
+
+    auto vs = std::string(sst::conduit::build::BuildDate) + " " +
+              std::string(sst::conduit::build::BuildTime) + " " + sst::conduit::build::GitHash;
+    auto vl = std::make_unique<juce::Label>("Plugin Version", vs);
+    vl->setColour(juce::Label::ColourIds::textColourId, juce::Colour(220, 220, 230));
+    vl->setFont(vsFont);
+    vl->setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(*vl);
+    versionLabel = std::move(vl);
+
+    auto gb = std::make_unique<jcmp::GlyphButton>(jcmp::GlyphPainter::HAMBURGER);
+    gb->setOnCallback([w = juce::Component::SafePointer(this)]() {
+        if (w)
+            w->buildBurger();
+    });
+    gb->setIsInactiveValue(true);
+    addAndMakeVisible(*gb);
+    menuButton = std::move(gb);
+}
+
+template <typename Content> void Background<Content>::resized()
+{
+    auto lb = getLocalBounds();
+    if (contents)
+    {
+        auto cb = lb.withTrimmedTop(headerSize).withTrimmedBottom(footerSize);
+        contents->setBounds(cb);
+    }
+    nameLabel->setBounds(lb.withHeight(headerSize).withTrimmedRight(headerSize - 4));
+    auto gb = lb.withHeight(headerSize)
+                  .withWidth(headerSize)
+                  .translated(lb.getWidth() - headerSize - 2, 0)
+                  .reduced(5);
+    menuButton->setBounds(gb);
+    versionLabel->setBounds(lb.withTrimmedTop(lb.getHeight() - footerSize).withTrimmedBottom(2));
+}
+
+template <typename Content> void Background<Content>::buildBurger()
+{
+    juce::PopupMenu menu;
+    menu.addSectionHeader(eb.pluginName);
+    eb.populatePluginHamburgerItems(menu);
+    menu.addSeparator();
+    menu.addItem("Save Settings To...", [w = juce::Component::SafePointer(this)]() {
+        if (w)
+            w->loadsave(true);
+    });
+    menu.addItem("Load Settings From...", [w = juce::Component::SafePointer(this)]() {
+        if (w)
+            w->loadsave(false);
+    });
+    menu.addItem("About", []() {});
+
+    menu.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
+}
+
+template <typename Content>
+EditorBase<Content>::EditorBase(typename Content::UICommunicationBundle &u,
+                                const std::string &pluginName, const std::string &pluginId)
+    : uic(u), pluginName(pluginName), pluginId(pluginId)
+{
+    container = std::make_unique<Background<Content>>(pluginName, pluginId, *this);
+    addAndMakeVisible(*container);
+}
+
+template <typename Content>
+juce::Typeface::Ptr EditorBase<Content>::loadFont(const std::string &path)
+{
+    try
+    {
+        auto fs = cmrc::conduit_resources::get_filesystem();
+        auto fntf = fs.open(path);
+        std::vector<char> fontData(fntf.begin(), fntf.end());
+
+        auto res = juce::Typeface::createSystemTypefaceFor(fontData.data(), fontData.size());
+        return res;
+    }
+    catch (std::exception &e)
+    {
+    }
+    CNDOUT << "Font '" << path << "' failed to load" << std::endl;
+    return nullptr;
+}
+
+template <typename Content> void Background<Content>::loadsave(bool doSave)
+{
+    using FromUI = typename Content::UICommunicationBundle::UIToSynth_Queue_t::value_type;
+
+    auto dp = eb.uic.getDocumentsPath();
+    if (doSave)
+    {
+        fileChooser =
+            std::make_unique<juce::FileChooser>("Save Patch", juce::File(dp.u8string()), "*.cndx");
+
+        auto folderChooserFlags =
+            juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles;
+
+        fileChooser->launchAsync(folderChooserFlags, [this](auto &chooser) {
+            if (chooser.getResults().size())
+            {
+                auto file{chooser.getResult()};
+
+                std::string s = file.getFullPathName().toStdString();
+                FromUI sv;
+                sv.type = FromUI::MType::SAVE_PATCH;
+                sv.extended.strPointer = (char *)malloc(s.size() + 1);
+                strncpy(sv.extended.strPointer, s.c_str(), s.size() + 1);
+                this->eb.uic.fromUiQ.push(sv);
+            }
+        });
+    }
+    else
+    {
+        fileChooser =
+            std::make_unique<juce::FileChooser>("Load Patch", juce::File(dp.u8string()), "*.cndx");
+
+        auto folderChooserFlags =
+            juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
+
+        fileChooser->launchAsync(folderChooserFlags, [this](auto &chooser) {
+            if (chooser.getResults().size())
+            {
+                auto file{chooser.getResult()};
+
+                std::string s = file.getFullPathName().toStdString();
+                FromUI sv;
+                sv.type = FromUI::MType::LOAD_PATCH;
+                sv.extended.strPointer = (char *)malloc(s.size() + 1);
+                strncpy(sv.extended.strPointer, s.c_str(), s.size() + 1);
+                this->eb.uic.fromUiQ.push(sv);
+            }
+        });
+    }
+}
+
 } // namespace sst::conduit::shared
 #endif // CONDUIT_EDITOR_BASE_H

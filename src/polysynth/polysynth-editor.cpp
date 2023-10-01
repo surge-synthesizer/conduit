@@ -71,7 +71,7 @@ template <typename editor_t, int lx, int ly> struct GridContentBase : juce::Comp
         labels.push_back(std::move(lb));
 
         return (T *)(knobs[p].get());
-    };
+    }
 
     template <typename T>
     T *addDiscreteT(editor_t &e, clap_id p, int x, int y, const std::string &label)
@@ -89,7 +89,8 @@ template <typename editor_t, int lx, int ly> struct GridContentBase : juce::Comp
             labels.push_back(std::move(lb));
         }
         return (T *)(dknobs[p].get());
-    };
+    }
+
     jcmp::Knob *addKnob(editor_t &e, clap_id p, int x, int y, const std::string &label)
     {
         auto kb = addContinousT<jcmp::Knob>(e, p, x, y, label);
@@ -473,7 +474,7 @@ WSPanel::WSPanel(sst::conduit::polysynth::editor::uicomm_t &p,
     e.comms->attachDiscreteToParam(toggleButton.get(), ConduitPolysynth::pmWSActive);
 
     content->addMultiSwitch(e, ConduitPolysynth::pmWSMode, 0, 0, "");
-    content->addKnob(e, ConduitPolysynth::pmWSDrive, 1, 0, "Feedback");
+    content->addKnob(e, ConduitPolysynth::pmWSDrive, 1, 0, "Drive");
 
     setContentAreaComponent(std::move(content));
 }
@@ -537,7 +538,8 @@ std::unique_ptr<juce::Component> ConduitPolysynth::createEditor()
     uiComms.refreshUIValues = true;
     auto innards =
         std::make_unique<sst::conduit::polysynth::editor::ConduitPolysynthEditor>(uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase>(desc.name, desc.id);
+    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitPolysynth>>(
+        uiComms, desc.name, desc.id);
     editor->setContentComponent(std::move(innards));
 
     return editor;

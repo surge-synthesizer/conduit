@@ -50,7 +50,6 @@ struct ControlsPanel : juce::Component
         auto b = getLocalBounds().reduced(5);
         auto ks = std::min(b.getWidth(), b.getHeight());
 
-        int yp = 0;
         auto bx = b.withHeight(ks).withWidth(ks - 18).reduced(4);
         time->setBounds(bx);
     }
@@ -108,7 +107,8 @@ std::unique_ptr<juce::Component> ConduitChordMemory::createEditor()
     uiComms.refreshUIValues = true;
     auto innards =
         std::make_unique<sst::conduit::chord_memory::editor::ConduitChordMemoryEditor>(uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase>(desc.name, desc.id);
+    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitChordMemory>>(
+        uiComms, desc.name, desc.id);
     editor->setContentComponent(std::move(innards));
 
     return editor;
