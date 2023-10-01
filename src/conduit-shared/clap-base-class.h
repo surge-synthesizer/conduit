@@ -153,19 +153,37 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     bool paramsValueToText(clap_id paramId, double value, char *display,
                            uint32_t size) noexcept override
     {
-        auto pos = paramDescriptionMap.find(paramId);
-        if (pos == paramDescriptionMap.end())
-            return false;
-
-        const auto &pd = pos->second;
-        auto sValue = pd.valueToString(value);
-
+        auto sValue = paramValueDisplay(paramId, value);
         if (sValue.has_value())
         {
             strncpy(display, sValue->c_str(), size);
             return true;
         }
         return false;
+    }
+
+    std::optional<std::string> paramValueDisplay(clap_id paramId, double value) const
+    {
+        auto pos = paramDescriptionMap.find(paramId);
+        if (pos == paramDescriptionMap.end())
+            return std::nullopt;
+
+        const auto &pd = pos->second;
+        ParamDesc::FeatureState fs;
+
+        auto tsBuddy = temposyncActivatedBy.find(paramId);
+        if (tsBuddy != temposyncActivatedBy.end())
+        {
+            auto pvIt = paramToValue.find(tsBuddy->second);
+            if (pvIt != paramToValue.end())
+            {
+                auto isTS = *(pvIt->second) > 0.5;
+                fs = fs.withTemposync(isTS);
+            }
+        }
+
+        auto sValue = pd.valueToString(value, fs);
+        return sValue;
     }
 
     bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept override
@@ -184,6 +202,12 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             return true;
         }
         return false;
+    }
+
+    std::unordered_map<clap_id, clap_id> temposyncActivatedBy;
+    void addTemposyncActivator(clap_id toThis, clap_id byThat)
+    {
+        temposyncActivatedBy[toThis] = byThat;
     }
 
     struct Patch
@@ -621,6 +645,11 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 return ParamDesc();
             }
             return fp->second;
+        }
+
+        std::optional<std::string> getParamValueDisplay(clap_id id, double d) const
+        {
+            return cp.paramValueDisplay(id, d);
         }
 
         std::filesystem::path getDocumentsPath() const { return cp.documentsPath; }
