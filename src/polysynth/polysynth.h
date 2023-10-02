@@ -40,6 +40,10 @@
 #include "sst/filters/HalfRateFilter.h"
 #include "sst/voicemanager/voicemanager.h"
 
+#include "sst/effects/Phaser.h"
+#include "sst/effects/Flanger.h"
+#include "sst/effects/Reverb1.h"
+
 #include "conduit-shared/clap-base-class.h"
 #include "voice.h"
 
@@ -52,7 +56,7 @@ namespace sst::conduit::polysynth
  * url etc... and is consumed by clap-saw-demo-pluginentry.cpp
  */
 extern clap_plugin_descriptor desc;
-static constexpr int nParams{56};
+static constexpr int nParams{72};
 static constexpr int numModMatrixSlots{16};
 
 struct ConduitPolysynthConfig
@@ -70,6 +74,14 @@ struct ConduitPolysynthConfig
 
     static clap_plugin_descriptor *getDescription() { return &desc; }
 };
+
+struct PhaserConfig;
+struct FlangerConfig;
+struct Reverb1Config;
+
+using PhaserFX = sst::effects::phaser::Phaser<PhaserConfig>;
+using FlangerFX = sst::effects::flanger::Flanger<FlangerConfig>;
+using ReverbFX = sst::effects::reverb1::Reverb1<Reverb1Config>;
 
 struct ConduitPolysynth
     : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>
@@ -122,14 +134,17 @@ struct ConduitPolysynth
         pmLPFCutoff,
         pmLPFResonance,
         pmLPFFilterMode,
+        pmLPFKeytrack,
 
         pmSVFActive = 2100,
         pmSVFCutoff,
         pmSVFResonance,
         pmSVFFilterMode,
+        pmSVFKeytrack,
 
         pmWSActive = 2200,
         pmWSDrive,
+        pmWSBias,
         pmWSMode,
 
         pmFilterRouting = 2300,
@@ -153,7 +168,27 @@ struct ConduitPolysynth
         pmLFODeform,
         pmLFOAmplitude,
         pmLFOShape,
-        pmLFOTempoSync
+        pmLFOTempoSync,
+
+        // Output in the 10k range
+        pmVoicePan = 10000,
+        pmVoiceLevel,
+
+        // fx up in the 20k range
+        pmModFXActive = 20000,
+        pmModFXType,
+        pmModFXPreset,
+        pmModFXRate,
+        pmModFXRateTemposync,
+        pmModFXMix,
+
+        pmRevFXActive = 20025,
+        pmRevFXPreset,
+        pmRevFXTime,
+        pmRevFXMix,
+
+        // and finally the main level
+        pmOutputLevel = 20100
     };
 
     static constexpr int offPmFeg{10};
@@ -280,6 +315,10 @@ struct ConduitPolysynth
     }
 
     MTSClient *mtsClient{nullptr};
+
+    std::unique_ptr<PhaserFX> phaserFX;
+    // std::unique_ptr<FlangerFX> flangerFX;
+    // std::unique_ptr<ReverbFX> reverbFX;
 
   private:
     using voiceManager_t = sst::voicemanager::VoiceManager<VMConfig, ConduitPolysynth>;

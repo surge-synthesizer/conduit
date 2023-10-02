@@ -90,6 +90,25 @@ struct PolysynthVoice
         }
     };
 
+    // If you change this also change the param in polysynth.cpp
+    enum FilterRouting
+    {
+        LowWSMulti,
+        MultiWSLow,
+        WSLowMulti,
+        LowMultiWS
+    };
+
+    enum Waveshapers
+    {
+        Soft,
+        OJD,
+        Digital,
+        FullWaveRect,
+        WestcoastFold,
+        Fuzz
+    };
+
     std::unordered_map<clap_id, float> externalMods, internalMods;
 
     void applyExternalMod(clap_id param, float value);

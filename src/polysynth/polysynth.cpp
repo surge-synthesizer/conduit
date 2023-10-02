@@ -34,6 +34,8 @@
 #include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/mechanics/block-ops.h"
 
+#include "effects-impl.h"
+
 namespace sst::conduit::polysynth
 {
 
@@ -55,6 +57,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
       voiceManager(*this), voices{sst::cpputils::make_array<PolysynthVoice, max_voices>(*this)}
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
+    auto monoModFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE;
     auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE | CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID |
                    CLAP_PARAM_IS_MODULATABLE_PER_KEY;
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;
@@ -179,6 +182,8 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     paramDescriptions.push_back(ParamDesc()
                                     .asInt()
                                     .withID(pmLPFFilterMode)
+                                    .withName("LPF Mode")
+                                    .withGroupName("LPF Filter")
                                     .withRange(0, 5)
                                     .withDefault(0)
                                     .withFlags(steppedFlag)
@@ -188,14 +193,22 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                                                  {3, "Diode"},
                                                                  {4, "CutWarp"},
                                                                  {5, "ResWarp"}})); // FIXME - enums
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercentBipolar()
+                                    .withID(pmLPFKeytrack)
+                                    .withName("LPF Keytrack")
+                                    .withGroupName("LPF Filter")
+                                    .withFlags(modFlag)
+                                    .withDefault(0));
 
-    paramDescriptions.push_back(
-        activeBase.withID(pmSVFActive).withName("SVF Active").withGroupName("SVF Filter"));
+    paramDescriptions.push_back(activeBase.withID(pmSVFActive)
+                                    .withName("Multi-Mode Active")
+                                    .withGroupName("Multi-Mode Filter"));
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmSVFCutoff)
-                                    .withName("SVF Cutoff")
-                                    .withGroupName("SVF Filter")
+                                    .withName("Multi-Mode Cutoff")
+                                    .withGroupName("Multi-Mode Filter")
                                     .withRange(1, 127)
                                     .withDefault(69)
                                     .withSemitoneZeroAtMIDIZeroFormatting()
@@ -203,8 +216,8 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmSVFResonance)
-                                    .withName("SVF Resonance")
-                                    .withGroupName("SVF Filter")
+                                    .withName("Multi-Mode Resonance")
+                                    .withGroupName("Multi-Mode Filter")
                                     .withRange(0, 1)
                                     .withDefault(sqrt(2) / 2)
                                     .withLinearScaleFormatting("")
@@ -221,11 +234,18 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
         ParamDesc()
             .asInt()
             .withID(pmSVFFilterMode)
-            .withName("SVF Filter Type")
+            .withName("Multi-Mode Filter Type")
             .withGroupName("Filter")
             .withRange(PolysynthVoice::StereoSimperSVF::LP, PolysynthVoice::StereoSimperSVF::ALL)
             .withUnorderedMapFormatting(filterModes)
             .withFlags(steppedFlag));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercentBipolar()
+                                    .withID(pmSVFKeytrack)
+                                    .withName("Multi-Mode Keytrack")
+                                    .withGroupName("Multi-Mode Filter")
+                                    .withFlags(modFlag)
+                                    .withDefault(0));
 
     paramDescriptions.push_back(
         activeBase.withID(pmWSActive).withName("WaveShaper Active").withGroupName("WaveShaper"));
@@ -237,16 +257,29 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withName("WaveShaper Drive")
                                     .withGroupName("WaveShaper")
                                     .withFlags(modFlag));
-    paramDescriptions.push_back(
-        ParamDesc()
-            .asInt()
-            .withID(pmWSMode)
-            .withDefault(0)
-            .withRange(0, 2)
-            .withName("WaveShaper Mode")
-            .withGroupName("WaveShaper")
-            .withFlags(steppedFlag)
-            .withUnorderedMapFormatting({{0, "Sat"}, {1, "Digi"}, {2, "Fold"}})); // FIXME enums
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercentBipolar()
+                                    .withID(pmWSBias)
+                                    .withDefault(0)
+                                    .withName("WaveShaper Bias")
+                                    .withGroupName("WaveShaper")
+                                    .withFlags(modFlag));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asInt()
+                                    .withID(pmWSMode)
+                                    .withDefault(1)
+                                    .withRange(0, 5)
+                                    .withName("WaveShaper Mode")
+                                    .withGroupName("WaveShaper")
+                                    .withFlags(steppedFlag)
+                                    .withUnorderedMapFormatting({
+                                        {PolysynthVoice::Waveshapers::Soft, "Soft"},
+                                        {PolysynthVoice::Waveshapers::OJD, "OJD"},
+                                        {PolysynthVoice::Waveshapers::Digital, "Digital"},
+                                        {PolysynthVoice::Waveshapers::FullWaveRect, "Rectifier"},
+                                        {PolysynthVoice::Waveshapers::WestcoastFold, "Fold"},
+                                        {PolysynthVoice::Waveshapers::Fuzz, "Fuzz"},
+                                    })); // FIXME enums
 
     paramDescriptions.push_back(
         ParamDesc()
@@ -257,10 +290,10 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
             .withFlags(steppedFlag)
             .withName("Filter Routing")
             .withGroupName("Filters")
-            .withUnorderedMapFormatting({{0, "LPF -> WS -> SVF"},
-                                         {1, "SVF -> WS -> LPF"},
-                                         {2, "WS -> Parallel"},
-                                         {3, "Parallel -> WS"}})); // FIXME enums
+            .withUnorderedMapFormatting({{PolysynthVoice::WSLowMulti, "WS-LP-M"},
+                                         {PolysynthVoice::LowMultiWS, "LP-M-WS"},
+                                         {PolysynthVoice::LowWSMulti, "LP-WS-M"},
+                                         {PolysynthVoice::MultiWSLow, "M-WS-LP"}}));
     paramDescriptions.push_back(ParamDesc()
                                     .asPercentBipolar()
                                     .withID(pmFilterFeedback)
@@ -401,6 +434,107 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                 .withUnorderedMapFormatting(
                     {{0, "Sin"}, {1, "Square"}, {2, "Saw"}, {3, "Tri"}, {4, "Noise"}, {5, "S&H"}}));
     }
+
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercentBipolar()
+                                    .withID(pmVoicePan)
+                                    .withName("Pan")
+                                    .withGroupName("Voice")
+                                    .withFlags(modFlag));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asCubicDecibelAttenuation()
+                                    .withID(pmVoiceLevel)
+                                    .withName("Level")
+                                    .withGroupName("Voice")
+                                    .withFlags(modFlag)
+                                    .withDefault(1.0));
+
+    paramDescriptions.push_back(ParamDesc()
+                                    .asBool()
+                                    .withID(pmModFXActive)
+                                    .withName("Mod FX Active")
+                                    .withGroupName("Mod FX")
+                                    .withFlags(autoFlag)
+                                    .withDefault(1));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asInt()
+                                    .withID(pmModFXType)
+                                    .withName("Mod FX Type")
+                                    .withGroupName("Mod FX")
+                                    .withFlags(autoFlag)
+                                    .withRange(0, 1)
+                                    .withDefault(0)
+                                    .withUnorderedMapFormatting({{0, "Phaser"}, {1, "Flanger"}}));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asInt()
+                                    .withID(pmModFXPreset)
+                                    .withName("Mod FX Preset")
+                                    .withGroupName("Mod FX")
+                                    .withFlags(autoFlag)
+                                    .withRange(0, 2)
+                                    .withDefault(0)
+                                    .withUnorderedMapFormatting({{0, "I"}, {1, "II"}, {2, "III"}}));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asLfoRate()
+                                    .withID(pmModFXRate)
+                                    .withName("Mod FX Rate")
+                                    .withGroupName("Mod FX")
+                                    .withFlags(monoModFlag));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asBool()
+                                    .withID(pmModFXRateTemposync)
+                                    .withName("Mod FX Rate Temposync")
+                                    .withGroupName("Mod FX")
+                                    .withFlags(autoFlag)
+                                    .withDefault(0));
+    addTemposyncActivator(pmModFXRate, pmModFXRateTemposync);
+
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercent()
+                                    .withID(pmModFXMix)
+                                    .withName("Mod FX Mix")
+                                    .withGroupName("Mod FX")
+                                    .withDefault(0.5)
+                                    .withFlags(monoModFlag));
+
+    paramDescriptions.push_back(ParamDesc()
+                                    .asBool()
+                                    .withID(pmRevFXActive)
+                                    .withName("Reverb FX Active")
+                                    .withGroupName("Reverb FX")
+                                    .withFlags(autoFlag)
+                                    .withDefault(1));
+
+    paramDescriptions.push_back(ParamDesc()
+                                    .asInt()
+                                    .withID(pmRevFXPreset)
+                                    .withName("Reverb Preset")
+                                    .withGroupName("Reverb FX")
+                                    .withFlags(autoFlag)
+                                    .withRange(0, 2)
+                                    .withDefault(0)
+                                    .withUnorderedMapFormatting({{0, "I"}, {1, "II"}, {2, "III"}}));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercent()
+                                    .withID(pmRevFXTime)
+                                    .withName("Reverb Decay Time")
+                                    .withGroupName("Reverb FX")
+                                    .withFlags(monoModFlag));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asPercent()
+                                    .withID(pmRevFXMix)
+                                    .withName("Reverb Mix")
+                                    .withGroupName("Reverb FX")
+                                    .withDefault(0.5)
+                                    .withFlags(monoModFlag));
+
+    paramDescriptions.push_back(ParamDesc()
+                                    .asCubicDecibelAttenuation()
+                                    .withID(pmOutputLevel)
+                                    .withName("Output Level")
+                                    .withGroupName("Global")
+                                    .withFlags(monoModFlag)
+                                    .withDefault(1.0));
 
     configureParams();
 

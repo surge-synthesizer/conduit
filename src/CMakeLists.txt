@@ -18,6 +18,7 @@ target_link_libraries(conduit-shared PUBLIC
         sst-cpputils
         sst-jucegui
         sst-filters
+        sst-effects
         sst-voicemanager
         sst-plugininfra
         mts-esp-client
