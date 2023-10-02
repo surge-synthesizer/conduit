@@ -362,7 +362,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                         .withFlags(steppedFlag));
 
         paramDescriptions.push_back(ParamDesc()
-                                        .asPercent()
+                                        .asLfoRate()
                                         .withID(pmLFORate + i * offPmLFO2)
                                         .withName(nm + " Rate")
                                         .withGroupName(nm)
@@ -375,8 +375,10 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                         .withGroupName(nm)
                                         .withFlags(steppedFlag));
 
+        addTemposyncActivator(pmLFORate + i * offPmLFO2, pmLFOTempoSync + i * offPmLFO2);
+
         paramDescriptions.push_back(ParamDesc()
-                                        .asPercent()
+                                        .asPercentBipolar()
                                         .withID(pmLFODeform + i * offPmLFO2)
                                         .withName(nm + " Deform")
                                         .withGroupName(nm)
@@ -386,7 +388,8 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                         .withID(pmLFOAmplitude + i * offPmLFO2)
                                         .withName(nm + " Amplitude")
                                         .withGroupName(nm)
-                                        .withFlags(modFlag));
+                                        .withFlags(modFlag)
+                                        .withDefault(1.0));
         paramDescriptions.push_back(
             ParamDesc()
                 .asInt()

@@ -40,3 +40,6 @@
 [submodule "libs/MTS-ESP"]
 	path = libs/MTS-ESP
 	url = https://github.com/ODDSound/MTS-ESP
+[submodule "libs/sst/sst-effects"]
+	path = libs/sst/sst-effects
+	url = https://github.com/surge-synthesizer/sst-effects

@@ -171,7 +171,9 @@ template <typename T> struct ToolTipMixIn
 
         auto pd = asT()->uic.getParameterDescription(p);
         toolTip->title = pd.name;
-        auto sv = pd.valueToString(f);
+
+        auto sv = asT()->uic.getParamValueDisplay(p, f);
+
         if (sv.has_value())
             toolTip->value = *sv;
         else

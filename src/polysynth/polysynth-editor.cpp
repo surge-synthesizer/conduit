@@ -55,7 +55,15 @@ template <typename editor_t, int lx, int ly> struct GridContentBase : juce::Comp
             if (k)
                 k->setSource(nullptr);
     }
-    void resized() override { layout.resize(getLocalBounds()); }
+    void resized() override
+    {
+        layout.resize(getLocalBounds());
+        if (additionalResizeHandler)
+        {
+            additionalResizeHandler(this);
+        }
+    }
+    std::function<void(GridContentBase<editor_t, lx, ly> *)> additionalResizeHandler{nullptr};
 
     template <typename T>
     T *addContinousT(editor_t &e, clap_id p, int x, int y, const std::string &label)
@@ -499,13 +507,32 @@ LFOPanel::LFOPanel(sst::conduit::polysynth::editor::uicomm_t &p,
 
     content->addMultiSwitch(e, ConduitPolysynth::pmLFOShape + which * ConduitPolysynth::offPmLFO2,
                             0, 0, "");
-    content->addKnob(e, ConduitPolysynth::pmLFORate + which * ConduitPolysynth::offPmLFO2, 1, 0,
-                     "Rate");
+    auto rt = content->addKnob(e, ConduitPolysynth::pmLFORate + which * ConduitPolysynth::offPmLFO2,
+                               1, 0, "Rate");
+    rt->pathDrawMode = jcmp::Knob::ALWAYS_FROM_MIN;
+
     content->addKnob(e, ConduitPolysynth::pmLFOAmplitude + which * ConduitPolysynth::offPmLFO2, 2,
                      0, "Amp");
     content->addKnob(e, ConduitPolysynth::pmLFODeform + which * ConduitPolysynth::offPmLFO2, 3, 0,
                      "Deform");
 
+    auto ts = std::make_unique<jcmp::ToggleButton>();
+    ts->setGlyph(jcmp::GlyphPainter::GlyphType::METRONOME);
+    content->addAndMakeVisible(*ts);
+    e.comms->attachDiscreteToParam(ts.get(), ConduitPolysynth::pmLFOTempoSync +
+                                                 which * ConduitPolysynth::offPmLFO2);
+    content->dknobs[ConduitPolysynth::pmLFOTempoSync + which * ConduitPolysynth::offPmLFO2] =
+        std::move(ts);
+
+    content->additionalResizeHandler = [which](auto *ct) {
+        auto pRt = ConduitPolysynth::pmLFORate + which * ConduitPolysynth::offPmLFO2;
+        auto pTs = ConduitPolysynth::pmLFOTempoSync + which * ConduitPolysynth::offPmLFO2;
+
+        const auto &pK = ct->knobs[pRt];
+        const auto &pT = ct->dknobs[pTs];
+
+        pT->setBounds(pK->getRight() - 6, pK->getY() - 2, 10, 10);
+    };
     setContentAreaComponent(std::move(content));
 }
 
