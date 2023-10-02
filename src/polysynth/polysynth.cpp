@@ -503,7 +503,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withName("Reverb FX Active")
                                     .withGroupName("Reverb FX")
                                     .withFlags(autoFlag)
-                                    .withDefault(1));
+                                    .withDefault(0));
 
     paramDescriptions.push_back(ParamDesc()
                                     .asInt()
@@ -525,7 +525,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withID(pmRevFXMix)
                                     .withName("Reverb Mix")
                                     .withGroupName("Reverb FX")
-                                    .withDefault(0.5)
+                                    .withDefault(0.3)
                                     .withFlags(monoModFlag));
 
     paramDescriptions.push_back(ParamDesc()
@@ -545,6 +545,15 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
 
     mtsClient = MTS_RegisterClient();
 
+    phaserFX = std::make_unique<PhaserFX>(this, this, this);
+    phaserFX->initialize();
+
+    flangerFX = std::make_unique<FlangerFX>(this, this, this);
+    flangerFX->initialize();
+
+    reverbFX = std::make_unique<ReverbFX>(this, this, this);
+    reverbFX->initialize();
+
     for (auto &v : voices)
     {
         v.attachTo(*this);
@@ -559,6 +568,18 @@ ConduitPolysynth::~ConduitPolysynth()
     // with an open window but
     if (clapJuceShim)
         guiDestroy();
+}
+
+bool ConduitPolysynth::activate(double sampleRate, uint32_t minFrameCount,
+                                uint32_t maxFrameCount) noexcept
+{
+    setSampleRate(sampleRate);
+    for (auto &v : voices)
+        v.setSampleRate(sampleRate * 2); // run voices oversampled
+    phaserFX->onSampleRateChanged();
+    flangerFX->onSampleRateChanged();
+    reverbFX->onSampleRateChanged();
+    return true;
 }
 
 /*
@@ -655,6 +676,10 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
         nextEvent = ev->get(ev, nextEventIndex);
     }
 
+    bool modActive = *paramToValue[pmModFXActive] > 0.5;
+    bool revActive = *paramToValue[pmRevFXActive] > 0.5;
+    bool usePhaser = *paramToValue[pmModFXType] < 0.5;
+
     for (auto i = 0U; i < process->frames_count; ++i)
     {
         // Do I have an event to process. Note that multiple events
@@ -674,6 +699,21 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
         if (blockPos == 0)
         {
             renderVoices();
+            if (modActive)
+            {
+                if (usePhaser)
+                {
+                    phaserFX->processBlock(output[0], output[1]);
+                }
+                else
+                {
+                    flangerFX->processBlock(output[0], output[1]);
+                }
+            }
+            if (revActive)
+            {
+                reverbFX->processBlock(output[0], output[1]);
+            }
         }
         out[0][i] = output[0][blockPos];
         out[1][i] = output[1][blockPos];
