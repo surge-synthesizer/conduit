@@ -23,8 +23,11 @@ target_link_libraries(conduit-shared PUBLIC
         sst-plugininfra
         mts-esp-client
         clap-wrapper-extensions
-        clap-wrapper-compile-options
         )
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(conduit-shared PUBLIC -Wall -Werror)
+endif()
 
 add_library(conduit-impl STATIC)
 target_link_libraries(conduit-impl PUBLIC conduit-shared)
