@@ -26,7 +26,7 @@ target_link_libraries(conduit-shared PUBLIC
         )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(conduit-shared PUBLIC -Wall -Werror)
+    target_compile_options(conduit-shared PUBLIC -Wall -Werror -Wno-ignored-qualifiers)
 endif()
 
 add_library(conduit-impl STATIC)
