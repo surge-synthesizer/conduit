@@ -91,13 +91,7 @@ struct ConduitPolysynth
     ~ConduitPolysynth();
 
     bool activate(double sampleRate, uint32_t minFrameCount,
-                  uint32_t maxFrameCount) noexcept override
-    {
-        setSampleRate(sampleRate);
-        for (auto &v : voices)
-            v.setSampleRate(sampleRate * 2); // run voices oversampled
-        return true;
-    }
+                  uint32_t maxFrameCount) noexcept override;
 
     enum paramIds : uint32_t
     {
@@ -317,8 +311,8 @@ struct ConduitPolysynth
     MTSClient *mtsClient{nullptr};
 
     std::unique_ptr<PhaserFX> phaserFX;
-    // std::unique_ptr<FlangerFX> flangerFX;
-    // std::unique_ptr<ReverbFX> reverbFX;
+    std::unique_ptr<FlangerFX> flangerFX;
+    std::unique_ptr<ReverbFX> reverbFX;
 
   private:
     using voiceManager_t = sst::voicemanager::VoiceManager<VMConfig, ConduitPolysynth>;

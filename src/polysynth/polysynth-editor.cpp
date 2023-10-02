@@ -603,6 +603,9 @@ ModFXPanel::ModFXPanel(sst::conduit::polysynth::editor::uicomm_t &p,
                        sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Modulation Effect"), uic(p), ed(e)
 {
+    setTogglable(true);
+    e.comms->attachDiscreteToParam(toggleButton.get(), ConduitPolysynth::pmModFXActive);
+
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 5, 1>>();
     content->addMultiSwitch(e, ConduitPolysynth::pmModFXType, 0, 0, "");
     auto ms = content->addMultiSwitch(e, ConduitPolysynth::pmModFXPreset, 1, 0, "");
@@ -637,6 +640,9 @@ ReverbPanel::ReverbPanel(sst::conduit::polysynth::editor::uicomm_t &p,
                          sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Reverb Effect"), uic(p), ed(e)
 {
+    setTogglable(true);
+    e.comms->attachDiscreteToParam(toggleButton.get(), ConduitPolysynth::pmRevFXActive);
+
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 4, 1>>();
     auto ms = content->addMultiSwitch(e, ConduitPolysynth::pmRevFXPreset, 0, 0, "");
     ms->direction = jcmp::MultiSwitch::HORIZONTAL;
