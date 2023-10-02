@@ -18,12 +18,16 @@ target_link_libraries(conduit-shared PUBLIC
         sst-cpputils
         sst-jucegui
         sst-filters
+        sst-effects
         sst-voicemanager
         sst-plugininfra
         mts-esp-client
         clap-wrapper-extensions
-        clap-wrapper-compile-options
         )
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(conduit-shared PUBLIC -Wall -Werror -Wno-ignored-qualifiers)
+endif()
 
 add_library(conduit-impl STATIC)
 target_link_libraries(conduit-impl PUBLIC conduit-shared)
