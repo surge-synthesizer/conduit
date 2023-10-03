@@ -648,7 +648,9 @@ ReverbPanel::ReverbPanel(sst::conduit::polysynth::editor::uicomm_t &p,
     ms->direction = jcmp::MultiSwitch::HORIZONTAL;
     content->layout.setColspanAt(0, 2);
 
-    content->addKnob(e, ConduitPolysynth::pmRevFXTime, 2, 0, "Decay");
+    auto dk = content->addKnob(e, ConduitPolysynth::pmRevFXTime, 2, 0, "Decay");
+    dk->pathDrawMode = jcmp::Knob::ALWAYS_FROM_MIN;
+
     content->addKnob(e, ConduitPolysynth::pmRevFXMix, 3, 0, "Mix");
     setContentAreaComponent(std::move(content));
 }

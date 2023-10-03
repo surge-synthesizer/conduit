@@ -87,6 +87,11 @@ struct PhaserConfig : SharedConfig
         {
             return *(bc->synth->paramToValue[ConduitPolysynth::pmModFXMix]);
         }
+
+        if (idx == PhaserFX::ph_mod_rate)
+        {
+            return *(bc->synth->paramToValue[ConduitPolysynth::pmModFXRate]);
+        }
         return presets[presetIndex(bc)][idx];
     }
     static int intValueAt(const BaseClass *bc, const ValueStorage *, int idx)
@@ -112,9 +117,13 @@ struct FlangerConfig : SharedConfig
     }
     static float floatValueAt(const BaseClass *bc, const ValueStorage *, int idx)
     {
-        if (idx == FlangerFX ::fl_mix)
+        if (idx == FlangerFX::fl_mix)
         {
             return *(bc->synth->paramToValue[ConduitPolysynth::pmModFXMix]);
+        }
+        if (idx == FlangerFX::fl_rate)
+        {
+            return *(bc->synth->paramToValue[ConduitPolysynth::pmModFXRate]);
         }
         return presets[presetIndex(bc)][idx];
     }
@@ -143,9 +152,13 @@ struct Reverb1Config : SharedConfig
 
     static float floatValueAt(const BaseClass *bc, const ValueStorage *, int idx)
     {
-        if (idx == ReverbFX ::rev1_mix)
+        if (idx == ReverbFX::rev1_mix)
         {
             return *(bc->synth->paramToValue[ConduitPolysynth::pmRevFXMix]);
+        }
+        if (idx == ReverbFX::rev1_decaytime)
+        {
+            return *(bc->synth->paramToValue[ConduitPolysynth::pmRevFXTime]);
         }
         return presets[presetIndex(bc)][idx];
     }
