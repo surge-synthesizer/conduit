@@ -190,6 +190,22 @@ void PolysynthVoice::processBlock()
         }
     }
 
+    if (wsPtr)
+    {
+        auto drive = _mm_set1_ps(synth.dbToLinear(wsDrive.value()));
+
+        for (auto s = 0U; s < blockSizeOS; ++s)
+        {
+            auto input = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s]);
+            auto output = wsPtr(&wsState, input, drive);
+
+            float outArr alignas(16)[4];
+            _mm_store_ps(outArr, output);
+            outputOS[0][s] = outArr[0];
+            outputOS[1][s] = outArr[1];
+        }
+    }
+
     sst::basic_blocks::mechanics::scale_by<blockSizeOS>(aeg.outputCache, outputOS[0]);
     sst::basic_blocks::mechanics::scale_by<blockSizeOS>(aeg.outputCache, outputOS[1]);
 }
@@ -266,6 +282,50 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
 
     recalcPitch();
     recalcFilter();
+
+    auto wsActive = static_cast<bool>(*synth.paramToValue.at(ConduitPolysynth::pmWSActive));
+
+    if (wsActive)
+    {
+        float R[sst::waveshapers::n_waveshaper_registers];
+        auto wsTypeEnum =
+            static_cast<Waveshapers>(*synth.paramToValue.at(ConduitPolysynth::pmWSMode));
+
+        auto type = sst::waveshapers::WaveshaperType::wst_ojd;
+        switch (wsTypeEnum)
+        {
+        case Soft:
+            type = sst::waveshapers::WaveshaperType::wst_soft;
+            break;
+        case OJD:
+            type = sst::waveshapers::WaveshaperType::wst_ojd;
+            break;
+        case Digital:
+            type = sst::waveshapers::WaveshaperType::wst_digital;
+            break;
+        case FullWaveRect:
+            type = sst::waveshapers::WaveshaperType::wst_fwrectify;
+            break;
+        case WestcoastFold:
+            type = sst::waveshapers::WaveshaperType::wst_westfold;
+            break;
+        case Fuzz:
+            type = sst::waveshapers::WaveshaperType::wst_fuzz;
+            break;
+        }
+        sst::waveshapers::initializeWaveshaperRegister(type, R);
+
+        for (int i = 0; i < sst::waveshapers::n_waveshaper_registers; ++i)
+        {
+            wsState.R[i] = _mm_set1_ps(R[i]);
+        }
+        wsState.init = _mm_cmpneq_ps(_mm_setzero_ps(), _mm_setzero_ps());
+        wsPtr = sst::waveshapers::GetQuadWaveshaper(type);
+    }
+    else
+    {
+        wsPtr = nullptr;
+    }
 }
 
 void PolysynthVoice::release() { gated = false; }
@@ -383,6 +443,8 @@ void PolysynthVoice::attachTo(sst::conduit::polysynth::ConduitPolysynth &p)
     attach(ConduitPolysynth::pmEnvR + ConduitPolysynth::offPmFeg, fegValues.release);
 
     attach(ConduitPolysynth::pmFegToSVFCutoff, fegToSvfCutoff);
+
+    attach(ConduitPolysynth::pmWSDrive, wsDrive);
 
     mtsClient = p.mtsClient;
 }

@@ -45,6 +45,7 @@ set(SST_PLUGININFRA_FILESYSTEM_FORCE_PLATFORM TRUE CACHE BOOL "Use System FS")
 add_subdirectory(libs/sst/sst-plugininfra)
 add_subdirectory(libs/sst/sst-cpputils)
 add_subdirectory(libs/sst/sst-filters)
+add_subdirectory(libs/sst/sst-waveshapers)
 add_subdirectory(libs/sst/sst-effects)
 add_subdirectory(libs/sst/sst-voicemanager)
 
