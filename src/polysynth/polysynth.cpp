@@ -863,6 +863,7 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
         {
             // pitch bend
             auto bv = mevt->data[1] + mevt->data[2] * 128;
+
             voiceManager.routeMIDIPitchBend(mevt->port_index, chan, bv);
 
             break;
