@@ -205,20 +205,55 @@ void PolysynthVoice::processBlock()
 
     auto drive = _mm_set1_ps(synth.dbToLinear(wsDrive.value()));
 
-    for (auto s = 0U; s < blockSizeOS; ++s)
+#define PACK auto output = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s])
+#define UNPACK float outArr alignas(16)[4]; \
+    _mm_store_ps(outArr, output); \
+    outputOS[0][s] = outArr[0]; \
+    outputOS[1][s] = outArr[1]
+
+    switch(filterRouting)
     {
-        auto input = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s]);
-
-        auto output = qfPtr(&qfState, input);
-        output = wsPtr(&wsState, output, drive);
-        output = svfFilterOp(svfImpl, output);
-
-        float outArr alignas(16)[4];
-        _mm_store_ps(outArr, output);
-        outputOS[0][s] = outArr[0];
-        outputOS[1][s] = outArr[1];
+    case LowWSMulti:
+        for (auto s = 0U; s < blockSizeOS; ++s)
+        {
+            PACK;
+            output = qfPtr(&qfState, output);
+            output = wsPtr(&wsState, output, drive);
+            output = svfFilterOp(svfImpl, output);
+            UNPACK;
+        }
+        break;
+    case MultiWSLow:
+        for (auto s = 0U; s < blockSizeOS; ++s)
+        {
+            PACK;
+            output = svfFilterOp(svfImpl, output);
+            output = wsPtr(&wsState, output, drive);
+            output = qfPtr(&qfState, output);
+            UNPACK;
+        }
+        break;
+    case WSLowMulti:
+        for (auto s = 0U; s < blockSizeOS; ++s)
+        {
+            PACK;
+            output = wsPtr(&wsState, output, drive);
+            output = qfPtr(&qfState, output);
+            output = svfFilterOp(svfImpl, output);
+            UNPACK;
+        }
+        break;
+    case LowMultiWS:
+        for (auto s = 0U; s < blockSizeOS; ++s)
+        {
+            PACK;
+            output = qfPtr(&qfState, output);
+            output = svfFilterOp(svfImpl, output);
+            output = wsPtr(&wsState, output, drive);
+            UNPACK;
+        }
+        break;
     }
-
     sst::basic_blocks::mechanics::scale_by<blockSizeOS>(aeg.outputCache, outputOS[0]);
     sst::basic_blocks::mechanics::scale_by<blockSizeOS>(aeg.outputCache, outputOS[1]);
 }
@@ -229,6 +264,8 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     channel = channeli;
     key = keyi;
     note_id = noteidi;
+    
+    pitchBendWheel = 0;
 
     sawUnison = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmSawUnisonCount));
 
@@ -396,6 +433,8 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     {
         qfPtr = qfNoOp;
     }
+
+    filterRouting = static_cast<FilterRouting>(*synth.paramToValue.at(ConduitPolysynth::pmFilterRouting));
 }
 
 void PolysynthVoice::release() { gated = false; }
