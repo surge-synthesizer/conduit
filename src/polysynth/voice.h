@@ -181,7 +181,12 @@ struct PolysynthVoice
     ModulatedValue lpfKeytrack;
 
     bool wsActive;
+    sst::basic_blocks::dsp::lipol<float, blockSizeOS, true> wsDrive_lipol, wsBias_lipol;
     ModulatedValue wsDrive, wsBias;
+
+    sst::basic_blocks::dsp::lipol<float, blockSizeOS, true> filterFeedback_lipol;
+    ModulatedValue filterFeedback;
+    __m128 filterFeedbackSignal;
 
     bool anyFilterStepActive;
 

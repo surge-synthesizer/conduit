@@ -203,57 +203,72 @@ void PolysynthVoice::processBlock()
     aegPFG_lipol.set_target(synth.dbToLinear(aegPFG.value()));
     aegPFG_lipol.multiply_2_blocks(outputOS[0], outputOS[1]);
 
-    auto drive = _mm_set1_ps(synth.dbToLinear(wsDrive.value()));
+    wsDrive_lipol.newValue(synth.dbToLinear(wsDrive.value()));
+    wsBias_lipol.newValue(wsBias.value());
+    filterFeedback_lipol.newValue(filterFeedback.value());
+    if (anyFilterStepActive)
+    {
 
-#define PACK auto output = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s])
+#define PACK                                                                                       \
+    auto output = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s]);                                \
+    auto drive = _mm_set1_ps(wsDrive_lipol.v);                                                     \
+    wsDrive_lipol.process();                                                                       \
+    auto bias = _mm_set1_ps(wsBias_lipol.v);                                                       \
+    wsBias_lipol.process();                                                                        \
+    auto fback = _mm_set1_ps(filterFeedback_lipol.v);                                              \
+    filterFeedback_lipol.process();                                                                \
+    output = _mm_add_ps(output, filterFeedbackSignal)
+
 #define UNPACK                                                                                     \
+    filterFeedbackSignal = _mm_mul_ps(output, fback);                                              \
     float outArr alignas(16)[4];                                                                   \
     _mm_store_ps(outArr, output);                                                                  \
     outputOS[0][s] = outArr[0];                                                                    \
     outputOS[1][s] = outArr[1]
 
-    switch (filterRouting)
-    {
-    case LowWSMulti:
-        for (auto s = 0U; s < blockSizeOS; ++s)
+        switch (filterRouting)
         {
-            PACK;
-            output = qfPtr(&qfState, output);
-            output = wsPtr(&wsState, output, drive);
-            output = svfFilterOp(svfImpl, output);
-            UNPACK;
+        case LowWSMulti:
+            for (auto s = 0U; s < blockSizeOS; ++s)
+            {
+                PACK;
+                output = qfPtr(&qfState, output);
+                output = wsPtr(&wsState, _mm_add_ps(output, bias), drive);
+                output = svfFilterOp(svfImpl, output);
+                UNPACK;
+            }
+            break;
+        case MultiWSLow:
+            for (auto s = 0U; s < blockSizeOS; ++s)
+            {
+                PACK;
+                output = svfFilterOp(svfImpl, output);
+                output = wsPtr(&wsState, _mm_add_ps(output, bias), drive);
+                output = qfPtr(&qfState, output);
+                UNPACK;
+            }
+            break;
+        case WSLowMulti:
+            for (auto s = 0U; s < blockSizeOS; ++s)
+            {
+                PACK;
+                output = wsPtr(&wsState, _mm_add_ps(output, bias), drive);
+                output = qfPtr(&qfState, output);
+                output = svfFilterOp(svfImpl, output);
+                UNPACK;
+            }
+            break;
+        case LowMultiWS:
+            for (auto s = 0U; s < blockSizeOS; ++s)
+            {
+                PACK;
+                output = qfPtr(&qfState, output);
+                output = svfFilterOp(svfImpl, output);
+                output = wsPtr(&wsState, _mm_add_ps(output, bias), drive);
+                UNPACK;
+            }
+            break;
         }
-        break;
-    case MultiWSLow:
-        for (auto s = 0U; s < blockSizeOS; ++s)
-        {
-            PACK;
-            output = svfFilterOp(svfImpl, output);
-            output = wsPtr(&wsState, output, drive);
-            output = qfPtr(&qfState, output);
-            UNPACK;
-        }
-        break;
-    case WSLowMulti:
-        for (auto s = 0U; s < blockSizeOS; ++s)
-        {
-            PACK;
-            output = wsPtr(&wsState, output, drive);
-            output = qfPtr(&qfState, output);
-            output = svfFilterOp(svfImpl, output);
-            UNPACK;
-        }
-        break;
-    case LowMultiWS:
-        for (auto s = 0U; s < blockSizeOS; ++s)
-        {
-            PACK;
-            output = qfPtr(&qfState, output);
-            output = svfFilterOp(svfImpl, output);
-            output = wsPtr(&wsState, output, drive);
-            UNPACK;
-        }
-        break;
     }
     sst::basic_blocks::mechanics::scale_by<blockSizeOS>(aeg.outputCache, outputOS[0]);
     sst::basic_blocks::mechanics::scale_by<blockSizeOS>(aeg.outputCache, outputOS[1]);
@@ -267,6 +282,7 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     note_id = noteidi;
 
     pitchBendWheel = 0;
+    filterFeedbackSignal = _mm_setzero_ps();
 
     sawUnison = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmSawUnisonCount));
 
@@ -437,6 +453,8 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
 
     filterRouting =
         static_cast<FilterRouting>(*synth.paramToValue.at(ConduitPolysynth::pmFilterRouting));
+
+    anyFilterStepActive = wsActive || svfActive || lpfActive;
 }
 
 void PolysynthVoice::release() { gated = false; }
@@ -571,6 +589,9 @@ void PolysynthVoice::attachTo(sst::conduit::polysynth::ConduitPolysynth &p)
     attach(ConduitPolysynth::pmFegToLPFCutoff, fegToLPFCutoff);
 
     attach(ConduitPolysynth::pmWSDrive, wsDrive);
+    attach(ConduitPolysynth::pmWSBias, wsBias);
+
+    attach(ConduitPolysynth::pmFilterFeedback, filterFeedback);
 
     mtsClient = p.mtsClient;
 }
