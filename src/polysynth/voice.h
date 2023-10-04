@@ -112,6 +112,16 @@ struct PolysynthVoice
         Fuzz
     };
 
+    enum LPFTypes
+    {
+        OBXD,
+        Vintage,
+        K35,
+        Diode,
+        CutWarp,
+        ResWarp
+    };
+
     std::unordered_map<clap_id, float> externalMods, internalMods;
 
     void applyExternalMod(clap_id param, float value);
@@ -156,11 +166,19 @@ struct PolysynthVoice
     int svfMode{StereoSimperSVF::Mode::LP};
     ModulatedValue svfCutoff, svfResonance;
 
+    bool lpfActive;
+    int lpfMode{0};
+    ModulatedValue lpfCutoff, lpfResonance;
+
     struct EnvValue
     {
         ModulatedValue attack, decay, sustain, release;
     } aegValues, fegValues;
     ModulatedValue fegToSvfCutoff;
+    ModulatedValue fegToLPFCutoff;
+
+    ModulatedValue svfKeytrack;
+    ModulatedValue lpfKeytrack;
 
     ModulatedValue wsDrive;
 
@@ -221,6 +239,14 @@ struct PolysynthVoice
 
     sst::waveshapers::QuadWaveshaperPtr wsPtr{nullptr};
     sst::waveshapers::QuadWaveshaperState wsState;
+
+    sst::filters::FilterUnitQFPtr qfPtr{nullptr};
+    sst::filters::QuadFilterUnitState qfState;
+    sst::filters::FilterType qfType;
+    sst::filters::FilterSubType qfSubType;
+
+    float delayBufferData[4][sst::filters::utilities::MAX_FB_COMB +
+                             sst::filters::utilities::SincTable::FIRipol_N]{};
 
   private:
     double baseFreq{440.0};

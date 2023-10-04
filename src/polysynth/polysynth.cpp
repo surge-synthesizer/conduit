@@ -167,7 +167,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withName("LPF Cutoff")
                                     .withGroupName("LPF Filter")
                                     .withRange(1, 127)
-                                    .withDefault(69)
+                                    .withDefault(60)
                                     .withSemitoneZeroAtMIDIZeroFormatting()
                                     .withFlags(modFlag));
     paramDescriptions.push_back(ParamDesc()
@@ -179,20 +179,21 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withDefault(sqrt(2) / 2)
                                     .withLinearScaleFormatting("")
                                     .withFlags(modFlag));
-    paramDescriptions.push_back(ParamDesc()
-                                    .asInt()
-                                    .withID(pmLPFFilterMode)
-                                    .withName("LPF Mode")
-                                    .withGroupName("LPF Filter")
-                                    .withRange(0, 5)
-                                    .withDefault(0)
-                                    .withFlags(steppedFlag)
-                                    .withUnorderedMapFormatting({{0, "ObXD"},
-                                                                 {1, "Vintage"},
-                                                                 {2, "K-35"},
-                                                                 {3, "Diode"},
-                                                                 {4, "CutWarp"},
-                                                                 {5, "ResWarp"}})); // FIXME - enums
+    paramDescriptions.push_back(
+        ParamDesc()
+            .asInt()
+            .withID(pmLPFFilterMode)
+            .withName("LPF Mode")
+            .withGroupName("LPF Filter")
+            .withRange(0, 5)
+            .withDefault(0)
+            .withFlags(steppedFlag)
+            .withUnorderedMapFormatting({{PolysynthVoice::OBXD, "ObXD"},
+                                         {PolysynthVoice::Vintage, "Vintage"},
+                                         {PolysynthVoice::K35, "K-35"},
+                                         {PolysynthVoice::Diode, "Diode"},
+                                         {PolysynthVoice::CutWarp, "CutWarp"},
+                                         {PolysynthVoice::ResWarp, "ResWarp"}})); // FIXME - enums
     paramDescriptions.push_back(ParamDesc()
                                     .asPercentBipolar()
                                     .withID(pmLPFKeytrack)
