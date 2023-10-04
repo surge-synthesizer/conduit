@@ -30,6 +30,8 @@
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/FastMath.h"
 
+#include "sst/filters/FilterConfiguration.h"
+
 namespace sst::conduit::polysynth
 {
 float pival =
@@ -91,6 +93,15 @@ void PolysynthVoice::recalcFilter()
         auto rm = svfResonance.value();
         svfImpl.setCoeff(co, rm, srInv);
     }
+
+    if (qfPtr)
+    {
+        sst::filters::FilterCoefficientMaker coefMaker;
+        coefMaker.setSampleRateAndBlockSize(samplerate, blockSize);
+        coefMaker.MakeCoeffs(lpfCutoff.value() - 60, lpfResonance.value(), qfType, qfSubType,
+                             nullptr, false);
+        coefMaker.updateState(qfState);
+    }
 }
 
 void PolysynthVoice::processBlock()
@@ -101,7 +112,10 @@ void PolysynthVoice::processBlock()
     feg.processBlock(fegValues.attack.value(), fegValues.decay.value(), fegValues.sustain.value(),
                      fegValues.release.value(), 0, 0, 0, gated);
 
-    *svfCutoff.internalMod = feg.outBlock0 * fegToSvfCutoff.value();
+    *svfCutoff.internalMod =
+        feg.outBlock0 * fegToSvfCutoff.value() + svfKeytrack.value() * (key - 69);
+    *lpfCutoff.internalMod =
+        feg.outBlock0 * fegToLPFCutoff.value() + lpfKeytrack.value() * (key - 69);
 
     recalcFilter();
     recalcPitch();
@@ -198,6 +212,20 @@ void PolysynthVoice::processBlock()
         {
             auto input = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s]);
             auto output = wsPtr(&wsState, input, drive);
+
+            float outArr alignas(16)[4];
+            _mm_store_ps(outArr, output);
+            outputOS[0][s] = outArr[0];
+            outputOS[1][s] = outArr[1];
+        }
+    }
+
+    if (qfPtr)
+    {
+        for (auto s = 0U; s < blockSizeOS; ++s)
+        {
+            auto input = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s]);
+            auto output = qfPtr(&qfState, input);
 
             float outArr alignas(16)[4];
             _mm_store_ps(outArr, output);
@@ -326,6 +354,57 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     {
         wsPtr = nullptr;
     }
+
+    lpfActive = static_cast<bool>(*synth.paramToValue.at(ConduitPolysynth::pmLPFActive));
+
+    if (lpfActive)
+    {
+        qfState = sst::filters::QuadFilterUnitState{};
+        for (int i = 0; i < 4; ++i)
+        {
+            memset(delayBufferData[i], 0, sizeof(delayBufferData[i]));
+            qfState.DB[i] = delayBufferData[i];
+            qfState.active[i] = (int)0xffffffff;
+            qfState.WP[i] = 0;
+        }
+
+        auto lpfTypeEnum =
+            static_cast<LPFTypes>(*synth.paramToValue.at(ConduitPolysynth::pmLPFFilterMode));
+
+        switch (lpfTypeEnum)
+        {
+        case OBXD:
+            qfType = sst::filters::FilterType::fut_obxd_4pole;
+            qfSubType = (sst::filters::FilterSubType)3; // 24dv
+            break;
+        case Vintage:
+            qfType = sst::filters::FilterType::fut_vintageladder;
+            qfSubType = (sst::filters::FilterSubType)0;
+            break;
+        case K35:
+            qfType = sst::filters::FilterType::fut_k35_lp;
+            qfSubType = (sst::filters::FilterSubType)2; // medium saturation
+            break;
+        case Diode:
+            qfType = sst::filters::FilterType::fut_diode;
+            qfSubType = sst::filters::FilterSubType::st_diode_24dB;
+            break;
+        case CutWarp:
+            qfType = sst::filters::FilterType::fut_cutoffwarp_lp;
+            qfSubType = sst::filters::FilterSubType::st_cutoffwarp_ojd3;
+            break;
+        case ResWarp:
+            qfType = sst::filters::FilterType::fut_resonancewarp_lp;
+            qfSubType = sst::filters::FilterSubType::st_resonancewarp_tanh4;
+            break;
+        }
+
+        qfPtr = sst::filters::GetQFPtrFilterUnit(qfType, qfSubType);
+    }
+    else
+    {
+        qfPtr = nullptr;
+    }
 }
 
 void PolysynthVoice::release() { gated = false; }
@@ -429,6 +508,11 @@ void PolysynthVoice::attachTo(sst::conduit::polysynth::ConduitPolysynth &p)
 
     attach(ConduitPolysynth::pmSVFCutoff, svfCutoff);
     attach(ConduitPolysynth::pmSVFResonance, svfResonance);
+    attach(ConduitPolysynth::pmSVFKeytrack, svfKeytrack);
+
+    attach(ConduitPolysynth::pmLPFCutoff, lpfCutoff);
+    attach(ConduitPolysynth::pmLPFResonance, lpfResonance);
+    attach(ConduitPolysynth::pmLPFKeytrack, lpfKeytrack);
 
     attach(ConduitPolysynth::pmEnvA, aegValues.attack);
     attach(ConduitPolysynth::pmEnvD, aegValues.decay);
@@ -443,6 +527,7 @@ void PolysynthVoice::attachTo(sst::conduit::polysynth::ConduitPolysynth &p)
     attach(ConduitPolysynth::pmEnvR + ConduitPolysynth::offPmFeg, fegValues.release);
 
     attach(ConduitPolysynth::pmFegToSVFCutoff, fegToSvfCutoff);
+    attach(ConduitPolysynth::pmFegToLPFCutoff, fegToLPFCutoff);
 
     attach(ConduitPolysynth::pmWSDrive, wsDrive);
 
