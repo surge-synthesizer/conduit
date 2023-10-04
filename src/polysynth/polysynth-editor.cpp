@@ -466,15 +466,15 @@ FEGPanel::FEGPanel(sst::conduit::polysynth::editor::uicomm_t &p,
     content->addVSlider(e, ConduitPolysynth::pmEnvD + ConduitPolysynth::offPmFeg, 1, 0, "D");
     content->addVSlider(e, ConduitPolysynth::pmEnvS + ConduitPolysynth::offPmFeg, 2, 0, "S");
     content->addVSlider(e, ConduitPolysynth::pmEnvR + ConduitPolysynth::offPmFeg, 3, 0, "R");
-    content->addVSlider(e, ConduitPolysynth::pmFegToLPFCutoff, 4, 0, "LPF");
-    content->addVSlider(e, ConduitPolysynth::pmFegToSVFCutoff, 5, 0, "SVF");
+    content->addVSlider(e, ConduitPolysynth::pmFegToLPFCutoff, 4, 0, "Adv");
+    content->addVSlider(e, ConduitPolysynth::pmFegToSVFCutoff, 5, 0, "Mult");
 
     setContentAreaComponent(std::move(content));
 }
 
 LPFPanel::LPFPanel(sst::conduit::polysynth::editor::uicomm_t &p,
                    sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
-    : jcmp::NamedPanel("Low Pass Filter"), uic(p), ed(e)
+    : jcmp::NamedPanel("Advanced Filter"), uic(p), ed(e)
 {
     auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 4, 1>>();
 

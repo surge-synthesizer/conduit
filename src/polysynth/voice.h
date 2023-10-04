@@ -117,9 +117,9 @@ struct PolysynthVoice
         OBXD,
         Vintage,
         K35,
-        Diode,
         CutWarp,
-        ResWarp
+        ResWarp,
+        Comb
     };
 
     std::unordered_map<clap_id, float> externalMods, internalMods;
@@ -180,7 +180,10 @@ struct PolysynthVoice
     ModulatedValue svfKeytrack;
     ModulatedValue lpfKeytrack;
 
-    ModulatedValue wsDrive;
+    bool wsActive;
+    ModulatedValue wsDrive, wsBias;
+
+    bool anyFilterStepActive;
 
     // Two values can modify pitch, the note expression and the bend wheel.
     // After adjusting these, call 'recalcPitch'
@@ -232,10 +235,11 @@ struct PolysynthVoice
         void setCoeff(float key, float res, float srInv);
 
         template <int Mode> static void step(StereoSimperSVF &that, float &L, float &R);
+        template <int Mode> static __m128 stepSSE(StereoSimperSVF &that, __m128);
 
         void init();
     } svfImpl;
-    std::function<void(StereoSimperSVF &, float &, float &)> svfFilterOp;
+    std::function<__m128(StereoSimperSVF &, __m128)> svfFilterOp;
 
     sst::waveshapers::QuadWaveshaperPtr wsPtr{nullptr};
     sst::waveshapers::QuadWaveshaperState wsState;

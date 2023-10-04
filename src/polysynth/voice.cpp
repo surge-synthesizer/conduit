@@ -94,7 +94,7 @@ void PolysynthVoice::recalcFilter()
         svfImpl.setCoeff(co, rm, srInv);
     }
 
-    if (qfPtr)
+    if (lpfActive)
     {
         sst::filters::FilterCoefficientMaker coefMaker;
         coefMaker.setSampleRateAndBlockSize(samplerate, blockSize);
@@ -103,6 +103,13 @@ void PolysynthVoice::recalcFilter()
         coefMaker.updateState(qfState);
     }
 }
+
+static __m128 wsNoOp(sst::waveshapers::QuadWaveshaperState *__restrict, __m128 in, __m128 drive)
+{
+    return in;
+}
+
+static __m128 qfNoOp(sst::filters::QuadFilterUnitState *__restrict, __m128 in) { return in; }
 
 void PolysynthVoice::processBlock()
 {
@@ -196,42 +203,20 @@ void PolysynthVoice::processBlock()
     aegPFG_lipol.set_target(synth.dbToLinear(aegPFG.value()));
     aegPFG_lipol.multiply_2_blocks(outputOS[0], outputOS[1]);
 
-    if (svfActive)
+    auto drive = _mm_set1_ps(synth.dbToLinear(wsDrive.value()));
+
+    for (auto s = 0U; s < blockSizeOS; ++s)
     {
-        for (auto s = 0U; s < blockSizeOS; ++s)
-        {
-            svfFilterOp(svfImpl, outputOS[0][s], outputOS[1][s]);
-        }
-    }
+        auto input = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s]);
 
-    if (wsPtr)
-    {
-        auto drive = _mm_set1_ps(synth.dbToLinear(wsDrive.value()));
+        auto output = qfPtr(&qfState, input);
+        output = wsPtr(&wsState, output, drive);
+        output = svfFilterOp(svfImpl, output);
 
-        for (auto s = 0U; s < blockSizeOS; ++s)
-        {
-            auto input = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s]);
-            auto output = wsPtr(&wsState, input, drive);
-
-            float outArr alignas(16)[4];
-            _mm_store_ps(outArr, output);
-            outputOS[0][s] = outArr[0];
-            outputOS[1][s] = outArr[1];
-        }
-    }
-
-    if (qfPtr)
-    {
-        for (auto s = 0U; s < blockSizeOS; ++s)
-        {
-            auto input = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s]);
-            auto output = qfPtr(&qfState, input);
-
-            float outArr alignas(16)[4];
-            _mm_store_ps(outArr, output);
-            outputOS[0][s] = outArr[0];
-            outputOS[1][s] = outArr[1];
-        }
+        float outArr alignas(16)[4];
+        _mm_store_ps(outArr, output);
+        outputOS[0][s] = outArr[0];
+        outputOS[1][s] = outArr[1];
     }
 
     sst::basic_blocks::mechanics::scale_by<blockSizeOS>(aeg.outputCache, outputOS[0]);
@@ -252,30 +237,36 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     sinActive = static_cast<bool>(*synth.paramToValue.at(ConduitPolysynth::pmSinActive));
     noiseActive = static_cast<bool>(*synth.paramToValue.at(ConduitPolysynth::pmNoiseActive));
 
-    svfMode = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmSVFFilterMode));
-    switch (svfMode)
-    {
-    case StereoSimperSVF::LP:
-        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::LP>;
-        break;
-    case StereoSimperSVF::HP:
-        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::HP>;
-        break;
-    case StereoSimperSVF::BP:
-        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::BP>;
-        break;
-    case StereoSimperSVF::NOTCH:
-        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::NOTCH>;
-        break;
-    case StereoSimperSVF::PEAK:
-        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::PEAK>;
-        break;
-    case StereoSimperSVF::ALL:
-        svfFilterOp = StereoSimperSVF::step<StereoSimperSVF::ALL>;
-        break;
-    }
-
     svfActive = static_cast<bool>(*synth.paramToValue.at(ConduitPolysynth::pmSVFActive));
+    if (svfActive)
+    {
+        svfMode = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmSVFFilterMode));
+        switch (svfMode)
+        {
+        case StereoSimperSVF::LP:
+            svfFilterOp = StereoSimperSVF::stepSSE<StereoSimperSVF::LP>;
+            break;
+        case StereoSimperSVF::HP:
+            svfFilterOp = StereoSimperSVF::stepSSE<StereoSimperSVF::HP>;
+            break;
+        case StereoSimperSVF::BP:
+            svfFilterOp = StereoSimperSVF::stepSSE<StereoSimperSVF::BP>;
+            break;
+        case StereoSimperSVF::NOTCH:
+            svfFilterOp = StereoSimperSVF::stepSSE<StereoSimperSVF::NOTCH>;
+            break;
+        case StereoSimperSVF::PEAK:
+            svfFilterOp = StereoSimperSVF::stepSSE<StereoSimperSVF::PEAK>;
+            break;
+        case StereoSimperSVF::ALL:
+            svfFilterOp = StereoSimperSVF::stepSSE<StereoSimperSVF::ALL>;
+            break;
+        }
+    }
+    else
+    {
+        svfFilterOp = [](auto &a, auto b) { return b; };
+    }
 
     gated = true;
     active = true;
@@ -311,7 +302,7 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     recalcPitch();
     recalcFilter();
 
-    auto wsActive = static_cast<bool>(*synth.paramToValue.at(ConduitPolysynth::pmWSActive));
+    wsActive = static_cast<bool>(*synth.paramToValue.at(ConduitPolysynth::pmWSActive));
 
     if (wsActive)
     {
@@ -352,7 +343,7 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     }
     else
     {
-        wsPtr = nullptr;
+        wsPtr = wsNoOp;
     }
 
     lpfActive = static_cast<bool>(*synth.paramToValue.at(ConduitPolysynth::pmLPFActive));
@@ -385,9 +376,9 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
             qfType = sst::filters::FilterType::fut_k35_lp;
             qfSubType = (sst::filters::FilterSubType)2; // medium saturation
             break;
-        case Diode:
-            qfType = sst::filters::FilterType::fut_diode;
-            qfSubType = sst::filters::FilterSubType::st_diode_24dB;
+        case Comb:
+            qfType = sst::filters::FilterType::fut_comb_pos;
+            qfSubType = (sst::filters::FilterSubType)1;
             break;
         case CutWarp:
             qfType = sst::filters::FilterType::fut_cutoffwarp_lp;
@@ -403,7 +394,7 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     }
     else
     {
-        qfPtr = nullptr;
+        qfPtr = qfNoOp;
     }
 }
 
@@ -427,8 +418,16 @@ template <int FilterMode>
 void PolysynthVoice::StereoSimperSVF::step(StereoSimperSVF &that, float &L, float &R)
 {
     auto vin = _mm_set_ps(0, 0, R, L);
-    __m128 res;
+    auto res = stepSSE<FilterMode>(that, vin);
+    float r4 alignas(16)[4];
+    _mm_store_ps(r4, res);
+    L = r4[0];
+    R = r4[1];
+}
 
+template <int FilterMode>
+__m128 PolysynthVoice::StereoSimperSVF::stepSSE(StereoSimperSVF &that, __m128 vin)
+{
     // auto v3 = vin[c] - ic2eq[c];
     auto v3 = _mm_sub_ps(vin, that.ic2eq);
     // auto v0 = a1 * v3 - ak * ic1eq[c];
@@ -444,6 +443,8 @@ void PolysynthVoice::StereoSimperSVF::step(StereoSimperSVF &that, float &L, floa
     that.ic1eq = _mm_sub_ps(_mm_mul_ps(that.twoSSE, v1), that.ic1eq);
     // ic2eq[c] = 2 * v2 - ic2eq[c];
     that.ic2eq = _mm_sub_ps(_mm_mul_ps(that.twoSSE, v2), that.ic2eq);
+
+    __m128 res;
 
     switch (FilterMode)
     {
@@ -465,12 +466,11 @@ void PolysynthVoice::StereoSimperSVF::step(StereoSimperSVF &that, float &L, floa
     case ALL:
         res = _mm_sub_ps(_mm_add_ps(v2, v0), _mm_mul_ps(that.k, v1));
         break;
+    default:
+        res = _mm_setzero_ps();
     }
 
-    float r4 alignas(16)[4];
-    _mm_store_ps(r4, res);
-    L = r4[0];
-    R = r4[1];
+    return res;
 }
 
 void PolysynthVoice::StereoSimperSVF::init()
