@@ -164,10 +164,13 @@ function(make_conduit_standalone)
     add_to_all(TARGETS ${sat})
 endfunction()
 
-make_conduit_standalone(NAME "Polysynth" ID "polysynth")
-make_conduit_standalone(NAME "Polymetric Delay" ID "polymetric-delay")
-make_conduit_standalone(NAME "Ring Modulator" ID "ring-modulator")
-make_conduit_standalone(NAME "Chord Memory" ID "chord-memory")
+
+if (NOT DEFINED CONDUIT_SKIP_STANDALONES)
+    make_conduit_standalone(NAME "Polysynth" ID "polysynth")
+    make_conduit_standalone(NAME "Polymetric Delay" ID "polymetric-delay")
+    make_conduit_standalone(NAME "Ring Modulator" ID "ring-modulator")
+    make_conduit_standalone(NAME "Chord Memory" ID "chord-memory")
+endif()
 
 add_to_all(TARGETS ${PROJECT_NAME}_clap ${PROJECT_NAME}_vst3)
 if (APPLE)

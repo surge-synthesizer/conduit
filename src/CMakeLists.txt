@@ -32,6 +32,7 @@ endif()
 
 add_library(conduit-impl STATIC)
 target_link_libraries(conduit-impl PUBLIC conduit-shared)
+target_compile_definitions(conduit-impl PUBLIC $<$<CONFIG:Debug>:CONDUIT_DEBUG_BUILD>)
 
 function(add_to_conduit)
     set(multiValArgs SOURCE INCLUDE)

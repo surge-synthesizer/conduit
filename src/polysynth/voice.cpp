@@ -206,12 +206,13 @@ void PolysynthVoice::processBlock()
     auto drive = _mm_set1_ps(synth.dbToLinear(wsDrive.value()));
 
 #define PACK auto output = _mm_set_ps(0, 0, outputOS[1][s], outputOS[0][s])
-#define UNPACK float outArr alignas(16)[4]; \
-    _mm_store_ps(outArr, output); \
-    outputOS[0][s] = outArr[0]; \
+#define UNPACK                                                                                     \
+    float outArr alignas(16)[4];                                                                   \
+    _mm_store_ps(outArr, output);                                                                  \
+    outputOS[0][s] = outArr[0];                                                                    \
     outputOS[1][s] = outArr[1]
 
-    switch(filterRouting)
+    switch (filterRouting)
     {
     case LowWSMulti:
         for (auto s = 0U; s < blockSizeOS; ++s)
@@ -264,7 +265,7 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     channel = channeli;
     key = keyi;
     note_id = noteidi;
-    
+
     pitchBendWheel = 0;
 
     sawUnison = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmSawUnisonCount));
@@ -434,7 +435,8 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
         qfPtr = qfNoOp;
     }
 
-    filterRouting = static_cast<FilterRouting>(*synth.paramToValue.at(ConduitPolysynth::pmFilterRouting));
+    filterRouting =
+        static_cast<FilterRouting>(*synth.paramToValue.at(ConduitPolysynth::pmFilterRouting));
 }
 
 void PolysynthVoice::release() { gated = false; }
