@@ -191,7 +191,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
             .withUnorderedMapFormatting({{PolysynthVoice::OBXD, "ObXD"},
                                          {PolysynthVoice::Vintage, "Vintage"},
                                          {PolysynthVoice::K35, "K-35"},
-                                         {PolysynthVoice::Diode, "Diode"},
+                                         {PolysynthVoice::Comb, "Comb"},
                                          {PolysynthVoice::CutWarp, "CutWarp"},
                                          {PolysynthVoice::ResWarp, "ResWarp"}})); // FIXME - enums
     paramDescriptions.push_back(ParamDesc()
