@@ -53,7 +53,7 @@ template <typename Content> struct Background : sst::jucegui::components::Window
     juce::Typeface::Ptr labelsTypeface{nullptr}, versionTypeface{nullptr};
 
     std::unique_ptr<juce::Component> contents;
-    std::unique_ptr<juce::Component> nameLabel, versionLabel;
+    std::unique_ptr<juce::Component> nameLabel, versionLabel, debugLabel;
 
     std::unique_ptr<sst::jucegui::components::GlyphButton> menuButton;
 
@@ -459,6 +459,15 @@ Background<Content>::Background(const std::string &pluginName, const std::string
     addAndMakeVisible(*vl);
     versionLabel = std::move(vl);
 
+#if CONDUIT_DEBUG_BUILD
+    auto dl = std::make_unique<juce::Label>("DEBUG BUILD", "DEBUG BUILD - PERFORMACE WILL SUFFER");
+    dl->setColour(juce::Label::ColourIds::textColourId, juce::Colour(220, 30, 30));
+    dl->setFont(vsFont);
+    dl->setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(*dl);
+    debugLabel = std::move(dl);
+#endif
+
     auto gb = std::make_unique<jcmp::GlyphButton>(jcmp::GlyphPainter::HAMBURGER);
     gb->setOnCallback([w = juce::Component::SafePointer(this)]() {
         if (w)
@@ -484,6 +493,8 @@ template <typename Content> void Background<Content>::resized()
                   .reduced(5);
     menuButton->setBounds(gb);
     versionLabel->setBounds(lb.withTrimmedTop(lb.getHeight() - footerSize).withTrimmedBottom(2));
+    if (debugLabel)
+        debugLabel->setBounds(lb.withTrimmedTop(lb.getHeight() - footerSize).withTrimmedBottom(2));
 }
 
 template <typename Content> void Background<Content>::buildBurger()
