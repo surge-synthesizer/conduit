@@ -21,6 +21,7 @@ target_link_libraries(conduit-shared PUBLIC
         sst-effects
         sst-voicemanager
         sst-plugininfra
+        sst-waveshapers
         mts-esp-client
         clap-wrapper-extensions
         )

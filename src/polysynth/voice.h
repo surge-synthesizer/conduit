@@ -37,6 +37,9 @@
 #include "sst/basic-blocks/modulators/ADSREnvelope.h"
 #include "sst/basic-blocks/dsp/BlockInterpolators.h"
 
+#include "sst/filters.h"
+#include "sst/waveshapers.h"
+
 struct MTSClient;
 
 namespace sst::conduit::polysynth
@@ -159,6 +162,8 @@ struct PolysynthVoice
     } aegValues, fegValues;
     ModulatedValue fegToSvfCutoff;
 
+    ModulatedValue wsDrive;
+
     // Two values can modify pitch, the note expression and the bend wheel.
     // After adjusting these, call 'recalcPitch'
     float pitchNoteExpressionValue{0.f}, pitchBendWheel{0.f};
@@ -213,6 +218,9 @@ struct PolysynthVoice
         void init();
     } svfImpl;
     std::function<void(StereoSimperSVF &, float &, float &)> svfFilterOp;
+
+    sst::waveshapers::QuadWaveshaperPtr wsPtr{nullptr};
+    sst::waveshapers::QuadWaveshaperState wsState;
 
   private:
     double baseFreq{440.0};
