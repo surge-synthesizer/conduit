@@ -1,22 +1,14 @@
 project(conduit-src)
 
-add_library(conduit-shared STATIC
+add_library(conduit-impl STATIC
         conduit-shared/shared-symbols.cpp)
-target_include_directories(conduit-shared PUBLIC .)
-target_compile_definitions(conduit-shared PUBLIC -DCONDUIT_SOURCE_DIR=\"${CONDUIT_SOURCE_DIR}\")
-target_link_libraries(conduit-shared PUBLIC
+target_include_directories(conduit-impl PUBLIC .)
+target_compile_definitions(conduit-impl PUBLIC -DCONDUIT_SOURCE_DIR=\"${CONDUIT_SOURCE_DIR}\")
+target_link_libraries(conduit-impl PUBLIC
         clap
         clap-helpers
-        conduit-resources
-        conduit-version-info
-        fmt
-        tinyxml
-        simde
-        juce::juce_gui_basics
-        sst::clap_juce_shim
         sst-basic-blocks
         sst-cpputils
-        sst-jucegui
         sst-filters
         sst-effects
         sst-voicemanager
@@ -24,14 +16,23 @@ target_link_libraries(conduit-shared PUBLIC
         sst-waveshapers
         mts-esp-client
         clap-wrapper-extensions
+        simde
+        conduit-resources
+        conduit-version-info
+        fmt
+        tinyxml
+        sst::clap_juce_shim_headers
+        )
+target_link_libraries(conduit-impl PRIVATE
+        sst-jucegui
+        juce::juce_gui_basics
+        sst::clap_juce_shim
         )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(conduit-shared PUBLIC -Wall -Werror -Wno-sign-compare -Wno-ignored-attributes -Wno-ignored-qualifiers)
+    target_compile_options(conduit-impl PUBLIC -Wall -Werror -Wno-sign-compare -Wno-ignored-attributes -Wno-ignored-qualifiers)
 endif()
 
-add_library(conduit-impl STATIC)
-target_link_libraries(conduit-impl PUBLIC conduit-shared)
 target_compile_definitions(conduit-impl PUBLIC $<$<CONFIG:Debug>:CONDUIT_DEBUG_BUILD>)
 
 function(add_to_conduit)
