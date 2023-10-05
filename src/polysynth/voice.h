@@ -74,6 +74,7 @@ struct PolysynthVoice
     int channel; // midi channel
     int key;     // The midi key which triggered me
     int note_id; // and the note_id delivered by the host (used for note expressions)
+    double velocity;
 
     MTSClient *mtsClient{nullptr};
     void attachTo(ConduitPolysynth &p);
@@ -176,6 +177,7 @@ struct PolysynthVoice
     } aegValues, fegValues;
     ModulatedValue fegToSvfCutoff;
     ModulatedValue fegToLPFCutoff;
+    ModulatedValue velocitySens;
 
     ModulatedValue svfKeytrack;
     ModulatedValue lpfKeytrack;
@@ -189,6 +191,9 @@ struct PolysynthVoice
     __m128 filterFeedbackSignal;
 
     bool anyFilterStepActive;
+
+    ModulatedValue outputPan, outputLevel;
+    sst::basic_blocks::dsp::lipol_sse<blockSizeOS, true> outputLevel_lipol;
 
     // Two values can modify pitch, the note expression and the bend wheel.
     // After adjusting these, call 'recalcPitch'
@@ -206,7 +211,7 @@ struct PolysynthVoice
 
     float outputOS alignas(16)[2][blockSizeOS];
 
-    void start(int16_t port, int16_t channel, int16_t key, int32_t noteid);
+    void start(int16_t port, int16_t channel, int16_t key, int32_t noteid, double velocity);
     void release();
 
     float baseFrequencyByMidiKey[128];

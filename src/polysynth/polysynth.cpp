@@ -938,7 +938,7 @@ PolysynthVoice *ConduitPolysynth::initializeVoice(uint16_t port, uint16_t channe
     {
         if (!v.active)
         {
-            activateVoice(v, port, channel, key, noteId);
+            activateVoice(v, port, channel, key, noteId, velocity);
 
             if (clapJuceShim->isEditorAttached())
             {
@@ -971,9 +971,9 @@ void ConduitPolysynth::releaseVoice(PolysynthVoice *sdv, float velocity)
 }
 
 void ConduitPolysynth::activateVoice(PolysynthVoice &v, int port_index, int channel, int key,
-                                     int noteid)
+                                     int noteid, double velocity)
 {
-    v.start(port_index, channel, key, noteid);
+    v.start(port_index, channel, key, noteid, velocity);
 }
 
 /*
