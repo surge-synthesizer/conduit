@@ -614,7 +614,7 @@ bool ConduitPolysynth::notePortsInfo(uint32_t index, bool isInput,
         info->id = 1;
         info->supported_dialects = CLAP_NOTE_DIALECT_MIDI | CLAP_NOTE_DIALECT_CLAP;
         info->preferred_dialect = CLAP_NOTE_DIALECT_CLAP;
-        strncpy(info->name, "NoteInput", CLAP_NAME_SIZE);
+        strncpy(info->name, "NoteInput", CLAP_NAME_SIZE-1);
         return true;
     }
     return false;

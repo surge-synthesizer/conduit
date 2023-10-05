@@ -278,7 +278,7 @@ jobs:
           mv *.zip *.dmg releases
 
           ls -l $(System.DefaultWorkingDirectory)/git_info/
-          echo "## ShortCircuit Nightly Build" > releases/ReleaseNotes.md
+          echo "## Conduit Nightly Build" > releases/ReleaseNotes.md
           echo " " >> releases/ReleaseNotes.md
           echo "**This is an incomplete pre-alpha build of Conduit. Please beware.** " >> releases/ReleaseNotes.md
           echo "For more info, please join our discord!" >> releases/ReleaseNotes.md
