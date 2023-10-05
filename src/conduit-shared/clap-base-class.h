@@ -141,7 +141,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         const auto &pd = paramDescriptions[paramIndex];
 
-        pd.template toClapParamInfo<CLAP_NAME_SIZE>(info);
+        pd.template toClapParamInfo<CLAP_NAME_SIZE-1>(info);
         return true;
     }
 
