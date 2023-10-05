@@ -548,6 +548,18 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
 
     mtsClient = MTS_RegisterClient();
 
+    if (mtsClient)
+    {
+        if (MTS_HasMaster(mtsClient))
+        {
+            CNDOUT << "MTS: Client registered with " << MTS_GetScaleName(mtsClient) << std::endl;
+        }
+        else
+        {
+            CNDOUT << "MTS: Client present without available source" << std::endl;
+        }
+    }
+
     phaserFX = std::make_unique<PhaserFX>(this, this, this);
     phaserFX->initialize();
 
