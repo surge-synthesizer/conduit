@@ -229,7 +229,8 @@ struct ConduitPolysynth
     clap_process_status process(const clap_process *process) noexcept override;
     void handleInboundEvent(const clap_event_header_t *evt);
     void pushParamsToVoices();
-    void activateVoice(PolysynthVoice &v, int port_index, int channel, int key, int noteid);
+    void activateVoice(PolysynthVoice &v, int port_index, int channel, int key, int noteid,
+                       double velocity);
 
     /*
      * In addition to ::process, the plugin should implement ::paramsFlush. ::paramsFlush will be

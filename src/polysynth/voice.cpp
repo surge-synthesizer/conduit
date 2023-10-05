@@ -29,6 +29,7 @@
 #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/FastMath.h"
+#include "sst/basic-blocks/dsp/PanLaws.h"
 
 #include "sst/filters/FilterConfiguration.h"
 
@@ -272,14 +273,41 @@ void PolysynthVoice::processBlock()
     }
     sst::basic_blocks::mechanics::scale_by<blockSizeOS>(aeg.outputCache, outputOS[0]);
     sst::basic_blocks::mechanics::scale_by<blockSizeOS>(aeg.outputCache, outputOS[1]);
+
+    auto olv = outputLevel.value();
+    auto velSen = velocitySens.value();
+    auto velAtten = velocity * velSen + (1 - velSen);
+    olv *= velAtten;
+
+    olv = olv * olv * olv;
+
+    outputLevel_lipol.set_target(olv);
+    outputLevel_lipol.multiply_2_blocks(outputOS[0], outputOS[1], blockSizeOS);
+
+    auto opv = outputPan.value();
+    if (opv != 0.f)
+    {
+        sst::basic_blocks::dsp::pan_laws::panmatrix_t panMatrix;
+        sst::basic_blocks::dsp::pan_laws::stereoTruePanning((opv + 1) * 0.5, panMatrix);
+        for (auto s = 0U; s < blockSizeOS; ++s)
+        {
+            auto l = panMatrix[0] * outputOS[0][s] + panMatrix[2] * outputOS[1][s];
+            auto r = panMatrix[1] * outputOS[1][s] + panMatrix[3] * outputOS[0][s];
+
+            outputOS[0][s] = l;
+            outputOS[1][s] = r;
+        }
+    }
 }
 
-void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_t noteidi)
+void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_t noteidi,
+                           double veli)
 {
     portid = porti;
     channel = channeli;
     key = keyi;
     note_id = noteidi;
+    velocity = veli;
 
     pitchBendWheel = 0;
     filterFeedbackSignal = _mm_setzero_ps();
@@ -592,6 +620,11 @@ void PolysynthVoice::attachTo(sst::conduit::polysynth::ConduitPolysynth &p)
     attach(ConduitPolysynth::pmWSBias, wsBias);
 
     attach(ConduitPolysynth::pmFilterFeedback, filterFeedback);
+
+    attach(ConduitPolysynth::pmVoiceLevel, outputLevel);
+    attach(ConduitPolysynth::pmVoicePan, outputPan);
+
+    attach(ConduitPolysynth::pmAegVelocitySens, velocitySens);
 
     mtsClient = p.mtsClient;
 }
