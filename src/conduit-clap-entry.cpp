@@ -46,11 +46,12 @@
 #include "chord-memory/chord-memory.h"
 #include "ring-modulator/ring-modulator.h"
 #include "clap-event-monitor/clap-event-monitor.h"
+#include "mts-to-noteexpression/mts-to-noteexpression.h"
 
 namespace sst::conduit::pluginentry
 {
 
-uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 5; }
+uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 6; }
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
     if (w == 0)
@@ -63,6 +64,8 @@ const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_facto
         return &ring_modulator::desc;
     if (w == 4)
         return &clap_event_monitor::desc;
+    if (w == 5)
+        return &mts_to_noteexpression::desc;
 
     CNDOUT << "Clap Plugin not found at " << w << std::endl;
     return nullptr;
@@ -94,6 +97,12 @@ static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const
     if (strcmp(plugin_id, clap_event_monitor::desc.id) == 0)
     {
         auto p = new clap_event_monitor::ConduitClapEventMonitor(host);
+        return p->clapPlugin();
+    }
+
+    if (strcmp(plugin_id, mts_to_noteexpression::desc.id) == 0)
+    {
+        auto p = new mts_to_noteexpression::ConduitMTSToNoteExpression(host);
         return p->clapPlugin();
     }
 
@@ -131,6 +140,11 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
     if (strcmp(plugin_id, clap_event_monitor::desc.id) == 0)
     {
         strncpy(info->au_subt, "clEv", 5);
+        return true;
+    }
+    if (strcmp(plugin_id, mts_to_noteexpression::desc.id) == 0)
+    {
+        strncpy(info->au_subt, "mtsN", 5);
         return true;
     }
 
