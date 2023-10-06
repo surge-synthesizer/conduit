@@ -64,11 +64,18 @@ struct ConduitMTSToNoteExpressionEditor : public jcmp::WindowPanel,
             }
         });
 
-        evtPanel = std::make_unique<jcmp::NamedPanel>("Events");
-        evtPanel->setContentAreaComponent(std::make_unique<InfoComp>(this));
-        addAndMakeVisible(*evtPanel);
+        statusPanel = std::make_unique<jcmp::NamedPanel>("Status");
+        statusPanel->setContentAreaComponent(std::make_unique<InfoComp>(this));
+        addAndMakeVisible(*statusPanel);
 
-        setSize(500, 150);
+        controlsPanel = std::make_unique<jcmp::NamedPanel>("Controls");
+        addAndMakeVisible(*controlsPanel);
+
+        notesPanel = std::make_unique<jcmp::NamedPanel>("Notes");
+        notesPanel->setContentAreaComponent(std::make_unique<NotesComp>(this));
+        addAndMakeVisible(*notesPanel);
+
+        setSize(600, 400);
     }
 
     ~ConduitMTSToNoteExpressionEditor()
@@ -77,6 +84,7 @@ struct ConduitMTSToNoteExpressionEditor : public jcmp::WindowPanel,
         comms->stopProcessing();
     }
 
+    int lastNoteUpd{-1};
     void onIdle()
     {
         auto cl = uic.dataCopyForUI.mtsClient;
@@ -92,6 +100,11 @@ struct ConduitMTSToNoteExpressionEditor : public jcmp::WindowPanel,
             scaleName = "";
         }
 
+        if (lastNoteUpd != uic.dataCopyForUI.noteRemainingUpdate)
+        {
+            lastNoteUpd = uic.dataCopyForUI.noteRemainingUpdate;
+            repaint();
+        }
         if (sn != scaleName)
         {
             repaint();
@@ -113,16 +126,72 @@ struct ConduitMTSToNoteExpressionEditor : public jcmp::WindowPanel,
                 b = b.translated(0, 20);
             };
             ln(editor->isConnected ? "MTS Connected" : "No MTS Connection");
-            ln(editor->scaleName);
+            ln("Scale: " + editor->scaleName);
+
+            int ct{0};
+            for (auto &c : editor->uic.dataCopyForUI.noteRemaining)
+            {
+                for (auto &m : c)
+                {
+                    if (m != 0.f)
+                        ct++;
+                }
+            }
+            ln("Active Voices : " + std::to_string(ct));
+        }
+    };
+
+    struct NotesComp : juce::Component
+    {
+        ConduitMTSToNoteExpressionEditor *editor{nullptr};
+        NotesComp(ConduitMTSToNoteExpressionEditor *that) : editor(that) {}
+
+        void paint(juce::Graphics &g)
+        {
+            auto b = getLocalBounds().withHeight(20).withTrimmedLeft(3);
+            auto ln = [&b, &g, this](auto s) {
+                g.setColour(juce::Colours::white);
+                g.setFont(juce::Font(editor->fixedFace).withHeight(12));
+                g.drawText(s, b, juce::Justification::centredLeft);
+                b = b.translated(0, 20);
+                if (!getLocalBounds().contains(b))
+                {
+                    b = getLocalBounds().withHeight(20).withTrimmedLeft(b.getX() + 200);
+                }
+            };
+            int ch{0};
+            auto cl = editor->uic.dataCopyForUI.mtsClient;
+            for (auto &c : editor->uic.dataCopyForUI.noteRemaining)
+            {
+                int nt{0};
+                for (auto &m : c)
+                {
+                    if (m != 0.f)
+                    {
+                        auto fr = MTS_NoteToFrequency(cl, nt, ch);
+                        auto m = fmt::format("ch={} k={} freq={:.2f}Hz", ch, nt, fr);
+                        ln(m);
+                    }
+                    nt++;
+                }
+                ch++;
+            }
         }
     };
 
     void resized() override
     {
-        if (evtPanel)
-            evtPanel->setBounds(getLocalBounds());
+        auto th = 90;
+        auto sw = 250;
+        if (statusPanel)
+            statusPanel->setBounds(getLocalBounds().withHeight(th).withWidth(sw));
+
+        if (controlsPanel)
+            controlsPanel->setBounds(getLocalBounds().withHeight(th).withTrimmedLeft(sw));
+        if (notesPanel)
+            notesPanel->setBounds(getLocalBounds().withTrimmedTop(th));
     }
-    std::unique_ptr<jcmp::NamedPanel> evtPanel;
+    std::unique_ptr<jcmp::NamedPanel> statusPanel, controlsPanel, notesPanel;
     juce::Typeface::Ptr fixedFace{nullptr};
 
     std::string scaleName{""};

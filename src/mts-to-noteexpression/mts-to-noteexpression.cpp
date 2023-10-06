@@ -133,6 +133,15 @@ clap_process_status ConduitMTSToNoteExpression::process(const clap_process *proc
         }
     }
 
+    if (lastUIUpdate == 0)
+    {
+        // if a paint happens through the copy it doesnt matter
+        uiComms.dataCopyForUI.noteRemaining = noteRemaining;
+        // since this will force a paint anyway on next idle
+        uiComms.dataCopyForUI.noteRemainingUpdate++;
+    }
+    lastUIUpdate = (lastUIUpdate + 1) & 15;
+
     for (uint32_t i = 0; i < sz; ++i)
     {
         auto evt = ev->get(ev, i);

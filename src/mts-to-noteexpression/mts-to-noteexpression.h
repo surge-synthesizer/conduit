@@ -52,6 +52,10 @@ struct ConduitMTSToNoteExpressionConfig
         std::atomic<bool> isProcessing{false};
         std::atomic<int32_t> updateCount{0};
         MTSClient *mtsClient{nullptr};
+
+        std::array<std::array<float, 128>, 16>
+            noteRemaining; // -1 means still held, otherwise its the time
+        std::atomic<int32_t> noteRemainingUpdate{0};
     };
 
     static clap_plugin_descriptor *getDescription() { return &desc; }
@@ -110,8 +114,10 @@ struct ConduitMTSToNoteExpression
     MTSClient *mtsClient{nullptr};
     char priorScaleName[CLAP_NAME_SIZE];
     std::array<std::array<float, 128>, 16>
-        noteRemaining; // -1 means still held, otherwise its the time
+        noteRemaining{}; // -1 means still held, otherwise its the time
     std::array<std::array<double, 128>, 16> sclTuning;
+
+    int lastUIUpdate{0};
 
     float retuningFor(int key, int channel) const;
     bool tuningActive();
