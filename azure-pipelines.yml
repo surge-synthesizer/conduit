@@ -27,6 +27,11 @@ jobs:
           isLinux: True
           isCodeQual: True
           cmakeArgs:
+        lin-gcc12:
+          imageName: 'ubuntu-22.04'
+          isLinux: True
+          isCodeQual: True
+          cmakeArgs: -DCMAKE_CXX_COMPLIER=g++-12 -DCMAKE_C_COMPILER=gcc-12
 
     pool:
       vmImage: $(imageName)
