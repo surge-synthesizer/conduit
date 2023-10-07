@@ -137,7 +137,7 @@ struct ConduitRingModulator
     float inputBuf alignas(16)[2][blockSize];
     float inputOS alignas(16)[2][blockSizeOS];
     float sidechainBuf alignas(16)[2][blockSize];
-    float sidechainBufOS alignas(16)[2][blockSizeOS];
+    float sourceOS alignas(16)[2][blockSizeOS];
 
     float outBuf[2][blockSize]{};
     float inMixBuf[2][blockSize]{};

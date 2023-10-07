@@ -21,10 +21,14 @@
 
 #include "ring-modulator.h"
 #include "juce_gui_basics/juce_gui_basics.h"
+#include "sst/basic-blocks/mechanics/block-ops.h"
 #include "version.h"
 
 namespace sst::conduit::ring_modulator
 {
+
+namespace mech = sst::basic_blocks::mechanics;
+
 const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
 clap_plugin_descriptor desc = {CLAP_VERSION,
                                "org.surge-synth-team.conduit.ring-modulator",
@@ -137,8 +141,30 @@ bool ConduitRingModulator::audioPortsInfo(uint32_t index, bool isInput,
     return false;
 }
 
+
+float diode_sim(float v)
+{
+    auto vb = 0.2;
+    auto vl = 0.5;
+    auto h = 1.f;
+    vl = std::max(vl, vb + 0.02f);
+    if (v < vb)
+    {
+        return 0;
+    }
+    if (v < vl)
+    {
+        auto vvb = v - vb;
+        return h * vvb * vvb / (2.f * vl - 2.f * vb);
+    }
+    auto vlvb = vl - vb;
+    return h * v - h * vl + h * vlvb * vlvb / (2.f * vl - 2.f * vb);
+}
+
 clap_process_status ConduitRingModulator::process(const clap_process *process) noexcept
 {
+    handleEventsFromUIQueue(process->out_events);
+
     if (process->audio_outputs_count <= 0)
         return CLAP_PROCESS_SLEEP;
     if (process->audio_inputs_count <= 0)
@@ -155,8 +181,6 @@ clap_process_status ConduitRingModulator::process(const clap_process *process) n
 
     assert(ochans == 2 || ichans == 2 || scchans == 2);
 
-    handleEventsFromUIQueue(process->out_events);
-
     auto chans = std::min({ochans, ichans, scchans});
     if (chans < 2)
         return CLAP_PROCESS_SLEEP;
@@ -171,6 +195,8 @@ clap_process_status ConduitRingModulator::process(const clap_process *process) n
     {
         nextEvent = ev->get(ev, nextEventIndex);
     }
+
+    auto isDigital = *algo < 0.5;
 
     for (auto i = 0U; i < process->frames_count; ++i)
     {
@@ -208,20 +234,45 @@ clap_process_status ConduitRingModulator::process(const clap_process *process) n
                 for (int i = 0; i < blockSizeOS; ++i)
                 {
                     internalSource.step();
-                    inputOS[0][i] *= 2 * internalSource.u;
-                    inputOS[1][i] *= 2 * internalSource.u;
+                    sourceOS[0][i] = 2 * internalSource.u;
+                    sourceOS[1][i] = 2 * internalSource.u;
                 }
             }
             else
             {
-                hr_scup.process_block_U2(sidechainBuf[0], sidechainBuf[1], sidechainBufOS[0],
-                                         sidechainBufOS[1], blockSizeOS);
-                for (int i = 0; i < blockSizeOS; ++i)
+                hr_scup.process_block_U2(sidechainBuf[0], sidechainBuf[1], sourceOS[0],
+                                         sourceOS[1], blockSizeOS);
+                mech::scale_by<blockSizeOS>(4, sourceOS[0], sourceOS[1]);
+            }
+
+            if (isDigital)
+            {
+                mech::mul_block<blockSizeOS>(inputOS[0], sourceOS[0]);
+                mech::mul_block<blockSizeOS>(inputOS[1], sourceOS[1]);
+            }
+            else
+            {
+                for (int c=0; c<2; ++c)
                 {
-                    inputOS[0][i] *= 4 * sidechainBufOS[0][i];
-                    inputOS[1][i] *= 4 * sidechainBufOS[1][i];
+                    for (int s = 0; s < blockSizeOS; ++s)
+                    {
+                        auto vin = inputOS[c][s];
+                        auto vc = sourceOS[c][s];
+                        auto A = 0.5 * vin + vc;
+                        auto B = vc - 0.5 * vin;
+
+                        auto dPA = diode_sim(A);
+                        auto dMA = diode_sim(-A);
+                        auto dPB = diode_sim(B);
+                        auto dMB = diode_sim(-B);
+
+                        auto res = dPA + dMA - dPB - dMB;
+
+                        inputOS[c][s] = res;
+                    }
                 }
             }
+
             hr_down.process_block_D2(inputOS[0], inputOS[1], blockSizeOS, outBuf[0], outBuf[1]);
             pos = 0;
         }

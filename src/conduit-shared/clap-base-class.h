@@ -427,30 +427,33 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             if (currParam->QueryDoubleAttribute("value", &value) != TIXML_SUCCESS)
             {
                 CNDOUT << "Param doesn't have value attribute" << std::endl;
-                return false;
+                goto nextParam;
             }
             if (currParam->QueryIntAttribute("id", &id) != TIXML_SUCCESS)
             {
                 CNDOUT << "Param doesn't have ID attribute" << std::endl;
-                return false;
+                goto nextParam;
             }
 
-            auto pos = paramToValue.find((clap_id)id);
-            if (pos != paramToValue.end())
             {
-                *paramToValue[(clap_id)id] = value;
+                auto pos = paramToValue.find((clap_id)id);
+                if (pos != paramToValue.end())
+                {
+                    *paramToValue[(clap_id)id] = value;
+                }
+                else
+                {
+                    CNDOUT << "Unknown parameter " << id << " in stream" << std::endl;
+                    // continue anyway
+                }
+                auto plv = paramToLag.find(id);
+                if (plv != paramToLag.end())
+                {
+                    plv->second->newValue(value);
+                    plv->second->instantize();
+                }
             }
-            else
-            {
-                CNDOUT << "Unknown parameter " << id << " in stream" << std::endl;
-                // continue anyway
-            }
-            auto plv = paramToLag.find(id);
-            if (plv != paramToLag.end())
-            {
-                plv->second->newValue(value);
-                plv->second->instantize();
-            }
+        nextParam:
             currParam = TINYXML_SAFE_TO_ELEMENT(currParam->NextSiblingElement("param"));
         }
 
@@ -459,7 +462,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             auto ext = TINYXML_SAFE_TO_ELEMENT(conduit->FirstChild("extension"));
             if (ext)
             {
-                if (patch.extension.fromXml(ext))
+                if (!patch.extension.fromXml(ext))
                 {
                     return false;
                 }
