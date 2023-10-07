@@ -212,17 +212,6 @@ bool ConduitPolymetricDelay::audioPortsInfo(uint32_t index, bool isInput,
 
 clap_process_status ConduitPolymetricDelay::process(const clap_process *process) noexcept
 {
-    if (process->audio_outputs_count <= 0)
-        return CLAP_PROCESS_SLEEP;
-    if (process->audio_inputs_count <= 0)
-        return CLAP_PROCESS_SLEEP;
-
-    float **out = process->audio_outputs[0].data32;
-    auto ochans = process->audio_outputs->channel_count;
-
-    float **const in = process->audio_inputs[0].data32;
-    auto ichans = process->audio_inputs->channel_count;
-
     while (!uiComms.fromUiQ.empty())
     {
         auto r = *uiComms.fromUiQ.pop();
@@ -234,6 +223,17 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
         }
     }
     refreshUIIfNeeded();
+
+    if (process->audio_outputs_count <= 0)
+        return CLAP_PROCESS_SLEEP;
+    if (process->audio_inputs_count <= 0)
+        return CLAP_PROCESS_SLEEP;
+
+    float **out = process->audio_outputs[0].data32;
+    auto ochans = process->audio_outputs->channel_count;
+
+    float **const in = process->audio_inputs[0].data32;
+    auto ichans = process->audio_inputs->channel_count;
 
     auto chans = std::min(ochans, ichans);
     if (chans < 2)
@@ -292,7 +292,7 @@ clap_process_status ConduitPolymetricDelay::process(const clap_process *process)
                 tapMx[t][1] = 0;
 
                 // Recalc pan laws
-                sst::basic_blocks::dsp::pan_laws::stereoEqualPower((tapData[t].pan.v + 1) * 0.5,
+                sst::basic_blocks::dsp::pan_laws::stereoEqualPower((*(tapData[t].pan) + 1) * 0.5,
                                                                    tapPanMatrix[t]);
 
                 setTapFilterFrequencies(t);
