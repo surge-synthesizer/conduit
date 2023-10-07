@@ -1027,4 +1027,9 @@ void ConduitPolysynthConfig::PatchExtension::initialize()
 {
     modMatrixConfig = std::make_unique<ModMatrixConfig>();
 }
+
+void ConduitPolysynth::handleSpecializedFromUI(const FromUI &r)
+{
+    CNDOUT << "handleSpecialized " << (int)r.type << std::endl;
+}
 } // namespace sst::conduit::polysynth

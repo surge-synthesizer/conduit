@@ -677,4 +677,5 @@ void PolysynthVoice::receiveNoteExpression(int expression, double value)
     }
 }
 
+
 } // namespace sst::conduit::polysynth

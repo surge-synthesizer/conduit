@@ -25,6 +25,7 @@
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
+#include "sst/jucegui/components/Label.h"
 #include "sst/jucegui/components/MultiSwitch.h"
 #include "sst/jucegui/data/Continuous.h"
 #include "conduit-shared/editor-base.h"
@@ -39,28 +40,53 @@ using uicomm_t = cps_t::UICommunicationBundle;
 
 struct ConduitRingModulatorEditor;
 
-struct ControlsPanel : juce::Component
+struct RMPanel : juce::Component
 {
     uicomm_t &uic;
 
-    ControlsPanel(uicomm_t &p, ConduitRingModulatorEditor &e);
-    ~ControlsPanel() { mix->setSource(nullptr); }
+    RMPanel(uicomm_t &p, ConduitRingModulatorEditor &e);
+    ~RMPanel() { mix->setSource(nullptr); }
 
     void resized() override
     {
-        auto sz = 70;
-        auto bx = getLocalBounds().withWidth(sz).withHeight(sz);
+        auto sz = 110;
+        auto bx = getLocalBounds().reduced(13, 0).withWidth(sz).withHeight(sz);
         mix->setBounds(bx);
-        bx = bx.translated(sz, 0);
-        freq->setBounds(bx);
-        bx = bx.translated(sz, 0);
-        src->setBounds(bx);
-        bx = bx.translated(sz, 0);
-        model->setBounds(bx);
+        auto mlBx = bx.translated(0,sz).withHeight(20);
+        mixLabel->setBounds(mlBx);
+
+        mlBx = mlBx.translated(0, 20).withHeight(30);
+
+        model->setBounds(mlBx);
     }
 
-    std::unique_ptr<jcmp::Knob> mix, freq;
-    std::unique_ptr<jcmp::MultiSwitch> src, model;
+    std::unique_ptr<jcmp::Knob> mix;
+    std::unique_ptr<jcmp::MultiSwitch> model;
+    std::unique_ptr<jcmp::Label> mixLabel;
+};
+
+struct SourcePanel : juce::Component
+{
+    uicomm_t &uic;
+
+    SourcePanel(uicomm_t &p, ConduitRingModulatorEditor &e);
+    ~SourcePanel() {  }
+
+    void resized() override
+    {
+        auto sz = 110;
+        auto bx = getLocalBounds().reduced(13, 0).withWidth(sz).withHeight(sz);
+        freq->setBounds(bx);
+        auto mlBx = bx.translated(0,sz).withHeight(20);
+        freqLabel->setBounds(mlBx);
+
+        mlBx = mlBx.translated(0, 20).withHeight(30);
+        src->setBounds(mlBx);
+    }
+
+    std::unique_ptr<jcmp::Knob> freq;
+    std::unique_ptr<jcmp::MultiSwitch> src;
+    std::unique_ptr<jcmp::Label> mixLabel, freqLabel;
 };
 
 struct ConduitRingModulatorEditor : public jcmp::WindowPanel,
@@ -75,13 +101,18 @@ struct ConduitRingModulatorEditor : public jcmp::WindowPanel,
     {
         comms = std::make_unique<comms_t>(p, *this);
 
-        ctrlPanel = std::make_unique<jcmp::NamedPanel>("Controls");
+        ctrlPanel = std::make_unique<jcmp::NamedPanel>("Ring Modulation");
         addAndMakeVisible(*ctrlPanel);
 
-        auto oct = std::make_unique<ControlsPanel>(uic, *this);
+        auto oct = std::make_unique<RMPanel>(uic, *this);
         ctrlPanel->setContentAreaComponent(std::move(oct));
 
-        setSize(600, 200);
+        sourcePanel = std::make_unique<jcmp::NamedPanel>("Modulator Source");
+        auto soct = std::make_unique<SourcePanel>(uic, *this);
+        sourcePanel->setContentAreaComponent(std::move(soct));
+        addAndMakeVisible(*sourcePanel);
+
+        setSize(300, 200);
 
         comms->startProcessing();
     }
@@ -90,26 +121,47 @@ struct ConduitRingModulatorEditor : public jcmp::WindowPanel,
 
     std::unique_ptr<juce::Slider> unisonSpread;
 
-    void resized() override { ctrlPanel->setBounds(getLocalBounds()); }
+    void resized() override {
+        auto cpW = 150;
+        ctrlPanel->setBounds(getLocalBounds().withWidth(cpW));
+        sourcePanel->setBounds(getLocalBounds().withTrimmedLeft(cpW));
+    }
 
-    std::unique_ptr<jcmp::NamedPanel> ctrlPanel;
+    std::unique_ptr<jcmp::NamedPanel> ctrlPanel, sourcePanel;
 };
 
-ControlsPanel::ControlsPanel(sst::conduit::ring_modulator::editor::uicomm_t &p,
+RMPanel::RMPanel(sst::conduit::ring_modulator::editor::uicomm_t &p,
                              sst::conduit::ring_modulator::editor::ConduitRingModulatorEditor &e)
     : uic(p)
 {
     mix = std::make_unique<jcmp::Knob>();
     addAndMakeVisible(*mix);
     e.comms->attachContinuousToParam(mix.get(), cps_t::paramIds::pmMixLevel);
+
+    mixLabel = std::make_unique<jcmp::Label>();
+    mixLabel->setText("Mix");
+    addAndMakeVisible(*mixLabel);
+
+    model = std::make_unique<jcmp::MultiSwitch>(jcmp::MultiSwitch::HORIZONTAL);
+
+    addAndMakeVisible(*model);
+    e.comms->attachDiscreteToParam(model.get(), cps_t::paramIds::pmAlgo);
+}
+
+SourcePanel::SourcePanel(sst::conduit::ring_modulator::editor::uicomm_t &p,
+                 sst::conduit::ring_modulator::editor::ConduitRingModulatorEditor &e)
+    : uic(p)
+{
     freq = std::make_unique<jcmp::Knob>();
     freq->pathDrawMode = jucegui::components::Knob::ALWAYS_FROM_MIN;
     addAndMakeVisible(*freq);
     e.comms->attachContinuousToParam(freq.get(), cps_t::paramIds::pmInternalSourceFrequency);
-    model = std::make_unique<jcmp::MultiSwitch>();
-    addAndMakeVisible(*model);
-    e.comms->attachDiscreteToParam(model.get(), cps_t::paramIds::pmAlgo);
-    src = std::make_unique<jcmp::MultiSwitch>();
+
+    freqLabel = std::make_unique<jcmp::Label>();
+    freqLabel->setText("Frequency");
+    addAndMakeVisible(*freqLabel);
+
+    src = std::make_unique<jcmp::MultiSwitch>(jcmp::MultiSwitch::HORIZONTAL);
     addAndMakeVisible(*src);
     e.comms->attachDiscreteToParam(src.get(), cps_t::paramIds::pmSource);
 }

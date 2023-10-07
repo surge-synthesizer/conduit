@@ -326,7 +326,7 @@ struct ConduitPolysynth
         v->receiveNoteExpression(expression, value);
     }
 
-    void handleSpecializedFromUI(const FromUI &r) {}
+    void handleSpecializedFromUI(const FromUI &r);
 
     MTSClient *mtsClient{nullptr};
 
