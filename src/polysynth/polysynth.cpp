@@ -53,7 +53,7 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(&desc, host),
-      hr_dn(6, true),
+      gen((size_t)this), urd(0.f, 1.f),hr_dn(6, true),
       voiceManager(*this), voices{sst::cpputils::make_array<PolysynthVoice, max_voices>(*this)}
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
@@ -287,14 +287,17 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
             .asInt()
             .withID(pmFilterRouting)
             .withDefault(0)
-            .withRange(0, 3)
+            .withRange(0, 5)
             .withFlags(steppedFlag)
             .withName("Filter Routing")
             .withGroupName("Filters")
             .withUnorderedMapFormatting({{PolysynthVoice::WSLowMulti, "WS-LP-M"},
                                          {PolysynthVoice::LowMultiWS, "LP-M-WS"},
                                          {PolysynthVoice::LowWSMulti, "LP-WS-M"},
-                                         {PolysynthVoice::MultiWSLow, "M-WS-LP"}}));
+                                         {PolysynthVoice::MultiWSLow, "M-WS-LP"},
+                                         {PolysynthVoice::WSPar, "WS-Par"},
+                                         {PolysynthVoice::ParWS, "Par-WS"},
+            }));
     paramDescriptions.push_back(ParamDesc()
                                     .asPercentBipolar()
                                     .withID(pmFilterFeedback)
@@ -477,6 +480,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withUnorderedMapFormatting({{0, "I"}, {1, "II"}, {2, "III"}}));
     paramDescriptions.push_back(ParamDesc()
                                     .asLfoRate()
+                                    .withRange(-6, log2(20))
                                     .withID(pmModFXRate)
                                     .withName("Mod FX Rate")
                                     .withGroupName("Mod FX")
@@ -573,6 +577,8 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     {
         v.attachTo(*this);
     }
+
+    patch.extension.initialize();
 }
 ConduitPolysynth::~ConduitPolysynth()
 {
@@ -869,6 +875,7 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
             {
                 voiceManager.updateSustainPedal(mevt->port_index, chan, mevt->data[2]);
             }
+            CNDOUT << "Controller " << (int)mevt->data[1] << std::endl;
             break;
         }
         case 0xE0:
@@ -1016,4 +1023,8 @@ void ConduitPolysynth::paramsFlush(const clap_input_events *in,
 
 void ConduitPolysynth::pushParamsToVoices() {}
 
+void ConduitPolysynthConfig::PatchExtension::initialize()
+{
+    modMatrixConfig = std::make_unique<ModMatrixConfig>();
+}
 } // namespace sst::conduit::polysynth

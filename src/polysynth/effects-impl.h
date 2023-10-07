@@ -50,7 +50,7 @@ struct SharedConfig
     }
     static bool isDeactivated(EffectStorage *, int) { return false; }
     static bool isExtended(EffectStorage *, int) { return false; }
-    static float rand01(GlobalStorage *) { return 0; }
+    static float rand01(GlobalStorage *g) { return g->urd(g->gen); }
     static double sampleRate(GlobalStorage *g) { return g->sampleRate; }
     static double sampleRateInv(GlobalStorage *g) { return g->sampleRateInv; }
     static float noteToPitch(GlobalStorage *g, float note)

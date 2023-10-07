@@ -44,6 +44,7 @@ struct ConduitClapEventMonitorConfig
 {
     static constexpr int nParams{sst::conduit::clap_event_monitor::nParams};
     static constexpr bool baseClassProvidesMonoModSupport{true};
+    static constexpr bool usesSpecializedMessages{false};
     using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
     struct DataCopyForUI
     {

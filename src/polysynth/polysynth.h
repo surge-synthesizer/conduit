@@ -32,7 +32,7 @@
 #include <array>
 #include <unordered_map>
 #include <memory>
-#include <memory>
+#include <random>
 
 #include <clap/helpers/plugin.hh>
 
@@ -46,6 +46,7 @@
 
 #include "conduit-shared/clap-base-class.h"
 #include "voice.h"
+#include "modmatrix.h"
 
 struct MTSClient;
 
@@ -59,12 +60,24 @@ extern clap_plugin_descriptor desc;
 static constexpr int nParams{72};
 static constexpr int numModMatrixSlots{16};
 
+struct ModMatrixConfig;
+
 struct ConduitPolysynthConfig
 {
     static constexpr int nParams{sst::conduit::polysynth::nParams};
     static constexpr bool baseClassProvidesMonoModSupport{
         false}; // as a synth we do voice level modulation with the VM
-    using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
+    static constexpr bool usesSpecializedMessages{true};
+    struct PatchExtension
+    {
+        static constexpr bool hasExtension{true};
+
+        void initialize();
+        std::unique_ptr<ModMatrixConfig> modMatrixConfig;
+
+        bool toXml(TiXmlElement &) { return true; }
+        bool fromXml(TiXmlElement *) { return true; }
+    };
     struct DataCopyForUI
     {
         std::atomic<uint32_t> updateCount{0};
@@ -259,6 +272,9 @@ struct ConduitPolysynth
 
     uint32_t getAsVst3SupportedNodeExpressions() override { return AS_VST3_NOTE_EXPRESSION_ALL; }
 
+    std::default_random_engine gen;
+    std::uniform_real_distribution<float> urd;
+
   protected:
     std::unique_ptr<juce::Component> createEditor() override;
 
@@ -279,6 +295,7 @@ struct ConduitPolysynth
         static constexpr size_t maxVoiceCount{max_voices};
         using voice_t = PolysynthVoice;
     };
+
 
   public:
     std::function<void(PolysynthVoice *)> voiceEndCallback;
@@ -309,6 +326,8 @@ struct ConduitPolysynth
         v->receiveNoteExpression(expression, value);
     }
 
+    void handleSpecializedFromUI(const FromUI &r) {}
+
     MTSClient *mtsClient{nullptr};
 
     std::unique_ptr<PhaserFX> phaserFX;
@@ -321,6 +340,29 @@ struct ConduitPolysynth
 
     std::array<PolysynthVoice, max_voices> voices;
     std::vector<std::tuple<int, int, int, int>> terminatedVoices; // that's PCK ID
+};
+
+struct ModMatrixConfig
+{
+    enum Sources
+    {
+        LFO1 = 10057,
+        LFO2,
+
+        Velocity,
+
+        Midi_CC40,
+    };
+
+    enum Curves
+    {
+        Linear = 100
+    };
+
+    using matrixEvaluator_t = ModMatrix<Sources, ConduitPolysynth::paramIds, Curves>;
+    static constexpr int nModSlots{8};
+
+    std::array<matrixEvaluator_t::EntryDescription, nModSlots> routings;
 };
 } // namespace sst::conduit::polysynth
 
