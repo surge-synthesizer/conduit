@@ -52,6 +52,7 @@ struct ConduitPolymetricDelayConfig
 {
     static constexpr int nParams{sst::conduit::polymetric_delay::nParams};
     static constexpr bool baseClassProvidesMonoModSupport{true};
+    static constexpr bool usesSpecializedMessages{false};
     using PatchExtension = sst::conduit::shared::EmptyPatchExtension;
     struct DataCopyForUI
     {
@@ -190,8 +191,8 @@ struct ConduitPolymetricDelay
     {
         float *ntaps, *mbeats, *active;
 
-        float *locut, *hicut;
-        lag_t level, fblev, crossfblev, pan, moddepth, modrate;
+        float *locut, *hicut, *pan;
+        lag_t level, fblev, crossfblev, moddepth, modrate;
 
         sst::basic_blocks::dsp::QuadratureOscillator<float> modulator;
     } tapData[nTaps];

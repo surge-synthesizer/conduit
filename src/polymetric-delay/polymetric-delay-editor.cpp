@@ -130,6 +130,8 @@ struct TapPanel : jcmp::NamedPanel
         std::vector<std::unique_ptr<juce::Component>> labels;
         std::unique_ptr<jcmp::VUMeter> vuMeter;
     };
+
+    void updateName();
 };
 
 struct OutputPanel : jcmp::NamedPanel
@@ -294,13 +296,34 @@ TapPanel::TapPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e, int i)
     content->vuMeter = std::make_unique<jcmp::VUMeter>();
     content->addAndMakeVisible(*(content->vuMeter));
 
-    e.comms->addIdleHandler("vumeter" + std::to_string(tapIdx),
-                            [this, c = content.get()]() { c->updateVUMeter(this); });
+    e.comms->addIdleHandler("tapIdle" + std::to_string(tapIdx), [this, c = content.get()]() {
+        c->updateVUMeter(this);
+        updateName();
+    });
 
     setContentAreaComponent(std::move(content));
 }
 
-TapPanel::~TapPanel() { ed.comms->removeIdleHandler("vumeter" + std::to_string(tapIdx)); }
+TapPanel::~TapPanel() { ed.comms->removeIdleHandler("tapIdle" + std::to_string(tapIdx)); }
+
+void TapPanel::updateName()
+{
+    auto nIt =
+        ed.comms->discreteDataTargets.find(ConduitPolymetricDelay::pmDelayTimeNTaps + tapIdx);
+    auto mIt =
+        ed.comms->discreteDataTargets.find(ConduitPolymetricDelay::pmDelayTimeEveryM + tapIdx);
+
+    if (nIt == ed.comms->discreteDataTargets.end() || mIt == ed.comms->discreteDataTargets.end())
+        return;
+
+    auto n = nIt->second.second->getValue();
+    auto m = mIt->second.second->getValue();
+
+    auto name = fmt::format("Tap {} : {} taps per {} beats ({:.2f} beat delay)", tapIdx + 1, n, m,
+                            1.f * n / m);
+    if (name != getName())
+        setName(name);
+}
 
 OutputPanel::OutputPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e)
     : jcmp::NamedPanel("Output"), uic(p), ed(e)
