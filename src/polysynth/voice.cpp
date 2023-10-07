@@ -269,6 +269,32 @@ void PolysynthVoice::processBlock()
                 UNPACK;
             }
             break;
+        case WSPar:
+            for (auto s = 0U; s < blockSizeOS; ++s)
+            {
+                PACK;
+                output = wsPtr(&wsState, _mm_add_ps(output, bias), drive);
+
+                auto outputQ = qfPtr(&qfState, output);
+                auto outputS = svfFilterOp(svfImpl, output);
+                const auto half = _mm_set1_ps(0.5f);
+                output = _mm_mul_ps(half, _mm_add_ps(outputQ, outputS));
+                UNPACK;
+            }
+            break;
+        case ParWS:
+            for (auto s = 0U; s < blockSizeOS; ++s)
+            {
+                PACK;
+                auto outputQ = qfPtr(&qfState, output);
+                auto outputS = svfFilterOp(svfImpl, output);
+                const auto half = _mm_set1_ps(0.5f);
+                output = _mm_mul_ps(half, _mm_add_ps(outputQ, outputS));
+                output = wsPtr(&wsState, _mm_add_ps(output, bias), drive);
+
+                UNPACK;
+            }
+            break;
         }
     }
     sst::basic_blocks::mechanics::scale_by<blockSizeOS>(aeg.outputCache, outputOS[0]);
@@ -472,7 +498,7 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
             break;
         }
 
-        qfPtr = sst::filters::GetQFPtrFilterUnit(qfType, qfSubType);
+        qfPtr = sst::filters::GetCompensatedQFPtrFilterUnit<true>(qfType, qfSubType);
     }
     else
     {

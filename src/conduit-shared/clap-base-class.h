@@ -313,14 +313,16 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             paramel.InsertEndChild(par);
         }
         conduit.InsertEndChild(paramel);
-        document.InsertEndChild(conduit);
 
         if constexpr (TConfig::PatchExtension::hasExtension)
         {
             TiXmlElement ext("extension");
             if (!patch.extension.toXml(ext))
                 return false;
+            conduit.InsertEndChild(ext);
         }
+
+        document.InsertEndChild(conduit);
 
         std::string xmlS;
         xmlS << document;
@@ -454,10 +456,14 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         if constexpr (TConfig::PatchExtension::hasExtension)
         {
-            /*TiXmlElement ext("extension");
-            if (!patch.extension.toXml(ext))
-                return false;
-                */
+            auto ext = TINYXML_SAFE_TO_ELEMENT(conduit->FirstChild("extension"));
+            if (ext)
+            {
+                if (patch.extension.fromXml(ext))
+                {
+                    return false;
+                }
+            }
         }
 
         onStateRestored();
@@ -503,6 +509,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             ADJUST_VALUE,
             LOAD_PATCH,
             SAVE_PATCH,
+
+            SPECIALIZED // basically use the id as a router
         } type;
         uint32_t id;
 
@@ -627,7 +635,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         UIToSynth_Queue_t fromUiQ;
         typename TConfig::DataCopyForUI dataCopyForUI;
 
-        std::atomic<bool> refreshUIValues{false};
+        std::atomic<bool> refreshUIValues{true};
 
         void requestHostParamFlush() const
         {
@@ -744,6 +752,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         // Similarly we need to push values to a UI on startup
         if (uiComms.refreshUIValues && clapJuceShim->isEditorAttached())
         {
+            CNDOUT << "Refreshing UI" << std::endl;
             uiComms.refreshUIValues = false;
 
             for (const auto &[k, v] : paramToValue)
@@ -797,6 +806,12 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         case FromUI::SAVE_PATCH:
             // For now just do this. See comment on IO Handler
             patchIOHandler.enqueueOperation(*this, PatchIOHandler::SAVE, r.extended.strPointer);
+            break;
+        case FromUI::SPECIALIZED:
+            if constexpr (TConfig::usesSpecializedMessages)
+            {
+                static_cast<T *>(this)->handleSpecializedFromUI(r);
+            }
             break;
         }
     }

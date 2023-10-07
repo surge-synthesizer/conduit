@@ -100,7 +100,9 @@ struct PolysynthVoice
         LowWSMulti,
         MultiWSLow,
         WSLowMulti,
-        LowMultiWS
+        LowMultiWS,
+        WSPar,
+        ParWS
     } filterRouting;
 
     enum Waveshapers
