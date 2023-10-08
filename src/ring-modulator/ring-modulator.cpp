@@ -41,26 +41,6 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
                                "The Conduit RingModulator is a work in progress",
                                features};
 
-
-float diode_sim(float v)
-{
-    static constexpr float vb = -0.15f;
-    static constexpr float vl = 0.35f;
-    static constexpr float h = 1.f;
-
-    if (v < vb)
-    {
-        return 0;
-    }
-    if (v < vl)
-    {
-        auto vvb = v - vb;
-        return h * vvb * vvb / (2.f * vl - 2.f * vb);
-    }
-    auto vlvb = vl - vb;
-    return h * v - h * vl + h * vlvb * vlvb / (2.f * vl - 2.f * vb);
-}
-
 ConduitRingModulator::ConduitRingModulator(const clap_host *host)
     : sst::conduit::shared::ClapBaseClass<ConduitRingModulator, ConduitRingModulatorConfig>(&desc,
                                                                                             host),
@@ -87,7 +67,7 @@ ConduitRingModulator::ConduitRingModulator(const clap_host *host)
             .withDefault(0)
             .withRange(0, 1)
             .withFlags(steppedFlag)
-            .withUnorderedMapFormatting({{algoDigital, "Digital"}, {algoAnalog, "DiodeSim"}}));
+            .withUnorderedMapFormatting({{algoDigital, "Digital"}, {algoAnalog, "Analog"}}));
 
     paramDescriptions.push_back(
         ParamDesc()
@@ -161,6 +141,25 @@ bool ConduitRingModulator::audioPortsInfo(uint32_t index, bool isInput,
     return false;
 }
 
+
+float diode_sim(float v)
+{
+    auto vb = 0.2;
+    auto vl = 0.5;
+    auto h = 1.f;
+    vl = std::max(vl, vb + 0.02f);
+    if (v < vb)
+    {
+        return 0;
+    }
+    if (v < vl)
+    {
+        auto vvb = v - vb;
+        return h * vvb * vvb / (2.f * vl - 2.f * vb);
+    }
+    auto vlvb = vl - vb;
+    return h * v - h * vl + h * vlvb * vlvb / (2.f * vl - 2.f * vb);
+}
 
 clap_process_status ConduitRingModulator::process(const clap_process *process) noexcept
 {
