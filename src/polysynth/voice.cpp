@@ -308,7 +308,7 @@ void PolysynthVoice::processBlock()
     olv = olv * olv * olv;
 
     outputLevel_lipol.set_target(olv);
-    outputLevel_lipol.multiply_2_blocks(outputOS[0], outputOS[1], blockSizeOS);
+    outputLevel_lipol.multiply_2_blocks(outputOS[0], outputOS[1]);
 
     auto opv = outputPan.value();
     if (opv != 0.f)

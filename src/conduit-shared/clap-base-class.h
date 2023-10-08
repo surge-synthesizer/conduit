@@ -221,6 +221,12 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         float modulations[TConfig::nParams]{};
         float values[TConfig::nParams]{};
         void update(int idx, Patch &p) { values[idx] = modulations[idx] + p.params[idx]; }
+        void updateAll(Patch &p) {
+            for (auto i=0U; i<TConfig::nParams; ++i)
+            {
+                update(i, p);
+            }
+        }
     } monoModulatedPatch;
 
     std::unordered_map<clap_id, float *> paramToValue;
@@ -328,7 +334,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         xmlS << document;
 
         auto c = xmlS.c_str();
-        auto s = xmlS.length() + 1; // write the null terminator
+        auto s = xmlS.length(); // write the null terminator
         while (s > 0)
         {
             auto r = ostream->write(ostream, c, s);
@@ -367,6 +373,15 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         TiXmlDocument document;
         // I forget how to error check this.
         document.Parse(xd.c_str());
+
+        if (document.Error() != TiXmlBase::TIXML_NO_ERROR)
+        {
+            CNDOUT << "Error Parsing XML : " << document.ErrorDesc()
+                   << " row=" << document.ErrorRow()
+                   << " col=" << document.ErrorCol()
+                   << std::endl;
+            return false;
+        }
 
 #define TINYXML_SAFE_TO_ELEMENT(expr) ((expr) ? (expr)->ToElement() : nullptr)
 
@@ -420,6 +435,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             return false;
         }
 
+        int restoredParams{0};
         while (currParam)
         {
             double value;
@@ -439,6 +455,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 auto pos = paramToValue.find((clap_id)id);
                 if (pos != paramToValue.end())
                 {
+                    restoredParams++;
                     *paramToValue[(clap_id)id] = value;
                 }
                 else
@@ -457,6 +474,12 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             currParam = TINYXML_SAFE_TO_ELEMENT(currParam->NextSiblingElement("param"));
         }
 
+        if (restoredParams != TConfig::nParams)
+        {
+            CNDOUT << "Warning : Restored " << restoredParams
+                   << " vs expected " << TConfig::nParams << std::endl;
+        }
+
         if constexpr (TConfig::PatchExtension::hasExtension)
         {
             auto ext = TINYXML_SAFE_TO_ELEMENT(conduit->FirstChild("extension"));
@@ -469,6 +492,10 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             }
         }
 
+        if (TConfig::baseClassProvidesMonoModSupport)
+        {
+            monoModulatedPatch.updateAll(patch);
+        }
         onStateRestored();
         return true;
     }
@@ -606,6 +633,9 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             // Oh this API is so terrible. I think this is right?
             ifs->read(static_cast<char *>(buffer), size);
             if (ifs->rdstate() == std::ios::goodbit || ifs->rdstate() == std::ios::eofbit)
+                return ifs->gcount();
+
+            if (ifs->rdstate() & std::ios::eofbit)
                 return ifs->gcount();
 
             return -1;
