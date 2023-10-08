@@ -27,6 +27,7 @@
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
 #include "sst/jucegui/components/VSlider.h"
+#include "sst/jucegui/components/HSlider.h"
 #include "sst/jucegui/components/MultiSwitch.h"
 #include "sst/jucegui/data/Continuous.h"
 #include "conduit-shared/editor-base.h"
@@ -216,6 +217,95 @@ struct ModMatrixPanel : jcmp::NamedPanel
     ConduitPolysynthEditor &ed;
 
     ModMatrixPanel(uicomm_t &p, ConduitPolysynthEditor &e);
+
+
+    struct ModMatrixRow : juce::Component, sst::jucegui::data::ContinunousModulatable
+    {
+        int row{-1};
+        ModMatrixRow(int row, uicomm_t &p, ConduitPolysynthEditor &e);
+        void paint(juce::Graphics &g) override
+        {
+            // g.fillAll(juce::Colour(row * 25, 100 + 100 * (row % 2), 250 - row * 25));
+        }
+        void resized() override {
+            static constexpr int bw{80};
+            static constexpr int tw{100};
+            static constexpr int lw{15};
+
+            auto bx = getLocalBounds().withWidth(bw);
+            s1->setBounds(bx.reduced(1));
+            bx = bx.translated(bw, 0);
+
+            xLab->setBounds(bx.withWidth(lw));
+            bx = bx.translated(lw, 0);
+
+            s2->setBounds(bx.reduced(1));
+            bx = bx.translated(bw, 0);
+
+            toLab->setBounds(bx.withWidth(lw));
+            bx = bx.translated(lw, 0);
+
+            bx = bx.withWidth(tw);
+            tgt->setBounds(bx.reduced(1));
+            bx = bx.translated(tw, 0);
+
+            atLab->setBounds(bx.withWidth(lw));
+            bx = bx.translated(lw, 0);
+
+            bx = bx.withWidth(getWidth() - bx.getX());
+            depth->setBounds(bx);
+        }
+
+        std::string getLabel() const override {
+            return "depth";
+        }
+        float getMin() const override { return -1; }
+        float getMax() const override { return 1; }
+        float getValue() const override {
+            return depthValue;
+        }
+        std::string getValueAsStringFor(float f) const override
+        {
+            return fmt::format("{:.2f}%", f * 100.f);
+        }
+        void setValueFromGUI(const float &f) override
+        {
+            depthValue = f;
+        }
+        void setValueFromModel(const float &f) override
+        {
+
+        }
+        float getDefaultValue() const override { return 0.f; }
+        float getModulationValuePM1() const override { return 0.f; }
+        void setModulationValuePM1(const float &) override {  }
+        bool isModulationBipolar() const override { return false; }
+        std::unique_ptr<jcmp::MenuButton> s1, s2, tgt;
+        std::unique_ptr<jcmp::Label> xLab, toLab, atLab;
+        std::unique_ptr<jcmp::HSlider> depth;
+        float depthValue{0};
+    };
+
+    struct Content : juce::Component
+    {
+        void resized() override {
+            auto bx = getLocalBounds().withHeight(getHeight() * 1.f / modRows.size());
+            for (auto &b : modRows)
+            {
+                if (b)
+                    b->setBounds(bx);
+                bx = bx.translated(0, bx.getHeight());
+            }
+        }
+
+        std::array<std::unique_ptr<ModMatrixRow>, polysynth::ModMatrixConfig::nModSlots> modRows;
+    };
+
+
+
+
+    std::map<std::string, std::map<std::string, int32_t>> sourceMenu;
+    std::map<std::string, std::map<std::string, int32_t>> targetMenu;
 };
 
 struct VoiceOutputPanel : jcmp::NamedPanel
@@ -579,7 +669,89 @@ ModMatrixPanel::ModMatrixPanel(sst::conduit::polysynth::editor::uicomm_t &p,
                                sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Mod Matrix"), uic(p), ed(e)
 {
-    auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 2, 1>>();
+    auto content = std::make_unique<Content>();
+
+    CNDOUT << "Constructing ModMatrix Panel" << std::endl;
+    auto v = uic.getAllParamDescriptions();
+    for (auto &pd : v)
+    {
+        if (pd.flags & CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID)
+        {
+            targetMenu[pd.groupName][pd.name] = pd.id;
+        }
+    }
+
+    auto q = conduit::polysynth::ModMatrixConfig();
+    auto s = q.sourceNames;
+    for (auto &pd : s)
+    {
+        sourceMenu[pd.second.second][pd.second.first] = pd.first;
+    }
+
+    for (const auto &[g, m] : targetMenu)
+    {
+        CNDOUT << "T -- " << g << std::endl;
+        for (const auto &[n, id] : m)
+        {
+            CNDOUT << "T     |-- " << n << " (" << id << ")" << std::endl;
+        }
+    }
+
+    for (const auto &[g, m] : sourceMenu)
+    {
+        CNDOUT << "S -- " << g << std::endl;
+        for (const auto &[n, id] : m)
+        {
+            CNDOUT << "S     |-- " << n << " (" << id << ")" << std::endl;
+        }
+    }
+
+    for (auto i=0U; i<content->modRows.size(); ++i)
+    {
+        content->modRows[i] = std::make_unique<ModMatrixRow>(i, p, e);
+        content->addAndMakeVisible(*(content->modRows[i]));
+    }
+
+    setContentAreaComponent(std::move(content));
+}
+
+ModMatrixPanel::ModMatrixRow::ModMatrixRow(int row, sst::conduit::polysynth::editor::uicomm_t &p, sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+: row(row)
+{
+    xLab = std::make_unique<jcmp::Label>();
+    xLab->setText("x");
+    addAndMakeVisible(*xLab);
+
+    toLab = std::make_unique<jcmp::Label>();
+    toLab->setText("to");
+    addAndMakeVisible(*toLab);
+
+    atLab = std::make_unique<jcmp::Label>();
+    atLab->setText("@");
+    addAndMakeVisible(*atLab);
+
+    s1 = std::make_unique<jcmp::MenuButton>();
+    s1->setLabel("-");
+    s1->setIsInactiveValue(true);
+    s1->setOnCallback([](){CNDOUT << "S1" << std::endl;});
+    addAndMakeVisible(*s1);
+
+    s2 = std::make_unique<jcmp::MenuButton>();
+    s2->setLabel("-");
+    s2->setIsInactiveValue(true);
+    s2->setOnCallback([](){CNDOUT << "S2" << std::endl;});
+    addAndMakeVisible(*s2);
+
+    tgt = std::make_unique<jcmp::MenuButton>();
+    tgt->setLabel("-");
+    tgt->setIsInactiveValue(true);
+    tgt->setOnCallback([](){CNDOUT << "TGT" << std::endl;});
+    addAndMakeVisible(*tgt);
+
+    depth = std::make_unique<jcmp::HSlider>();
+    depth->setSource(this);
+    depth->setShowLabel(false);
+    addAndMakeVisible(*depth);
 }
 
 VoiceOutputPanel::VoiceOutputPanel(sst::conduit::polysynth::editor::uicomm_t &p,

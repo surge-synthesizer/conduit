@@ -205,7 +205,7 @@ void PolysynthVoice::processBlock()
     aegPFG_lipol.multiply_2_blocks(outputOS[0], outputOS[1]);
 
     wsDrive_lipol.newValue(synth.dbToLinear(wsDrive.value()));
-    wsBias_lipol.newValue(wsBias.value());
+    wsBias_lipol.newValue(wsBias.value() * (wsActive ? 1.f : 0.f));
     filterFeedback_lipol.newValue(filterFeedback.value());
     if (anyFilterStepActive)
     {

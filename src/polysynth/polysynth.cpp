@@ -158,14 +158,14 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
         levelBase.withID(pmNoiseLevel).withName("Noise Level").withGroupName("Noise"));
 
     paramDescriptions.push_back(activeBase.withID(pmLPFActive)
-                                    .withName("LPF Active")
-                                    .withGroupName("LPF Filter")
+                                    .withName("Advanced Active")
+                                    .withGroupName("Advanced Filter")
                                     .withDefault(0));
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmLPFCutoff)
-                                    .withName("LPF Cutoff")
-                                    .withGroupName("LPF Filter")
+                                    .withName("Advanced Cutoff")
+                                    .withGroupName("Advanced Filter")
                                     .withRange(1, 127)
                                     .withDefault(60)
                                     .withSemitoneZeroAtMIDIZeroFormatting()
@@ -173,8 +173,8 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmLPFResonance)
-                                    .withName("LPF Resonance")
-                                    .withGroupName("LPF Filter")
+                                    .withName("Advanced Resonance")
+                                    .withGroupName("Advanced Filter")
                                     .withRange(0, 1)
                                     .withDefault(sqrt(2) / 2)
                                     .withLinearScaleFormatting("")
@@ -183,8 +183,8 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
         ParamDesc()
             .asInt()
             .withID(pmLPFFilterMode)
-            .withName("LPF Mode")
-            .withGroupName("LPF Filter")
+            .withName("Advanced Mode")
+            .withGroupName("Advanced Filter")
             .withRange(0, 5)
             .withDefault(0)
             .withFlags(steppedFlag)
@@ -197,8 +197,8 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     paramDescriptions.push_back(ParamDesc()
                                     .asPercentBipolar()
                                     .withID(pmLPFKeytrack)
-                                    .withName("LPF Keytrack")
-                                    .withGroupName("LPF Filter")
+                                    .withName("Advanced Keytrack")
+                                    .withGroupName("Advanced Filter")
                                     .withFlags(modFlag)
                                     .withDefault(0));
 
@@ -316,9 +316,9 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                        .withDecimalPlaces(4);
 
     paramDescriptions.push_back(
-        adrBase.withID(pmEnvA).withName("AEG Attack").withGroupName("AEG").withFlags(autoFlag));
+        adrBase.withID(pmEnvA).withName("AEG Attack").withGroupName("AEG").withFlags(modFlag));
     paramDescriptions.push_back(
-        adrBase.withID(pmEnvD).withName("AEG Decay").withGroupName("AEG").withFlags(autoFlag));
+        adrBase.withID(pmEnvD).withName("AEG Decay").withGroupName("AEG").withFlags(modFlag));
     paramDescriptions.push_back(ParamDesc()
                                     .asPercent()
                                     .withID(pmEnvS)
@@ -329,7 +329,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     paramDescriptions.push_back(adrBase.withID(pmEnvR)
                                     .withName("AEG Release")
                                     .withGroupName("AEG")
-                                    .withFlags(autoFlag)
+                                    .withFlags(modFlag)
                                     .withDefault(0.3));
 
     paramDescriptions.push_back(ParamDesc()
@@ -351,29 +351,29 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     paramDescriptions.push_back(adrBase.withID(pmEnvA + offPmFeg)
                                     .withName("FEG Attack")
                                     .withGroupName("FEG")
-                                    .withFlags(autoFlag));
+                                    .withFlags(modFlag));
     paramDescriptions.push_back(adrBase.withID(pmEnvD + offPmFeg)
                                     .withName("FEG Decay")
                                     .withGroupName("FEG")
-                                    .withFlags(autoFlag)
+                                    .withFlags(modFlag)
                                     .withDefault(0.25));
     paramDescriptions.push_back(ParamDesc()
                                     .asPercent()
                                     .withID(pmEnvS + offPmFeg)
                                     .withName("FEG Sustain")
                                     .withGroupName("FEG")
-                                    .withFlags(autoFlag));
+                                    .withFlags(modFlag));
     paramDescriptions.push_back(adrBase.withID(pmEnvR + offPmFeg)
                                     .withName("FEG Release")
                                     .withGroupName("FEG")
-                                    .withFlags(autoFlag));
+                                    .withFlags(modFlag));
 
     paramDescriptions.push_back(ParamDesc()
                                     .asFloat()
                                     .withID(pmFegToLPFCutoff)
                                     .withName("FEG to LPF Depth")
                                     .withGroupName("FEG")
-                                    .withFlags(autoFlag)
+                                    .withFlags(modFlag)
                                     .withRange(-48, 48)
                                     .withDefault(0)
                                     .withLinearScaleFormatting("semitones"));
@@ -383,7 +383,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withID(pmFegToSVFCutoff)
                                     .withName("FEG to Cutoff Depth")
                                     .withGroupName("FEG")
-                                    .withFlags(autoFlag)
+                                    .withFlags(modFlag)
                                     .withRange(-48, 48)
                                     .withDefault(0)
                                     .withLinearScaleFormatting("semitones"));

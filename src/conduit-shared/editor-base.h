@@ -565,8 +565,8 @@ template <typename Content> void Background<Content>::loadsave(bool doSave)
                 std::string s = file.getFullPathName().toStdString();
                 FromUI sv;
                 sv.type = FromUI::MType::SAVE_PATCH;
-                sv.extended.strPointer = (char *)malloc(s.size() + 1);
-                strncpy(sv.extended.strPointer, s.c_str(), s.size() + 1);
+                sv.strPointer = (char *)malloc(s.size() + 1);
+                strncpy(sv.strPointer, s.c_str(), s.size() + 1);
                 this->eb.uic.fromUiQ.push(sv);
             }
         });
@@ -587,8 +587,8 @@ template <typename Content> void Background<Content>::loadsave(bool doSave)
                 std::string s = file.getFullPathName().toStdString();
                 FromUI sv;
                 sv.type = FromUI::MType::LOAD_PATCH;
-                sv.extended.strPointer = (char *)malloc(s.size() + 1);
-                strncpy(sv.extended.strPointer, s.c_str(), s.size() + 1);
+                sv.strPointer = (char *)malloc(s.size() + 1);
+                strncpy(sv.strPointer, s.c_str(), s.size() + 1);
                 this->eb.uic.fromUiQ.push(sv);
             }
         });
