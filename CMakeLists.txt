@@ -85,6 +85,7 @@ target_sources(${VST3_TARGET} PRIVATE src/conduit-clap-entry.cpp)
 target_link_libraries(${VST3_TARGET} PRIVATE conduit-impl)
 target_add_vst3_wrapper(TARGET ${VST3_TARGET}
         OUTPUT_NAME "Conduit"
+        SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
         )
 if (WIN32)
     # Question - do we want this default in the helpers
@@ -185,7 +186,9 @@ if (${CONDUIT_BUILD_STANDALONES})
     make_conduit_standalone(NAME "Chord Memory" ID "chord-memory")
 endif()
 
-set_target_properties(${PROJECT_NAME}_vst3 PROPERTIES CONDUIT_HAS_BUNDLE_STRUCTURE TRUE CONDUIT_BUNDLE_SUFFIX "vst3")
+if (UNIX)
+    set_target_properties(${PROJECT_NAME}_vst3 PROPERTIES CONDUIT_HAS_BUNDLE_STRUCTURE TRUE CONDUIT_BUNDLE_SUFFIX "vst3")
+endif()
 add_to_all(TARGETS ${PROJECT_NAME}_clap ${PROJECT_NAME}_vst3)
 if (APPLE)
     add_to_all(TARGETS ${PROJECT_NAME}_auv2)
