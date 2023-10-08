@@ -15,7 +15,7 @@ cmake --build build --target conduit_all
 
 results in a `Conduit.clap` and `Conduit.vst3` in `build/conduit_products`.
 
-The best way to interact with this project is
+The best way to interact with this project is to reac us via:
 
 1. The `#conduit-dev` channel on surge discord
 2. The `#wrappers` channel on clap discord or
