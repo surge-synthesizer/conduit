@@ -85,6 +85,7 @@ target_sources(${VST3_TARGET} PRIVATE src/conduit-clap-entry.cpp)
 target_link_libraries(${VST3_TARGET} PRIVATE conduit-impl)
 target_add_vst3_wrapper(TARGET ${VST3_TARGET}
         OUTPUT_NAME "Conduit"
+        SUPPORTS_ALL_NOTE_EXPRESSIONS TRUE
         )
 if (WIN32)
     # Question - do we want this default in the helpers
@@ -139,11 +140,24 @@ function(add_to_all)
                     ${coldir}/$<TARGET_PROPERTY:${TGT},MACOSX_BUNDLE_BUNDLE_NAME>.$<TARGET_PROPERTY:${TGT},BUNDLE_EXTENSION>/
                     )
         else()
-            add_custom_command(TARGET ${pn}
-                    POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E make_directory ${coldir}
-                    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${TGT}> ${coldir}
-                    )
+            set(isb FALSE)
+            get_property(isb TARGET ${TGT} PROPERTY CONDUIT_HAS_BUNDLE_STRUCTURE)
+
+            if (${isb})
+                message(STATUS "conduit: Treating ${TGT} as a bundle on linux")
+                add_custom_command(TARGET ${pn}
+                        POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E make_directory ${coldir}
+                        COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:${TGT}>/../../../$<TARGET_PROPERTY:${TGT},LIBRARY_OUTPUT_NAME>.$<TARGET_PROPERTY:${TGT},CONDUIT_BUNDLE_SUFFIX>/
+                        ${coldir}/$<TARGET_PROPERTY:${TGT},LIBRARY_OUTPUT_NAME>.$<TARGET_PROPERTY:${TGT},CONDUIT_BUNDLE_SUFFIX>/
+                )
+            else()
+                add_custom_command(TARGET ${pn}
+                        POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E make_directory ${coldir}
+                        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${TGT}> ${coldir}
+                        )
+            endif()
         endif()
     endforeach ()
 endfunction(add_to_all)
@@ -165,13 +179,16 @@ function(make_conduit_standalone)
 endfunction()
 
 
-if (NOT DEFINED CONDUIT_SKIP_STANDALONES)
+if (${CONDUIT_BUILD_STANDALONES})
     make_conduit_standalone(NAME "Polysynth" ID "polysynth")
     make_conduit_standalone(NAME "Polymetric Delay" ID "polymetric-delay")
     make_conduit_standalone(NAME "Ring Modulator" ID "ring-modulator")
     make_conduit_standalone(NAME "Chord Memory" ID "chord-memory")
 endif()
 
+if (UNIX)
+    set_target_properties(${PROJECT_NAME}_vst3 PROPERTIES CONDUIT_HAS_BUNDLE_STRUCTURE TRUE CONDUIT_BUNDLE_SUFFIX "vst3")
+endif()
 add_to_all(TARGETS ${PROJECT_NAME}_clap ${PROJECT_NAME}_vst3)
 if (APPLE)
     add_to_all(TARGETS ${PROJECT_NAME}_auv2)

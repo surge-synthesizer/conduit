@@ -1,8 +1,9 @@
 # Experimental Conduit Plugin
 
-This is experimental code. Right now all the DSP and processing is 
-bad. So far this exists to set up the wrapper infrastructure
-and to ponder how to do 'clap-first' development.
+Conduit is still experimental. Things are getting better but lots
+still doesn't work, and a few things only work on Mac. 
+
+You can download the nightly from here, but your best bet is:
 
 ```bash
 git clone https://github.com/surge-synthesizer/conduit
@@ -12,19 +13,14 @@ cmake -Bbuild -DCMAKE_BUILD_TYPE=Release
 cmake --build build --target conduit_all
 ```
 
-results in a `Conduit.clap` and `Conduit.vst3` somewhere
-in your build directory. Changes based on platform right now.
-You can find em.
+results in a `Conduit.clap` and `Conduit.vst3` in `build/conduit_products`.
 
-My todo list is in the BaconPaulTODO.md but is a mess
+The best way to interact with this project is to reac us via:
 
-right now, hmu in the #wrappers channel on clap discord or
-if you really want in #clap-chatter in surge discord
+1. The `#conduit-dev` channel on surge discord
+2. The `#wrappers` channel on clap discord or
+3. Github Issues here
 
-Said DSP and processing are getting incrementally less bad. But this is still 
-primarily an infrastructure project. If you're looking for good plugins this 
-still ain't quite the place. Feel free to try them but don't
-expect things like "all the parameters do something" yet. :)
 
 ## An Important Note about Licensing
 
