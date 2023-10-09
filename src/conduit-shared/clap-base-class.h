@@ -695,10 +695,10 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             return fp->second;
         }
 
-        std::vector<const ParamDesc> getAllParamDescriptions() const
+        std::vector<ParamDesc> getAllParamDescriptions() const
         {
 
-            auto res = std::vector<const ParamDesc>(cp.paramDescriptions.size());
+            auto res = std::vector<ParamDesc>(cp.paramDescriptions.size());
             for (const auto &p : cp.paramDescriptions)
                 res.push_back(p);
             return res;
