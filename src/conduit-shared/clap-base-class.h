@@ -697,8 +697,11 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         std::vector<const ParamDesc> getAllParamDescriptions() const
         {
-            return std::vector<const ParamDesc>{cp.paramDescriptions.cbegin(),
-                                             cp.paramDescriptions.cend()};
+
+            auto res = std::vector<const ParamDesc>(cp.paramDescriptions.size());
+            for (const auto &p : cp.paramDescriptions)
+                res.push_back(p);
+            return res;
         }
 
         std::optional<std::string> getParamValueDisplay(clap_id id, double d) const
