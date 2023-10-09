@@ -546,11 +546,18 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         double value;
 
-        union
-        {
-            char *strPointer;
-            int16_t intMessage[8];
-        } extended{(char *)nullptr};
+        char *strPointer;
+
+        template<bool Cond, typename Tp>
+        struct specTypeTrait
+        { typedef int type; };
+
+        template<typename Tp>
+        struct specTypeTrait<true, Tp>
+        { typedef typename Tp::specializedMessage_t type; };
+
+        typename specTypeTrait<TConfig::usesSpecializedMessages, TConfig>::type specializedMessage;
+
     };
 
     /* In the future we will want this off audio thread with a tiny
@@ -686,6 +693,15 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 return ParamDesc();
             }
             return fp->second;
+        }
+
+        std::vector<ParamDesc> getAllParamDescriptions() const
+        {
+
+            auto res = std::vector<ParamDesc>(cp.paramDescriptions.size());
+            for (const auto &p : cp.paramDescriptions)
+                res.push_back(p);
+            return res;
         }
 
         std::optional<std::string> getParamValueDisplay(clap_id id, double d) const
@@ -834,11 +850,11 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         break;
         case FromUI::LOAD_PATCH:
             // For now just do this. See comment on IO Handler
-            patchIOHandler.enqueueOperation(*this, PatchIOHandler::LOAD, r.extended.strPointer);
+            patchIOHandler.enqueueOperation(*this, PatchIOHandler::LOAD, r.strPointer);
             break;
         case FromUI::SAVE_PATCH:
             // For now just do this. See comment on IO Handler
-            patchIOHandler.enqueueOperation(*this, PatchIOHandler::SAVE, r.extended.strPointer);
+            patchIOHandler.enqueueOperation(*this, PatchIOHandler::SAVE, r.strPointer);
             break;
         case FromUI::SPECIALIZED:
             if constexpr (TConfig::usesSpecializedMessages)

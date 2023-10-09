@@ -25,6 +25,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <map>
 #include <optional>
 #include "conduit-shared/debug-helpers.h"
 
@@ -33,6 +34,7 @@
 #include <unordered_map>
 #include <memory>
 #include <random>
+#include <tuple>
 
 #include <clap/helpers/plugin.hh>
 
@@ -58,7 +60,6 @@ namespace sst::conduit::polysynth
  */
 extern clap_plugin_descriptor desc;
 static constexpr int nParams{72};
-static constexpr int numModMatrixSlots{16};
 
 struct ModMatrixConfig;
 
@@ -83,9 +84,15 @@ struct ConduitPolysynthConfig
         std::atomic<uint32_t> updateCount{0};
         std::atomic<bool> isProcessing{false};
         std::atomic<int> polyphony{0};
+
+        // s1, s2, target, depth
+        using modMessage = std::tuple<int32_t, int32_t, int32_t, float>;
+        std::vector<modMessage> modMatrixCopy;
+        std::atomic<uint32_t> rescanMatrix{0};
     };
 
     static clap_plugin_descriptor *getDescription() { return &desc; }
+    typedef std::array<int, 32> specializedMessage_t;
 };
 
 struct PhaserConfig;
@@ -346,13 +353,29 @@ struct ModMatrixConfig
 {
     enum Sources
     {
+        NONE = 600,
         LFO1 = 10057,
         LFO2,
 
-        Velocity,
+        Velocity = 17000,
 
-        Midi_CC40,
+        ModWheel,
+        PitchBend,
+
+        Midi_CC15,
     };
+
+    std::map<Sources, std::pair<std::string, std::string>> sourceNames
+        {
+            {NONE, {"-", ""}},
+            {LFO1, {"LFO1", "LFOs"}},
+            {LFO2, {"LFO2", "LFOs"}},
+
+            {Velocity, {"Velocity", "MIDI"}},
+            {ModWheel, {"ModWheel", "MIDI"}},
+            {PitchBend, {"PitchBend", "MIDI"}},
+            {Midi_CC15, {"CC15", "MIDI"}},
+        };
 
     enum Curves
     {
