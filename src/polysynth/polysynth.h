@@ -76,8 +76,8 @@ struct ConduitPolysynthConfig
         void initialize();
         std::unique_ptr<ModMatrixConfig> modMatrixConfig;
 
-        bool toXml(TiXmlElement &) { return true; }
-        bool fromXml(TiXmlElement *) { return true; }
+        bool toXml(TiXmlElement &);
+        bool fromXml(TiXmlElement *);
     };
     struct DataCopyForUI
     {
@@ -87,12 +87,21 @@ struct ConduitPolysynthConfig
 
         // s1, s2, target, depth
         using modMessage = std::tuple<int32_t, int32_t, int32_t, float>;
-        std::vector<modMessage> modMatrixCopy;
+        std::array<modMessage, 8> modMatrixCopy;
         std::atomic<uint32_t> rescanMatrix{0};
+
+        void populateMatrixView(const std::unique_ptr<ModMatrixConfig> &);
     };
 
     static clap_plugin_descriptor *getDescription() { return &desc; }
-    typedef std::array<int, 32> specializedMessage_t;
+
+    struct ModRowMessage
+    {
+        int32_t row;
+        int32_t s1, s2, tgt;
+        float depth;
+    };
+    using specializedMessage_t = ModRowMessage;
 };
 
 struct PhaserConfig;
@@ -202,7 +211,10 @@ struct ConduitPolysynth
         pmRevFXMix,
 
         // and finally the main level
-        pmOutputLevel = 20100
+        pmOutputLevel = 20100,
+
+        // Special parameter indicating no modulation target
+        pmNoModTarget = 0x0100BEEF
     };
 
     static constexpr int offPmFeg{10};
@@ -281,6 +293,8 @@ struct ConduitPolysynth
 
     std::default_random_engine gen;
     std::uniform_real_distribution<float> urd;
+
+    void onStateRestored() override;
 
   protected:
     std::unique_ptr<juce::Component> createEditor() override;
@@ -386,6 +400,18 @@ struct ModMatrixConfig
     static constexpr int nModSlots{8};
 
     std::array<matrixEvaluator_t::EntryDescription, nModSlots> routings;
+
+    ModMatrixConfig()
+    {
+        for (auto &e : routings)
+        {
+            e.source = NONE;
+            e.via = NONE;
+            e.target = ConduitPolysynth::pmNoModTarget;
+            e.curveBy = Linear;
+            e.depth = 0.f;
+        }
+    }
 };
 } // namespace sst::conduit::polysynth
 

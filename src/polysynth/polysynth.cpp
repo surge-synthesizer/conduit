@@ -120,7 +120,9 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withID(pmPWWidth)
                                     .withName("Pulse Width Width")
                                     .withGroupName("Pulse Width")
-                                    .withDefault(0.5));
+                                    .withDefault(0.5)
+                                    .withFlags(modFlag)
+                                );
     paramDescriptions.push_back(freqDivBase.withID(pmPWFrequencyDiv)
                                     .withName("Pulse Width Frequency Multiple")
                                     .withGroupName("Pulse Width")
@@ -579,6 +581,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     }
 
     patch.extension.initialize();
+    uiComms.dataCopyForUI.populateMatrixView(patch.extension.modMatrixConfig);
 }
 ConduitPolysynth::~ConduitPolysynth()
 {
@@ -1030,6 +1033,86 @@ void ConduitPolysynthConfig::PatchExtension::initialize()
 
 void ConduitPolysynth::handleSpecializedFromUI(const FromUI &r)
 {
-    CNDOUT << "handleSpecialized " << (int)r.type << std::endl;
+    auto &sm = r.specializedMessage;
+    auto &rt = patch.extension.modMatrixConfig->routings[sm.row];
+    rt.source = (ModMatrixConfig::Sources)sm.s1;
+    rt.via = (ModMatrixConfig::Sources)sm.s2;
+    rt.target = (ConduitPolysynth::paramIds)sm.tgt;
+    rt.depth = sm.depth;
+    uiComms.dataCopyForUI.populateMatrixView(patch.extension.modMatrixConfig);
 }
+
+void ConduitPolysynthConfig::DataCopyForUI::populateMatrixView(const std::unique_ptr<ModMatrixConfig> &c)
+{
+    int i{0};
+    for (auto row : c->routings)
+    {
+        modMatrixCopy[i] = {row.source, row.via, row.target, row.depth};
+        i++;
+    }
+    rescanMatrix ++;
+}
+
+bool ConduitPolysynthConfig::PatchExtension::toXml(TiXmlElement &root)
+{
+    TiXmlElement matrix("matrix");
+
+    int idx{0};
+    for (auto &el : modMatrixConfig->routings)
+    {
+        TiXmlElement rt("routing");
+        rt.SetAttribute("idx", idx);
+        rt.SetAttribute("source", el.source);
+        rt.SetAttribute("via", el.via);
+        rt.SetAttribute("target", el.target);
+        rt.SetDoubleAttribute("depth", el.depth);
+
+        matrix.InsertEndChild(rt);
+        idx++;
+    }
+
+    root.InsertEndChild(matrix);
+    return true;
+}
+
+bool ConduitPolysynthConfig::PatchExtension::fromXml(TiXmlElement *root)
+{
+
+#define TINYXML_SAFE_TO_ELEMENT(expr) ((expr) ? (expr)->ToElement() : nullptr)
+
+    auto matrix = TINYXML_SAFE_TO_ELEMENT(root->FirstChild("matrix"));
+
+    auto rt = TINYXML_SAFE_TO_ELEMENT(matrix->FirstChild("routing"));
+
+    while(rt)
+    {
+        int idx{-1}, s{ModMatrixConfig::Sources::NONE}, v{ModMatrixConfig::Sources::NONE}, t{ConduitPolysynth::pmNoModTarget};
+        double d{0};
+
+        rt->QueryIntAttribute("idx", &idx);
+        rt->QueryIntAttribute("source", &s);
+        rt->QueryIntAttribute("via", &v);
+        rt->QueryIntAttribute("target", &t);
+        rt->QueryDoubleAttribute("depth", &d);
+
+        if (idx >= 0)
+        {
+            auto &rto = modMatrixConfig->routings[idx];
+            rto.source = (ModMatrixConfig::Sources)s;
+            rto.via = (ModMatrixConfig::Sources)v;
+            rto.target = (ConduitPolysynth::paramIds)t;
+            rto.depth = d;
+        }
+
+        rt = rt->NextSiblingElement();
+    }
+    return true;
+}
+
+void ConduitPolysynth::onStateRestored()
+{
+    uiComms.dataCopyForUI.populateMatrixView(patch.extension.modMatrixConfig);
+}
+
+
 } // namespace sst::conduit::polysynth

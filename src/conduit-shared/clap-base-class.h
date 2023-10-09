@@ -330,8 +330,10 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         document.InsertEndChild(conduit);
 
-        std::string xmlS;
-        xmlS << document;
+        TiXmlPrinter pr;
+        document.Accept( &pr );
+
+        auto xmlS = pr.Str();
 
         auto c = xmlS.c_str();
         auto s = xmlS.length(); // write the null terminator

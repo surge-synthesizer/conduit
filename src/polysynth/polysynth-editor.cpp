@@ -218,11 +218,17 @@ struct ModMatrixPanel : jcmp::NamedPanel
 
     ModMatrixPanel(uicomm_t &p, ConduitPolysynthEditor &e);
 
-
     struct ModMatrixRow : juce::Component, sst::jucegui::data::ContinunousModulatable
     {
         int row{-1};
-        ModMatrixRow(int row, uicomm_t &p, ConduitPolysynthEditor &e);
+        uicomm_t &uic;
+        const ModMatrixPanel &panel;
+
+        int lastDataUpdate{-1};
+
+        ModMatrixRow(int row, const ModMatrixPanel &, uicomm_t &p, ConduitPolysynthEditor &e);
+        ~ModMatrixRow();
+
         void paint(juce::Graphics &g) override
         {
             // g.fillAll(juce::Colour(row * 25, 100 + 100 * (row % 2), 250 - row * 25));
@@ -271,6 +277,7 @@ struct ModMatrixPanel : jcmp::NamedPanel
         void setValueFromGUI(const float &f) override
         {
             depthValue = f;
+            resendData();
         }
         void setValueFromModel(const float &f) override
         {
@@ -283,7 +290,15 @@ struct ModMatrixPanel : jcmp::NamedPanel
         std::unique_ptr<jcmp::MenuButton> s1, s2, tgt;
         std::unique_ptr<jcmp::Label> xLab, toLab, atLab;
         std::unique_ptr<jcmp::HSlider> depth;
-        float depthValue{0};
+        float depthValue{0.f};
+        int32_t s1value, s2value, tgtvalue;
+
+        void showSourceMenu(int which);
+        void showTargetMenu();
+        void resendData();
+        void updateFromDataIfNeeded();
+        void updateFromDataCopy();
+        void updateLabels();
     };
 
     struct Content : juce::Component
@@ -303,9 +318,11 @@ struct ModMatrixPanel : jcmp::NamedPanel
 
 
 
-
     std::map<std::string, std::map<std::string, int32_t>> sourceMenu;
+    std::unordered_map<int32_t, std::string> sourceName;
+
     std::map<std::string, std::map<std::string, int32_t>> targetMenu;
+    std::unordered_map<int32_t, std::string> targetName;
 };
 
 struct VoiceOutputPanel : jcmp::NamedPanel
@@ -678,14 +695,18 @@ ModMatrixPanel::ModMatrixPanel(sst::conduit::polysynth::editor::uicomm_t &p,
         if (pd.flags & CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID)
         {
             targetMenu[pd.groupName][pd.name] = pd.id;
+            targetName[pd.id] = pd.name;
         }
     }
+    targetMenu[""]["Off"] = ConduitPolysynth::pmNoModTarget;
+    targetName[ConduitPolysynth::pmNoModTarget] = "-";
 
     auto q = conduit::polysynth::ModMatrixConfig();
     auto s = q.sourceNames;
     for (auto &pd : s)
     {
         sourceMenu[pd.second.second][pd.second.first] = pd.first;
+        sourceName[pd.first] = pd.second.first;
     }
 
     for (const auto &[g, m] : targetMenu)
@@ -708,15 +729,15 @@ ModMatrixPanel::ModMatrixPanel(sst::conduit::polysynth::editor::uicomm_t &p,
 
     for (auto i=0U; i<content->modRows.size(); ++i)
     {
-        content->modRows[i] = std::make_unique<ModMatrixRow>(i, p, e);
+        content->modRows[i] = std::make_unique<ModMatrixRow>(i, *this, p, e);
         content->addAndMakeVisible(*(content->modRows[i]));
     }
 
     setContentAreaComponent(std::move(content));
 }
 
-ModMatrixPanel::ModMatrixRow::ModMatrixRow(int row, sst::conduit::polysynth::editor::uicomm_t &p, sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
-: row(row)
+ModMatrixPanel::ModMatrixRow::ModMatrixRow(int row, const ModMatrixPanel &pan, sst::conduit::polysynth::editor::uicomm_t &p, sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+:  row(row), uic(p), panel(pan)
 {
     xLab = std::make_unique<jcmp::Label>();
     xLab->setText("x");
@@ -733,25 +754,177 @@ ModMatrixPanel::ModMatrixRow::ModMatrixRow(int row, sst::conduit::polysynth::edi
     s1 = std::make_unique<jcmp::MenuButton>();
     s1->setLabel("-");
     s1->setIsInactiveValue(true);
-    s1->setOnCallback([](){CNDOUT << "S1" << std::endl;});
+    s1->setOnCallback([w = juce::Component::SafePointer(this)](){
+        if (w)
+            w->showSourceMenu(0);
+    });
     addAndMakeVisible(*s1);
 
     s2 = std::make_unique<jcmp::MenuButton>();
     s2->setLabel("-");
     s2->setIsInactiveValue(true);
-    s2->setOnCallback([](){CNDOUT << "S2" << std::endl;});
+    s2->setOnCallback([w = juce::Component::SafePointer(this)](){
+        if (w)
+            w->showSourceMenu(1);
+    });
     addAndMakeVisible(*s2);
 
     tgt = std::make_unique<jcmp::MenuButton>();
     tgt->setLabel("-");
     tgt->setIsInactiveValue(true);
-    tgt->setOnCallback([](){CNDOUT << "TGT" << std::endl;});
+    tgt->setOnCallback([w = juce::Component::SafePointer(this)](){
+        if (w)
+            w->showTargetMenu();
+    });
     addAndMakeVisible(*tgt);
 
     depth = std::make_unique<jcmp::HSlider>();
     depth->setSource(this);
     depth->setShowLabel(false);
     addAndMakeVisible(*depth);
+
+    updateFromDataCopy();
+
+    panel.ed.comms->addIdleHandler("row" + std::to_string(row), [this](){updateFromDataIfNeeded();});
+}
+
+ModMatrixPanel::ModMatrixRow::~ModMatrixRow()
+{
+    panel.ed.comms->removeIdleHandler("row" + std::to_string(row));
+}
+
+void ModMatrixPanel::ModMatrixRow::resendData()
+{
+    ConduitPolysynth::FromUI val;
+    val.type = ConduitPolysynth::FromUI::SPECIALIZED;
+    val.id = 0;
+    val.specializedMessage.row = row;
+    val.specializedMessage.s1 = s1value;
+    val.specializedMessage.s2 = s2value;
+    val.specializedMessage.tgt = tgtvalue;
+    val.specializedMessage.depth = depthValue;
+
+    uic.fromUiQ.push(val);
+}
+
+void ModMatrixPanel::ModMatrixRow::updateFromDataIfNeeded()
+{
+    int32_t v = uic.dataCopyForUI.rescanMatrix;
+    if (v != lastDataUpdate)
+    {
+        updateFromDataCopy();
+        lastDataUpdate = v;
+    }
+}
+
+void ModMatrixPanel::ModMatrixRow::updateFromDataCopy()
+{
+    auto &dc = uic.dataCopyForUI.modMatrixCopy[row];
+    s1value = std::get<0>(dc);
+    s2value = std::get<1>(dc);
+    tgtvalue = std::get<2>(dc);
+    depthValue = std::get<3>(dc);
+
+    updateLabels();
+}
+
+
+void ModMatrixPanel::ModMatrixRow::updateLabels()
+{
+    s1->setLabel(panel.sourceName.at(s1value));
+    s2->setLabel(panel.sourceName.at(s2value));
+    tgt->setLabel(panel.targetName.at(tgtvalue));
+    repaint();
+}
+
+void ModMatrixPanel::ModMatrixRow::showSourceMenu(int which)
+{
+    auto p = juce::PopupMenu();
+    p.addSectionHeader((which == 0) ? "Set Source" : "Set Source Via");
+    p.addSeparator();
+    for (const auto &[name, group] : panel.sourceMenu)
+    {
+        if (name == "")
+        {
+            for (auto &[t, id] : group)
+            {
+                p.addItem(t, [setTo=id, which, w = juce::Component::SafePointer(this)](){
+                    if (w)
+                    {
+                        if (which)
+                            w->s2value = setTo;
+                        else
+                            w->s1value = setTo;
+                        w->updateLabels();
+                        w->resendData();
+                    }
+                });
+            }
+        }
+        else
+        {
+            auto sm = juce::PopupMenu();
+            for (auto &[t, id] : group)
+            {
+                sm.addItem(t, [setTo=id, which, w = juce::Component::SafePointer(this)](){
+                    if (w)
+                    {
+                        if (which)
+                            w->s2value = setTo;
+                        else
+                            w->s1value = setTo;
+                        w->updateLabels();
+                        w->resendData();
+                    }
+                });
+            }
+            p.addSubMenu(name, sm);
+        }
+    }
+    // p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
+    p.showMenuAsync(juce::PopupMenu::Options());
+}
+
+void ModMatrixPanel::ModMatrixRow::showTargetMenu()
+{
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Select Target");
+    p.addSeparator();
+    for (const auto &[name, group] : panel.targetMenu)
+    {
+        if (name == "")
+        {
+            for (auto &[t, id] : group)
+            {
+                p.addItem(t, [setTo=id, w = juce::Component::SafePointer(this)](){
+                    if (w)
+                    {
+                        w->tgtvalue = setTo;
+                        w->updateLabels();
+                        w->resendData();
+                    }
+                });
+            }
+        }
+        else
+        {
+            auto sm = juce::PopupMenu();
+            for (auto &[t, id] : group)
+            {
+                sm.addItem(t, [setTo=id, w = juce::Component::SafePointer(this)](){
+                    if (w)
+                    {
+                        w->tgtvalue = setTo;
+                        w->updateLabels();
+                        w->resendData();
+                    }
+                });
+            }
+            p.addSubMenu(name, sm);
+        }
+    }
+    // p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
+    p.showMenuAsync(juce::PopupMenu::Options());
 }
 
 VoiceOutputPanel::VoiceOutputPanel(sst::conduit::polysynth::editor::uicomm_t &p,
