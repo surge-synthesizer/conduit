@@ -48,7 +48,6 @@
 
 #include "conduit-shared/clap-base-class.h"
 #include "voice.h"
-#include "modmatrix.h"
 
 struct MTSClient;
 
@@ -371,6 +370,9 @@ struct ModMatrixConfig
         LFO1 = 10057,
         LFO2,
 
+        AEG = 10157,
+        FEG,
+
         Velocity = 17000,
 
         ModWheel,
@@ -384,6 +386,8 @@ struct ModMatrixConfig
             {NONE, {"-", ""}},
             {LFO1, {"LFO1", "LFOs"}},
             {LFO2, {"LFO2", "LFOs"}},
+            {AEG, {"AEG", "Envelopes"}},
+            {FEG, {"FEG", "Envelopes"}},
 
             {Velocity, {"Velocity", "MIDI"}},
             {ModWheel, {"ModWheel", "MIDI"}},
@@ -391,15 +395,16 @@ struct ModMatrixConfig
             {Midi_CC15, {"CC15", "MIDI"}},
         };
 
-    enum Curves
+    struct EntryDescription
     {
-        Linear = 100
+        Sources source;
+        Sources via;
+        float depth;
+        ConduitPolysynth::paramIds target;
     };
-
-    using matrixEvaluator_t = ModMatrix<Sources, ConduitPolysynth::paramIds, Curves>;
     static constexpr int nModSlots{8};
 
-    std::array<matrixEvaluator_t::EntryDescription, nModSlots> routings;
+    std::array<EntryDescription, nModSlots> routings;
 
     ModMatrixConfig()
     {
@@ -408,7 +413,6 @@ struct ModMatrixConfig
             e.source = NONE;
             e.via = NONE;
             e.target = ConduitPolysynth::pmNoModTarget;
-            e.curveBy = Linear;
             e.depth = 0.f;
         }
     }

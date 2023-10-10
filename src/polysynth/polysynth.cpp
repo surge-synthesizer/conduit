@@ -438,7 +438,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                 .withFlags(steppedFlag)
                 .withRange(0, 5)
                 .withUnorderedMapFormatting(
-                    {{0, "Sin"}, {1, "Square"}, {2, "Saw"}, {3, "Tri"}, {4, "Noise"}, {5, "S&H"}}));
+                    {{0, "Sin"}, {1, "Saw"}, {2, "Tri"}, {3, "Square"}, {4, "Noise"}, {5, "S&H"}}));
     }
 
     paramDescriptions.push_back(ParamDesc()

@@ -35,6 +35,7 @@
 #include "sst/basic-blocks/dsp/DPWSawPulseOscillator.h"
 #include "sst/basic-blocks/dsp/QuadratureOscillators.h"
 #include "sst/basic-blocks/modulators/ADSREnvelope.h"
+#include "sst/basic-blocks/modulators/SimpleLFO.h"
 #include "sst/basic-blocks/dsp/BlockInterpolators.h"
 
 #include "sst/filters.h"
@@ -55,7 +56,8 @@ struct PolysynthVoice
 
     const ConduitPolysynth &synth;
     PolysynthVoice(const ConduitPolysynth &sy)
-        : synth(sy), gen((uint64_t)(this)), urd(-1.0, 1.0), aeg(this), feg(this)
+        : synth(sy), gen((uint64_t)(this)), urd(-1.0, 1.0), aeg(this), feg(this),
+    lfos{this,this}
     {
         for (int i = 0; i < 128; ++i)
         {
@@ -209,6 +211,13 @@ struct PolysynthVoice
     bool gated{false};
     bool active{false};
 
+    using lfo_t = sst::basic_blocks::modulators::SimpleLFO<PolysynthVoice, blockSizeOS>;
+    std::array<lfo_t, 2> lfos;
+    struct LfoData {
+        lfo_t::Shape shape;
+        ModulatedValue rate, deform, amplitude;
+    } lfoData[2];
+
     void processBlock();
 
     float outputOS alignas(16)[2][blockSizeOS];
@@ -263,6 +272,17 @@ struct PolysynthVoice
 
     float delayBufferData[4][sst::filters::utilities::MAX_FB_COMB +
                              sst::filters::utilities::SincTable::FIRipol_N]{};
+
+    struct ModRoutingData
+    {
+        float *source{nullptr};
+        float *via{nullptr};
+        float *target{nullptr};
+        float *depth{nullptr};
+        float range;
+    };
+
+    std::array<ModRoutingData, 8> routings;
 
   private:
     double baseFreq{440.0};

@@ -119,10 +119,30 @@ void PolysynthVoice::processBlock()
                      aegValues.release.value(), 0, 0, 0, gated);
     feg.processBlock(fegValues.attack.value(), fegValues.decay.value(), fegValues.sustain.value(),
                      fegValues.release.value(), 0, 0, 0, gated);
+    lfos[0].process_block(lfoData[0].rate.value(), lfoData[0].deform.value(), lfoData[0].shape);
+    lfos[1].process_block(lfoData[1].rate.value(), lfoData[1].deform.value(), lfoData[1].shape);
 
-    *svfCutoff.internalMod =
+    *svfCutoff.internalMod = 0;
+    *lpfCutoff.internalMod = 0;
+
+    for (auto &r : routings)
+    {
+        if (r.target)
+            *(r.target) = 0;
+    }
+    for (auto &r : routings)
+    {
+        if (r.source && r.target)
+        {
+            auto s = *(r.source);
+            s *= (r.via ? *(r.via) : 1);
+            *(r.target) += s * (*r.depth) * r.range;
+        }
+    }
+
+    *svfCutoff.internalMod +=
         feg.outBlock0 * fegToSvfCutoff.value() + svfKeytrack.value() * (key - 69);
-    *lpfCutoff.internalMod =
+    *lpfCutoff.internalMod +=
         feg.outBlock0 * fegToLPFCutoff.value() + lpfKeytrack.value() * (key - 69);
 
     recalcFilter();
@@ -509,6 +529,62 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
         static_cast<FilterRouting>(*synth.paramToValue.at(ConduitPolysynth::pmFilterRouting));
 
     anyFilterStepActive = wsActive || svfActive || lpfActive;
+
+    auto l1shp = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmLFOShape));
+    if (l1shp > 1) l1shp ++;
+    lfoData[0].shape = (lfo_t::Shape)l1shp;
+    lfos[0].attack(lfoData[0].shape);
+
+    auto l2shp = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmLFOShape + ConduitPolysynth::offPmLFO2));
+    if (l2shp > 1) l2shp ++;
+    lfoData[1].shape = (lfo_t::Shape)l2shp;
+    lfos[1].attack(lfoData[1].shape);
+
+    // This obviously can be built at start time more intelligently
+    int idx{0};
+    for (auto &r : synth.patch.extension.modMatrixConfig->routings)
+    {
+        if (idx >= routings.size())
+        {
+            assert(false);
+            continue;
+        }
+        routings[idx] = {};
+        auto &rt = routings[idx];
+
+        if (r.source != ModMatrixConfig::NONE && r.target != ConduitPolysynth::pmNoModTarget)
+        {
+            auto pmd = synth.paramDescriptionMap.at(r.target);
+            rt.range = pmd.maxVal - pmd.minVal;
+            auto tp = internalMods.find(r.target);
+
+            switch (r.source)
+            {
+            case ModMatrixConfig::LFO1:
+                rt.source = &(lfos[0].lastTarget);
+                break;
+
+            case ModMatrixConfig::LFO2:
+                rt.source = &(lfos[1].lastTarget);
+                break;
+
+            case ModMatrixConfig::AEG:
+                rt.source = &(aeg.outBlock0);
+                break;
+
+            case ModMatrixConfig::FEG:
+                rt.source = &(feg.outBlock0);
+                break;
+
+            default:
+                break;
+            }
+
+            rt.target = &(tp->second);
+            rt.depth = &(r.depth);
+        }
+        idx ++;
+    }
 }
 
 void PolysynthVoice::release() { gated = false; }
@@ -649,6 +725,15 @@ void PolysynthVoice::attachTo(sst::conduit::polysynth::ConduitPolysynth &p)
 
     attach(ConduitPolysynth::pmVoiceLevel, outputLevel);
     attach(ConduitPolysynth::pmVoicePan, outputPan);
+
+    attach(ConduitPolysynth::pmLFORate, lfoData[0].rate);
+    attach(ConduitPolysynth::pmLFODeform, lfoData[0].deform);
+    attach(ConduitPolysynth::pmLFOAmplitude, lfoData[0].amplitude);
+
+    attach(ConduitPolysynth::pmLFORate + ConduitPolysynth::offPmLFO2, lfoData[1].rate);
+    attach(ConduitPolysynth::pmLFODeform + ConduitPolysynth::offPmLFO2, lfoData[1].deform);
+    attach(ConduitPolysynth::pmLFOAmplitude + ConduitPolysynth::offPmLFO2, lfoData[1].amplitude);
+
 
     attach(ConduitPolysynth::pmAegVelocitySens, velocitySens);
 
