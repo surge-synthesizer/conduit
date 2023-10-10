@@ -544,11 +544,11 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
             SPECIALIZED // basically use the id as a router
         } type;
-        uint32_t id;
+        uint32_t id{};
 
-        double value;
+        double value{};
 
-        char *strPointer;
+        char *strPointer{nullptr};
 
         template<bool Cond, typename Tp>
         struct specTypeTrait
@@ -558,7 +558,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         struct specTypeTrait<true, Tp>
         { typedef typename Tp::specializedMessage_t type; };
 
-        typename specTypeTrait<TConfig::usesSpecializedMessages, TConfig>::type specializedMessage;
+        typename specTypeTrait<TConfig::usesSpecializedMessages, TConfig>::type specializedMessage{};
 
     };
 
