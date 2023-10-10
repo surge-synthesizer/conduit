@@ -460,7 +460,7 @@ Background<Content>::Background(const std::string &pluginName, const std::string
     versionLabel = std::move(vl);
 
 #if CONDUIT_DEBUG_BUILD
-    auto dl = std::make_unique<juce::Label>("DEBUG BUILD", "DEBUG BUILD - PERFORMACE WILL SUFFER");
+    auto dl = std::make_unique<juce::Label>("DEBUG BUILD", "DEBUG BUILD - PERFORMANCE WILL SUFFER");
     dl->setColour(juce::Label::ColourIds::textColourId, juce::Colour(220, 30, 30));
     dl->setFont(vsFont);
     dl->setJustificationType(juce::Justification::centredLeft);
