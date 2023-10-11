@@ -56,8 +56,7 @@ struct PolysynthVoice
 
     const ConduitPolysynth &synth;
     PolysynthVoice(const ConduitPolysynth &sy)
-        : synth(sy), gen((uint64_t)(this)), urd(-1.0, 1.0), aeg(this), feg(this),
-    lfos{this,this}
+        : synth(sy), gen((uint64_t)(this)), urd(-1.0, 1.0), aeg(this), feg(this), lfos{this, this}
     {
         for (int i = 0; i < 128; ++i)
         {
@@ -79,9 +78,10 @@ struct PolysynthVoice
 
     /* Midi Controller Values */
     float velocity{0.f};
-    float polyphonicAT{0.f}; // scaled 0...1
+    float releaseVelocity{0.f};
+    float polyphonicAT{0.f};    // scaled 0...1
     float channelPressure{0.f}; // scaled 0..1
-    float midi1CC[128]{}; // scaled 0...1
+    float midi1CC[128]{};       // scaled 0...1
 
     MTSClient *mtsClient{nullptr};
     void attachTo(ConduitPolysynth &p);
@@ -208,6 +208,9 @@ struct PolysynthVoice
     // After adjusting these, call 'recalcPitch'
     float pitchNoteExpressionValue{0.f}, pitchBendWheel{0.f};
 
+    // In MPE mode we also get mpePitchBend
+    float mpePitchBend{0.f};
+
     // Finally, please set my sample rate at voice on. Thanks!
     float samplerate{0};
 
@@ -218,7 +221,8 @@ struct PolysynthVoice
 
     using lfo_t = sst::basic_blocks::modulators::SimpleLFO<PolysynthVoice, blockSizeOS>;
     std::array<lfo_t, 2> lfos;
-    struct LfoData {
+    struct LfoData
+    {
         lfo_t::Shape shape;
         ModulatedValue rate, deform, amplitude;
     } lfoData[2];
@@ -235,11 +239,8 @@ struct PolysynthVoice
     void recalcFilter();
 
     void receiveNoteExpression(int expression, double value);
-    void applyPolyphonicAftertouch(int8_t val) {
-        polyphonicAT = 1.f * val / 127.f;
-    }
-    void applyChannelPressure(int8_t val) { channelPressure = 1.f * val / 127.f;
-    }
+    void applyPolyphonicAftertouch(int8_t val) { polyphonicAT = 1.f * val / 127.f; }
+    void applyChannelPressure(int8_t val) { channelPressure = 1.f * val / 127.f; }
     void applyMIDI1CC(int8_t cc, int8_t val)
     {
         assert(cc >= 0);

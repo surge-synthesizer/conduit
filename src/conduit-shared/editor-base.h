@@ -353,7 +353,7 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
             uic.fromUiQ.push({FromUI::MType::BEGIN_EDIT, pid, 1});
             if (w)
             {
-                ed.openTooltip(pid, w, w->source->getValue());
+                ed.openTooltip(pid, w, w->continuous()->getValue());
             }
         };
         comp->onEndEdit = [this, pid]() {
@@ -363,7 +363,7 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
         comp->onIdleHover = [this, w = juce::Component::SafePointer(comp), pid]() {
             if (w)
             {
-                ed.openTooltip(pid, w, w->source->getValue());
+                ed.openTooltip(pid, w, w->continuous()->getValue());
             }
         };
         comp->onIdleHoverEnd = [this, pid]() { ed.closeTooltip(pid); };

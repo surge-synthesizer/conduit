@@ -141,7 +141,6 @@ bool ConduitRingModulator::audioPortsInfo(uint32_t index, bool isInput,
     return false;
 }
 
-
 float diode_sim(float v)
 {
     auto vb = 0.2;
@@ -240,8 +239,8 @@ clap_process_status ConduitRingModulator::process(const clap_process *process) n
             }
             else
             {
-                hr_scup.process_block_U2(sidechainBuf[0], sidechainBuf[1], sourceOS[0],
-                                         sourceOS[1], blockSizeOS);
+                hr_scup.process_block_U2(sidechainBuf[0], sidechainBuf[1], sourceOS[0], sourceOS[1],
+                                         blockSizeOS);
                 mech::scale_by<blockSizeOS>(4, sourceOS[0], sourceOS[1]);
             }
 
@@ -252,7 +251,7 @@ clap_process_status ConduitRingModulator::process(const clap_process *process) n
             }
             else
             {
-                for (int c=0; c<2; ++c)
+                for (int c = 0; c < 2; ++c)
                 {
                     for (int s = 0; s < blockSizeOS; ++s)
                     {

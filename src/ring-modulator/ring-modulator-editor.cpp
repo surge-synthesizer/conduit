@@ -45,14 +45,13 @@ struct RMPanel : juce::Component
     uicomm_t &uic;
 
     RMPanel(uicomm_t &p, ConduitRingModulatorEditor &e);
-    ~RMPanel() { mix->setSource(nullptr); }
 
     void resized() override
     {
         auto sz = 110;
         auto bx = getLocalBounds().reduced(13, 0).withWidth(sz).withHeight(sz);
         mix->setBounds(bx);
-        auto mlBx = bx.translated(0,sz).withHeight(20);
+        auto mlBx = bx.translated(0, sz).withHeight(20);
         mixLabel->setBounds(mlBx);
 
         mlBx = mlBx.translated(0, 20).withHeight(30);
@@ -70,14 +69,14 @@ struct SourcePanel : juce::Component
     uicomm_t &uic;
 
     SourcePanel(uicomm_t &p, ConduitRingModulatorEditor &e);
-    ~SourcePanel() {  }
+    ~SourcePanel() {}
 
     void resized() override
     {
         auto sz = 110;
         auto bx = getLocalBounds().reduced(13, 0).withWidth(sz).withHeight(sz);
         freq->setBounds(bx);
-        auto mlBx = bx.translated(0,sz).withHeight(20);
+        auto mlBx = bx.translated(0, sz).withHeight(20);
         freqLabel->setBounds(mlBx);
 
         mlBx = mlBx.translated(0, 20).withHeight(30);
@@ -121,7 +120,8 @@ struct ConduitRingModulatorEditor : public jcmp::WindowPanel,
 
     std::unique_ptr<juce::Slider> unisonSpread;
 
-    void resized() override {
+    void resized() override
+    {
         auto cpW = 150;
         ctrlPanel->setBounds(getLocalBounds().withWidth(cpW));
         sourcePanel->setBounds(getLocalBounds().withTrimmedLeft(cpW));
@@ -131,7 +131,7 @@ struct ConduitRingModulatorEditor : public jcmp::WindowPanel,
 };
 
 RMPanel::RMPanel(sst::conduit::ring_modulator::editor::uicomm_t &p,
-                             sst::conduit::ring_modulator::editor::ConduitRingModulatorEditor &e)
+                 sst::conduit::ring_modulator::editor::ConduitRingModulatorEditor &e)
     : uic(p)
 {
     mix = std::make_unique<jcmp::Knob>();
@@ -149,7 +149,7 @@ RMPanel::RMPanel(sst::conduit::ring_modulator::editor::uicomm_t &p,
 }
 
 SourcePanel::SourcePanel(sst::conduit::ring_modulator::editor::uicomm_t &p,
-                 sst::conduit::ring_modulator::editor::ConduitRingModulatorEditor &e)
+                         sst::conduit::ring_modulator::editor::ConduitRingModulatorEditor &e)
     : uic(p)
 {
     freq = std::make_unique<jcmp::Knob>();

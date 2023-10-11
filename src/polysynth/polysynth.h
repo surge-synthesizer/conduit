@@ -77,6 +77,8 @@ struct ConduitPolysynthConfig
 
         bool toXml(TiXmlElement &);
         bool fromXml(TiXmlElement *);
+
+        bool mpeMode{false};
     };
     struct DataCopyForUI
     {
@@ -94,13 +96,22 @@ struct ConduitPolysynthConfig
 
     static clap_plugin_descriptor *getDescription() { return &desc; }
 
-    struct ModRowMessage
+    struct SpecializedMessage
     {
-        int32_t row;
-        int32_t s1, s2, tgt;
-        float depth;
+        struct ModRowMessage
+        {
+            int32_t row;
+            int32_t s1, s2, tgt;
+            float depth;
+        };
+        struct MPEConfig
+        {
+            bool active;
+            int range{24};
+        };
+        std::variant<ModRowMessage, MPEConfig> payload;
     };
-    using specializedMessage_t = ModRowMessage;
+    using specializedMessage_t = SpecializedMessage;
 };
 
 struct PhaserConfig;
@@ -316,7 +327,6 @@ struct ConduitPolysynth
         using voice_t = PolysynthVoice;
     };
 
-
   public:
     std::function<void(PolysynthVoice *)> voiceEndCallback;
     void setVoiceEndCallback(std::function<void(PolysynthVoice *)> f) { voiceEndCallback = f; }
@@ -336,6 +346,13 @@ struct ConduitPolysynth
         v->recalcPitch();
     }
 
+    void setVoiceMIDIMPEChannelPitchBend(PolysynthVoice *v, uint16_t pb14bit)
+    {
+        auto bv = (pb14bit - 8192) / 8192.f;
+        v->mpePitchBend = bv;
+        v->recalcPitch();
+    }
+
     void setVoicePolyphonicParameterModulation(PolysynthVoice *v, uint32_t parameter, double value)
     {
         v->applyExternalMod(parameter, value);
@@ -351,15 +368,9 @@ struct ConduitPolysynth
         v->applyPolyphonicAftertouch(pat);
     }
 
-        void setChannelPressure(PolysynthVoice *v, int8_t pres)
-        {
-            v->applyChannelPressure(pres);
-        }
+    void setChannelPressure(PolysynthVoice *v, int8_t pres) { v->applyChannelPressure(pres); }
 
-        void setMIDI1CC(PolysynthVoice *v, int8_t cc, int8_t val)
-        {
-            v->applyMIDI1CC(cc, val);
-        }
+    void setMIDI1CC(PolysynthVoice *v, int8_t cc, int8_t val) { v->applyMIDI1CC(cc, val); }
 
     void handleSpecializedFromUI(const FromUI &r);
 
@@ -389,30 +400,35 @@ struct ModMatrixConfig
         FEG,
 
         Velocity = 17000,
+        ReleaseVelocity,
 
         ModWheel,
         PitchBend,
+        MPEPitchBend,
         PolyAT,
         ChannelAT,
+        MidiTimbre,
 
         Midi_CC15,
     };
 
-    std::map<Sources, std::pair<std::string, std::string>> sourceNames
-        {
-            {NONE, {"-", ""}},
-            {LFO1, {"LFO1", "LFOs"}},
-            {LFO2, {"LFO2", "LFOs"}},
-            {AEG, {"AEG", "Envelopes"}},
-            {FEG, {"FEG", "Envelopes"}},
+    std::map<Sources, std::pair<std::string, std::string>> sourceNames{
+        {NONE, {"-", ""}},
+        {LFO1, {"LFO1", "LFOs"}},
+        {LFO2, {"LFO2", "LFOs"}},
+        {AEG, {"AEG", "Envelopes"}},
+        {FEG, {"FEG", "Envelopes"}},
 
-            {Velocity, {"Velocity", "MIDI"}},
-            {ModWheel, {"ModWheel", "MIDI"}},
-            {PitchBend, {"PitchBend", "MIDI"}},
-            {PolyAT, {"Polyphonic Aftertouch", "MIDI"}},
-            {ChannelAT, {"Channel / MPE Pressure", "MIDI"}},
-            {Midi_CC15, {"CC15", "MIDI"}},
-        };
+        {Velocity, {"Velocity", "MIDI"}},
+        {ReleaseVelocity, {"Release Velocity", "MIDI"}},
+        {ModWheel, {"ModWheel", "MIDI"}},
+        {PitchBend, {"PitchBend", "MIDI"}},
+        {MPEPitchBend, {"MPE PitchBend", "MIDI"}},
+        {PolyAT, {"Polyphonic Aftertouch", "MIDI"}},
+        {ChannelAT, {"Channel AfterTouch", "MIDI"}},
+        {MidiTimbre, {"Timbre (CC74}", "MIDI"}},
+        {Midi_CC15, {"CC21", "MIDI"}},
+    };
 
     struct EntryDescription
     {

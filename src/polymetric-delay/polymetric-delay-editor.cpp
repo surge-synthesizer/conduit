@@ -99,16 +99,7 @@ struct TapPanel : jcmp::NamedPanel
             layout.addColGapAfter(2);
         }
 
-        ~Content()
-        {
-            for (auto &[p, k] : knobs)
-                if (k)
-                    k->setSource(nullptr);
-
-            for (auto &[p, k] : dknobs)
-                if (k)
-                    k->setSource(nullptr);
-        }
+        ~Content() {}
         void resized() override
         {
             layout.resize(getLocalBounds());
@@ -143,12 +134,6 @@ struct OutputPanel : jcmp::NamedPanel
     OutputPanel(uicomm_t &p, ConduitPolymetricDelayEditor &e);
     struct Content : juce::Component
     {
-        ~Content()
-        {
-            for (auto &k : knobs)
-                if (k)
-                    k->setSource(nullptr);
-        }
         void resized() override
         {
             auto bx = getLocalBounds().reduced(2).withHeight(getWidth() / 2);
