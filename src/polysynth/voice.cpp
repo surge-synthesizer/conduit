@@ -49,6 +49,8 @@ void PolysynthVoice::recalcPitch()
         baseFreq = baseFrequencyByMidiKey[std::clamp(key, 0, 127)];
     }
 
+    auto coarseBend =
+        pitchNoteExpressionValue + pitchBendWheel + mpePitchBend * 24; // hardocde range for now
     if (sawActive)
     {
         for (int i = 0; i < sawUnison; ++i)
@@ -57,7 +59,7 @@ void PolysynthVoice::recalcPitch()
                 baseFreq *
                 synth.twoToXTable.twoToThe(
                     ((sawUnisonDetune.value() * sawUniVoiceDetune[i] + sawFine.value()) / 100 +
-                     sawCoarse.value() + pitchNoteExpressionValue + pitchBendWheel) /
+                     sawCoarse.value() + coarseBend) /
                     12.0);
             sawOsc[i].setFrequency(uf, srInv);
         }
@@ -69,9 +71,8 @@ void PolysynthVoice::recalcPitch()
     {
         auto po = std::clamp((int)std::round(pulseOctave.value()) + 3, 0, 6);
         auto sbf = baseFreq * mul[po];
-        auto pf = sbf * synth.twoToXTable.twoToThe((pulseCoarse.value() + pulseFine.value() * 0.01 +
-                                                    pitchNoteExpressionValue + pitchBendWheel) /
-                                                   12.0);
+        auto pf = sbf * synth.twoToXTable.twoToThe(
+                            (pulseCoarse.value() + pulseFine.value() * 0.01 + coarseBend) / 12.0);
         pulseOsc.setFrequency(pf, srInv);
         pulseOsc.setPulseWidth(pulseWidth.value());
     }
@@ -80,8 +81,7 @@ void PolysynthVoice::recalcPitch()
     {
         auto po = std::clamp((int)std::round(sinOctave.value()) + 3, 0, 6);
         auto sbf = baseFreq * mul[po];
-        auto pf = sbf * synth.twoToXTable.twoToThe(
-                            (sinCoarse.value() + pitchNoteExpressionValue + pitchBendWheel) / 12.0);
+        auto pf = sbf * synth.twoToXTable.twoToThe((sinCoarse.value() + coarseBend) / 12.0);
         sinOsc.setRate(2.0 * M_PI * pf * srInv);
     }
 }
@@ -356,6 +356,7 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     velocity = veli;
 
     pitchBendWheel = 0;
+    mpePitchBend = 0;
     filterFeedbackSignal = _mm_setzero_ps();
 
     sawUnison = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmSawUnisonCount));
@@ -531,12 +532,15 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
     anyFilterStepActive = wsActive || svfActive || lpfActive;
 
     auto l1shp = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmLFOShape));
-    if (l1shp > 1) l1shp ++;
+    if (l1shp > 1)
+        l1shp++;
     lfoData[0].shape = (lfo_t::Shape)l1shp;
     lfos[0].attack(lfoData[0].shape);
 
-    auto l2shp = static_cast<int>(*synth.paramToValue.at(ConduitPolysynth::pmLFOShape + ConduitPolysynth::offPmLFO2));
-    if (l2shp > 1) l2shp ++;
+    auto l2shp = static_cast<int>(
+        *synth.paramToValue.at(ConduitPolysynth::pmLFOShape + ConduitPolysynth::offPmLFO2));
+    if (l2shp > 1)
+        l2shp++;
     lfoData[1].shape = (lfo_t::Shape)l2shp;
     lfos[1].attack(lfoData[1].shape);
 
@@ -596,6 +600,18 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
                 rt.source = &pitchBendWheel;
                 break;
 
+            case ModMatrixConfig::MidiTimbre:
+                rt.source = &midi1CC[74];
+                break;
+
+            case ModMatrixConfig::ReleaseVelocity:
+                rt.source = &releaseVelocity;
+                break;
+
+            case ModMatrixConfig::MPEPitchBend:
+                rt.source = &mpePitchBend;
+                break;
+
             default:
                 break;
             }
@@ -603,7 +619,7 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
             rt.target = &(tp->second);
             rt.depth = &(r.depth);
         }
-        idx ++;
+        idx++;
     }
 }
 
@@ -754,7 +770,6 @@ void PolysynthVoice::attachTo(sst::conduit::polysynth::ConduitPolysynth &p)
     attach(ConduitPolysynth::pmLFODeform + ConduitPolysynth::offPmLFO2, lfoData[1].deform);
     attach(ConduitPolysynth::pmLFOAmplitude + ConduitPolysynth::offPmLFO2, lfoData[1].amplitude);
 
-
     attach(ConduitPolysynth::pmAegVelocitySens, velocitySens);
 
     mtsClient = p.mtsClient;
@@ -781,6 +796,5 @@ void PolysynthVoice::receiveNoteExpression(int expression, double value)
     break;
     }
 }
-
 
 } // namespace sst::conduit::polysynth

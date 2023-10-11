@@ -28,7 +28,10 @@
 #include "sst/jucegui/components/Knob.h"
 #include "sst/jucegui/components/VSlider.h"
 #include "sst/jucegui/components/HSlider.h"
+#include "sst/jucegui/components/HSliderFilled.h"
 #include "sst/jucegui/components/MultiSwitch.h"
+
+#include "sst/jucegui/component-adapters/DiscreteToReference.h"
 #include "sst/jucegui/data/Continuous.h"
 #include "conduit-shared/editor-base.h"
 #include <sst/jucegui/layouts/LabeledGrid.h>
@@ -36,6 +39,7 @@
 namespace sst::conduit::polysynth::editor
 {
 namespace jcmp = sst::jucegui::components;
+namespace jcad = sst::jucegui::component_adapters;
 namespace jdat = sst::jucegui::data;
 
 using cps_t = sst::conduit::polysynth::ConduitPolysynth;
@@ -46,16 +50,7 @@ struct ConduitPolysynthEditor;
 template <typename editor_t, int lx, int ly> struct GridContentBase : juce::Component
 {
     GridContentBase() { layout.setControlCellSize(60, 60); }
-    ~GridContentBase()
-    {
-        for (auto &[p, k] : knobs)
-            if (k)
-                k->setSource(nullptr);
-
-        for (auto &[p, k] : dknobs)
-            if (k)
-                k->setSource(nullptr);
-    }
+    ~GridContentBase() {}
     void resized() override
     {
         layout.resize(getLocalBounds());
@@ -218,7 +213,7 @@ struct ModMatrixPanel : jcmp::NamedPanel
 
     ModMatrixPanel(uicomm_t &p, ConduitPolysynthEditor &e);
 
-    struct ModMatrixRow : juce::Component, sst::jucegui::data::ContinunousModulatable
+    struct ModMatrixRow : juce::Component, sst::jucegui::data::Continuous
     {
         int row{-1};
         uicomm_t &uic;
@@ -233,7 +228,8 @@ struct ModMatrixPanel : jcmp::NamedPanel
         {
             // g.fillAll(juce::Colour(row * 25, 100 + 100 * (row % 2), 250 - row * 25));
         }
-        void resized() override {
+        void resized() override
+        {
             static constexpr int bw{80};
             static constexpr int tw{100};
             static constexpr int lw{15};
@@ -259,17 +255,13 @@ struct ModMatrixPanel : jcmp::NamedPanel
             bx = bx.translated(lw, 0);
 
             bx = bx.withWidth(getWidth() - bx.getX());
-            depth->setBounds(bx);
+            depth->setBounds(bx.reduced(1));
         }
 
-        std::string getLabel() const override {
-            return "depth";
-        }
+        std::string getLabel() const override { return "depth"; }
         float getMin() const override { return -1; }
         float getMax() const override { return 1; }
-        float getValue() const override {
-            return depthValue;
-        }
+        float getValue() const override { return depthValue; }
         std::string getValueAsStringFor(float f) const override
         {
             return fmt::format("{:.2f}%", f * 100.f);
@@ -279,14 +271,9 @@ struct ModMatrixPanel : jcmp::NamedPanel
             depthValue = f;
             resendData();
         }
-        void setValueFromModel(const float &f) override
-        {
-
-        }
+        void setValueFromModel(const float &f) override {}
         float getDefaultValue() const override { return 0.f; }
-        float getModulationValuePM1() const override { return 0.f; }
-        void setModulationValuePM1(const float &) override {  }
-        bool isModulationBipolar() const override { return false; }
+
         std::unique_ptr<jcmp::MenuButton> s1, s2, tgt;
         std::unique_ptr<jcmp::Label> xLab, toLab, atLab;
         std::unique_ptr<jcmp::HSlider> depth;
@@ -303,7 +290,8 @@ struct ModMatrixPanel : jcmp::NamedPanel
 
     struct Content : juce::Component
     {
-        void resized() override {
+        void resized() override
+        {
             auto bx = getLocalBounds().withHeight(getHeight() * 1.f / modRows.size());
             for (auto &b : modRows)
             {
@@ -315,8 +303,6 @@ struct ModMatrixPanel : jcmp::NamedPanel
 
         std::array<std::unique_ptr<ModMatrixRow>, polysynth::ModMatrixConfig::nModSlots> modRows;
     };
-
-
 
     std::map<std::string, std::map<std::string, int32_t>> sourceMenu;
     std::unordered_map<int32_t, std::string> sourceName;
@@ -339,6 +325,28 @@ struct StatusPanel : jcmp::NamedPanel
     ConduitPolysynthEditor &ed;
 
     StatusPanel(uicomm_t &p, ConduitPolysynthEditor &e);
+
+    struct Content : juce::Component
+    {
+        StatusPanel *panel{nullptr};
+        Content(StatusPanel *p) : panel(p) {}
+        void resized() { panel->mpeButton->widget->setBounds(0, 0, 200, 20); }
+    };
+
+    void pushMPEStatus()
+    {
+        auto ms = ConduitPolysynthConfig::SpecializedMessage::MPEConfig();
+        ms.active = mpeActive;
+
+        ConduitPolysynth::FromUI val;
+        val.type = ConduitPolysynth::FromUI::SPECIALIZED;
+        val.id = 0;
+        val.specializedMessage.payload = ms;
+
+        uic.fromUiQ.push(val);
+    }
+    std::unique_ptr<jcad::DiscreteToValueReference<jcmp::ToggleButton, bool>> mpeButton;
+    bool mpeActive{false};
 };
 
 struct ModFXPanel : jcmp::NamedPanel
@@ -727,7 +735,7 @@ ModMatrixPanel::ModMatrixPanel(sst::conduit::polysynth::editor::uicomm_t &p,
         }
     }
 
-    for (auto i=0U; i<content->modRows.size(); ++i)
+    for (auto i = 0U; i < content->modRows.size(); ++i)
     {
         content->modRows[i] = std::make_unique<ModMatrixRow>(i, *this, p, e);
         content->addAndMakeVisible(*(content->modRows[i]));
@@ -736,8 +744,10 @@ ModMatrixPanel::ModMatrixPanel(sst::conduit::polysynth::editor::uicomm_t &p,
     setContentAreaComponent(std::move(content));
 }
 
-ModMatrixPanel::ModMatrixRow::ModMatrixRow(int row, const ModMatrixPanel &pan, sst::conduit::polysynth::editor::uicomm_t &p, sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
-:  row(row), uic(p), panel(pan)
+ModMatrixPanel::ModMatrixRow::ModMatrixRow(
+    int row, const ModMatrixPanel &pan, sst::conduit::polysynth::editor::uicomm_t &p,
+    sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
+    : row(row), uic(p), panel(pan)
 {
     xLab = std::make_unique<jcmp::Label>();
     xLab->setText("x");
@@ -754,7 +764,7 @@ ModMatrixPanel::ModMatrixRow::ModMatrixRow(int row, const ModMatrixPanel &pan, s
     s1 = std::make_unique<jcmp::MenuButton>();
     s1->setLabel("-");
     s1->setIsInactiveValue(true);
-    s1->setOnCallback([w = juce::Component::SafePointer(this)](){
+    s1->setOnCallback([w = juce::Component::SafePointer(this)]() {
         if (w)
             w->showSourceMenu(0);
     });
@@ -763,7 +773,7 @@ ModMatrixPanel::ModMatrixRow::ModMatrixRow(int row, const ModMatrixPanel &pan, s
     s2 = std::make_unique<jcmp::MenuButton>();
     s2->setLabel("-");
     s2->setIsInactiveValue(true);
-    s2->setOnCallback([w = juce::Component::SafePointer(this)](){
+    s2->setOnCallback([w = juce::Component::SafePointer(this)]() {
         if (w)
             w->showSourceMenu(1);
     });
@@ -772,20 +782,21 @@ ModMatrixPanel::ModMatrixRow::ModMatrixRow(int row, const ModMatrixPanel &pan, s
     tgt = std::make_unique<jcmp::MenuButton>();
     tgt->setLabel("-");
     tgt->setIsInactiveValue(true);
-    tgt->setOnCallback([w = juce::Component::SafePointer(this)](){
+    tgt->setOnCallback([w = juce::Component::SafePointer(this)]() {
         if (w)
             w->showTargetMenu();
     });
     addAndMakeVisible(*tgt);
 
-    depth = std::make_unique<jcmp::HSlider>();
+    depth = std::make_unique<jcmp::HSliderFilled>();
     depth->setSource(this);
     depth->setShowLabel(false);
     addAndMakeVisible(*depth);
 
     updateFromDataCopy();
 
-    panel.ed.comms->addIdleHandler("row" + std::to_string(row), [this](){updateFromDataIfNeeded();});
+    panel.ed.comms->addIdleHandler("row" + std::to_string(row),
+                                   [this]() { updateFromDataIfNeeded(); });
 }
 
 ModMatrixPanel::ModMatrixRow::~ModMatrixRow()
@@ -798,11 +809,15 @@ void ModMatrixPanel::ModMatrixRow::resendData()
     ConduitPolysynth::FromUI val;
     val.type = ConduitPolysynth::FromUI::SPECIALIZED;
     val.id = 0;
-    val.specializedMessage.row = row;
-    val.specializedMessage.s1 = s1value;
-    val.specializedMessage.s2 = s2value;
-    val.specializedMessage.tgt = tgtvalue;
-    val.specializedMessage.depth = depthValue;
+    ConduitPolysynthConfig::SpecializedMessage::ModRowMessage msg;
+
+    msg.row = row;
+    msg.s1 = s1value;
+    msg.s2 = s2value;
+    msg.tgt = tgtvalue;
+    msg.depth = depthValue;
+
+    val.specializedMessage.payload = msg;
 
     uic.fromUiQ.push(val);
 }
@@ -828,7 +843,6 @@ void ModMatrixPanel::ModMatrixRow::updateFromDataCopy()
     updateLabels();
 }
 
-
 void ModMatrixPanel::ModMatrixRow::updateLabels()
 {
     s1->setLabel(panel.sourceName.at(s1value));
@@ -848,7 +862,7 @@ void ModMatrixPanel::ModMatrixRow::showSourceMenu(int which)
         {
             for (auto &[t, id] : group)
             {
-                p.addItem(t, [setTo=id, which, w = juce::Component::SafePointer(this)](){
+                p.addItem(t, [setTo = id, which, w = juce::Component::SafePointer(this)]() {
                     if (w)
                     {
                         if (which)
@@ -866,7 +880,7 @@ void ModMatrixPanel::ModMatrixRow::showSourceMenu(int which)
             auto sm = juce::PopupMenu();
             for (auto &[t, id] : group)
             {
-                sm.addItem(t, [setTo=id, which, w = juce::Component::SafePointer(this)](){
+                sm.addItem(t, [setTo = id, which, w = juce::Component::SafePointer(this)]() {
                     if (w)
                     {
                         if (which)
@@ -896,7 +910,7 @@ void ModMatrixPanel::ModMatrixRow::showTargetMenu()
         {
             for (auto &[t, id] : group)
             {
-                p.addItem(t, [setTo=id, w = juce::Component::SafePointer(this)](){
+                p.addItem(t, [setTo = id, w = juce::Component::SafePointer(this)]() {
                     if (w)
                     {
                         w->tgtvalue = setTo;
@@ -911,7 +925,7 @@ void ModMatrixPanel::ModMatrixRow::showTargetMenu()
             auto sm = juce::PopupMenu();
             for (auto &[t, id] : group)
             {
-                sm.addItem(t, [setTo=id, w = juce::Component::SafePointer(this)](){
+                sm.addItem(t, [setTo = id, w = juce::Component::SafePointer(this)]() {
                     if (w)
                     {
                         w->tgtvalue = setTo;
@@ -941,7 +955,18 @@ StatusPanel::StatusPanel(sst::conduit::polysynth::editor::uicomm_t &p,
                          sst::conduit::polysynth::editor::ConduitPolysynthEditor &e)
     : jcmp::NamedPanel("Global"), uic(p), ed(e)
 {
-    auto content = std::make_unique<GridContentBase<ConduitPolysynthEditor, 2, 1>>();
+    auto content = std::make_unique<Content>(this);
+
+    mpeButton =
+        std::make_unique<jcad::DiscreteToValueReference<jcmp::ToggleButton, bool>>(mpeActive);
+    mpeButton->setLabel("MPE Mode");
+    mpeButton->onValueChanged = [w = juce::Component::SafePointer(this)](auto v) {
+        if (w)
+            w->pushMPEStatus();
+    };
+    content->addAndMakeVisible(*(mpeButton->widget));
+
+    setContentAreaComponent(std::move(content));
 }
 
 ModFXPanel::ModFXPanel(sst::conduit::polysynth::editor::uicomm_t &p,

@@ -54,7 +54,7 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(&desc, host),
-      gen((size_t)this), urd(0.f, 1.f),hr_dn(6, true),
+      gen((size_t)this), urd(0.f, 1.f), hr_dn(6, true),
       voiceManager(*this), voices{sst::cpputils::make_array<PolysynthVoice, max_voices>(*this)}
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
@@ -122,8 +122,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withName("Pulse Width Width")
                                     .withGroupName("Pulse Width")
                                     .withDefault(0.5)
-                                    .withFlags(modFlag)
-                                );
+                                    .withFlags(modFlag));
     paramDescriptions.push_back(freqDivBase.withID(pmPWFrequencyDiv)
                                     .withName("Pulse Width Frequency Multiple")
                                     .withGroupName("Pulse Width")
@@ -285,22 +284,22 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                         {PolysynthVoice::Waveshapers::Fuzz, "Fuzz"},
                                     })); // FIXME enums
 
-    paramDescriptions.push_back(
-        ParamDesc()
-            .asInt()
-            .withID(pmFilterRouting)
-            .withDefault(0)
-            .withRange(0, 5)
-            .withFlags(steppedFlag)
-            .withName("Filter Routing")
-            .withGroupName("Filters")
-            .withUnorderedMapFormatting({{PolysynthVoice::WSLowMulti, "WS-LP-M"},
-                                         {PolysynthVoice::LowMultiWS, "LP-M-WS"},
-                                         {PolysynthVoice::LowWSMulti, "LP-WS-M"},
-                                         {PolysynthVoice::MultiWSLow, "M-WS-LP"},
-                                         {PolysynthVoice::WSPar, "WS-Par"},
-                                         {PolysynthVoice::ParWS, "Par-WS"},
-            }));
+    paramDescriptions.push_back(ParamDesc()
+                                    .asInt()
+                                    .withID(pmFilterRouting)
+                                    .withDefault(0)
+                                    .withRange(0, 5)
+                                    .withFlags(steppedFlag)
+                                    .withName("Filter Routing")
+                                    .withGroupName("Filters")
+                                    .withUnorderedMapFormatting({
+                                        {PolysynthVoice::WSLowMulti, "WS-LP-M"},
+                                        {PolysynthVoice::LowMultiWS, "LP-M-WS"},
+                                        {PolysynthVoice::LowWSMulti, "LP-WS-M"},
+                                        {PolysynthVoice::MultiWSLow, "M-WS-LP"},
+                                        {PolysynthVoice::WSPar, "WS-Par"},
+                                        {PolysynthVoice::ParWS, "Par-WS"},
+                                    }));
     paramDescriptions.push_back(ParamDesc()
                                     .asPercentBipolar()
                                     .withID(pmFilterFeedback)
@@ -933,6 +932,7 @@ void ConduitPolysynth::releaseVoice(PolysynthVoice *sdv, float velocity)
 {
     if (sdv)
     {
+        sdv->releaseVelocity = velocity;
         sdv->release();
 
         if (clapJuceShim->isEditorAttached())
@@ -986,16 +986,31 @@ void ConduitPolysynthConfig::PatchExtension::initialize()
 
 void ConduitPolysynth::handleSpecializedFromUI(const FromUI &r)
 {
-    auto &sm = r.specializedMessage;
-    auto &rt = patch.extension.modMatrixConfig->routings[sm.row];
-    rt.source = (ModMatrixConfig::Sources)sm.s1;
-    rt.via = (ModMatrixConfig::Sources)sm.s2;
-    rt.target = (ConduitPolysynth::paramIds)sm.tgt;
-    rt.depth = sm.depth;
-    uiComms.dataCopyForUI.populateMatrixView(patch.extension.modMatrixConfig);
+    auto &smw = r.specializedMessage;
+    using smt = ConduitPolysynthConfig::SpecializedMessage;
+    if (std::holds_alternative<smt::ModRowMessage>(smw.payload))
+    {
+        auto &sm = std::get<smt::ModRowMessage>(smw.payload);
+        auto &rt = patch.extension.modMatrixConfig->routings[sm.row];
+        rt.source = (ModMatrixConfig::Sources)sm.s1;
+        rt.via = (ModMatrixConfig::Sources)sm.s2;
+        rt.target = (ConduitPolysynth::paramIds)sm.tgt;
+        rt.depth = sm.depth;
+        uiComms.dataCopyForUI.populateMatrixView(patch.extension.modMatrixConfig);
+    }
+    else if (std::holds_alternative<smt::MPEConfig>(smw.payload))
+    {
+        auto &mp = std::get<smt::MPEConfig>(smw.payload);
+        voiceManager.dialect = (mp.active ? voiceManager_t::MIDI1_MPE : voiceManager_t::MIDI1);
+    }
+    else
+    {
+        CNDOUT << "WARNING: Unhandled specialized variant" << std::endl;
+    }
 }
 
-void ConduitPolysynthConfig::DataCopyForUI::populateMatrixView(const std::unique_ptr<ModMatrixConfig> &c)
+void ConduitPolysynthConfig::DataCopyForUI::populateMatrixView(
+    const std::unique_ptr<ModMatrixConfig> &c)
 {
     int i{0};
     for (auto row : c->routings)
@@ -1003,7 +1018,7 @@ void ConduitPolysynthConfig::DataCopyForUI::populateMatrixView(const std::unique
         modMatrixCopy[i] = {row.source, row.via, row.target, row.depth};
         i++;
     }
-    rescanMatrix ++;
+    rescanMatrix++;
 }
 
 bool ConduitPolysynthConfig::PatchExtension::toXml(TiXmlElement &root)
@@ -1037,9 +1052,10 @@ bool ConduitPolysynthConfig::PatchExtension::fromXml(TiXmlElement *root)
 
     auto rt = TINYXML_SAFE_TO_ELEMENT(matrix->FirstChild("routing"));
 
-    while(rt)
+    while (rt)
     {
-        int idx{-1}, s{ModMatrixConfig::Sources::NONE}, v{ModMatrixConfig::Sources::NONE}, t{ConduitPolysynth::pmNoModTarget};
+        int idx{-1}, s{ModMatrixConfig::Sources::NONE}, v{ModMatrixConfig::Sources::NONE},
+            t{ConduitPolysynth::pmNoModTarget};
         double d{0};
 
         rt->QueryIntAttribute("idx", &idx);
@@ -1066,6 +1082,5 @@ void ConduitPolysynth::onStateRestored()
 {
     uiComms.dataCopyForUI.populateMatrixView(patch.extension.modMatrixConfig);
 }
-
 
 } // namespace sst::conduit::polysynth

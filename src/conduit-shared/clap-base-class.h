@@ -221,8 +221,9 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         float modulations[TConfig::nParams]{};
         float values[TConfig::nParams]{};
         void update(int idx, Patch &p) { values[idx] = modulations[idx] + p.params[idx]; }
-        void updateAll(Patch &p) {
-            for (auto i=0U; i<TConfig::nParams; ++i)
+        void updateAll(Patch &p)
+        {
+            for (auto i = 0U; i < TConfig::nParams; ++i)
             {
                 update(i, p);
             }
@@ -331,7 +332,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         document.InsertEndChild(conduit);
 
         TiXmlPrinter pr;
-        document.Accept( &pr );
+        document.Accept(&pr);
 
         auto xmlS = pr.Str();
 
@@ -379,9 +380,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         if (document.Error() != TiXmlBase::TIXML_NO_ERROR)
         {
             CNDOUT << "Error Parsing XML : " << document.ErrorDesc()
-                   << " row=" << document.ErrorRow()
-                   << " col=" << document.ErrorCol()
-                   << std::endl;
+                   << " row=" << document.ErrorRow() << " col=" << document.ErrorCol() << std::endl;
             return false;
         }
 
@@ -478,8 +477,8 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         if (restoredParams != TConfig::nParams)
         {
-            CNDOUT << "Warning : Restored " << restoredParams
-                   << " vs expected " << TConfig::nParams << std::endl;
+            CNDOUT << "Warning : Restored " << restoredParams << " vs expected " << TConfig::nParams
+                   << std::endl;
         }
 
         if constexpr (TConfig::PatchExtension::hasExtension)
@@ -550,16 +549,18 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         char *strPointer{nullptr};
 
-        template<bool Cond, typename Tp>
-        struct specTypeTrait
-        { typedef int type; };
+        template <bool Cond, typename Tp> struct specTypeTrait
+        {
+            typedef int type;
+        };
 
-        template<typename Tp>
-        struct specTypeTrait<true, Tp>
-        { typedef typename Tp::specializedMessage_t type; };
+        template <typename Tp> struct specTypeTrait<true, Tp>
+        {
+            typedef typename Tp::specializedMessage_t type;
+        };
 
-        typename specTypeTrait<TConfig::usesSpecializedMessages, TConfig>::type specializedMessage{};
-
+        typename specTypeTrait<TConfig::usesSpecializedMessages, TConfig>::type
+            specializedMessage{};
     };
 
     /* In the future we will want this off audio thread with a tiny
