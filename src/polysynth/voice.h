@@ -242,7 +242,7 @@ struct PolysynthVoice
     }
     void applyMIDI1CC(int8_t cc, int8_t val)
     {
-        assert(cc >= 0 && cc < 128);
+        assert(cc >= 0);
         midi1CC[cc] = 1.f * val / 127.f;
     }
 
