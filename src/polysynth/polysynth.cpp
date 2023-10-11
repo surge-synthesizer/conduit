@@ -33,6 +33,7 @@
 
 #include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/mechanics/block-ops.h"
+#include "sst/voicemanager/midi1_to_voicemanager.h"
 
 #include "effects-impl.h"
 
@@ -841,56 +842,8 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
          * that) streams to do with as you wish. The CLAP_MIDI_EVENT here does the obvious thing.
          */
         auto mevt = reinterpret_cast<const clap_event_midi *>(evt);
-        auto msg = mevt->data[0] & 0xF0;
-        auto chan = mevt->data[0] & 0x0F;
-        switch (msg)
-        {
-        case 0x90:
-        {
-            if (mevt->data[2] == 0)
-            {
-                voiceManager.processNoteOffEvent(mevt->port_index, chan, mevt->data[1], -1,
-                                                 voiceManager.midiToFloatVelocity(mevt->data[2]));
-            }
-            else
-            {
-                // Hosts should prefer CLAP_NOTE events but if they don't
-                voiceManager.processNoteOnEvent(mevt->port_index, chan, mevt->data[1], -1,
-                                                voiceManager.midiToFloatVelocity(mevt->data[2]),
-                                                0.f);
-            }
-            break;
-        }
-        case 0x80:
-        {
-            // Hosts should prefer CLAP_NOTE events but if they don't
-            voiceManager.processNoteOffEvent(mevt->port_index, chan, mevt->data[1], -1,
-                                             voiceManager.midiToFloatVelocity(mevt->data[2]));
-            break;
-        }
-        case 0xA0:
-        {
-            break;
-        }
-        case 0xB0:
-        {
-            if (mevt->data[1] == 64)
-            {
-                voiceManager.updateSustainPedal(mevt->port_index, chan, mevt->data[2]);
-            }
-            CNDOUT << "Controller " << (int)mevt->data[1] << std::endl;
-            break;
-        }
-        case 0xE0:
-        {
-            // pitch bend
-            auto bv = mevt->data[1] + mevt->data[2] * 128;
 
-            voiceManager.routeMIDIPitchBend(mevt->port_index, chan, bv);
-
-            break;
-        }
-        }
+        sst::voicemanager::applyMidi1Message(voiceManager, mevt->port_index, mevt->data);
         break;
     }
     /*

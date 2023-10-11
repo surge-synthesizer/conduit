@@ -76,7 +76,12 @@ struct PolysynthVoice
     int channel; // midi channel
     int key;     // The midi key which triggered me
     int note_id; // and the note_id delivered by the host (used for note expressions)
-    double velocity;
+
+    /* Midi Controller Values */
+    float velocity{0.f};
+    float polyphonicAT{0.f}; // scaled 0...1
+    float channelPressure{0.f}; // scaled 0..1
+    float midi1CC[128]{}; // scaled 0...1
 
     MTSClient *mtsClient{nullptr};
     void attachTo(ConduitPolysynth &p);
@@ -230,6 +235,16 @@ struct PolysynthVoice
     void recalcFilter();
 
     void receiveNoteExpression(int expression, double value);
+    void applyPolyphonicAftertouch(int8_t val) {
+        polyphonicAT = 1.f * val / 127.f;
+    }
+    void applyChannelPressure(int8_t val) { channelPressure = 1.f * val / 127.f;
+    }
+    void applyMIDI1CC(int8_t cc, int8_t val)
+    {
+        assert(cc >= 0);
+        midi1CC[cc] = 1.f * val / 127.f;
+    }
 
     // Sigh - fix this to a table of course
     inline float envelope_rate_linear_nowrap(float f) { return blockSizeOS * srInv * pow(2.f, -f); }

@@ -346,6 +346,21 @@ struct ConduitPolysynth
         v->receiveNoteExpression(expression, value);
     }
 
+    void setPolyphonicAftertouch(PolysynthVoice *v, int8_t pat)
+    {
+        v->applyPolyphonicAftertouch(pat);
+    }
+
+        void setChannelPressure(PolysynthVoice *v, int8_t pres)
+        {
+            v->applyChannelPressure(pres);
+        }
+
+        void setMIDI1CC(PolysynthVoice *v, int8_t cc, int8_t val)
+        {
+            v->applyMIDI1CC(cc, val);
+        }
+
     void handleSpecializedFromUI(const FromUI &r);
 
     MTSClient *mtsClient{nullptr};
@@ -377,6 +392,8 @@ struct ModMatrixConfig
 
         ModWheel,
         PitchBend,
+        PolyAT,
+        ChannelAT,
 
         Midi_CC15,
     };
@@ -392,6 +409,8 @@ struct ModMatrixConfig
             {Velocity, {"Velocity", "MIDI"}},
             {ModWheel, {"ModWheel", "MIDI"}},
             {PitchBend, {"PitchBend", "MIDI"}},
+            {PolyAT, {"Polyphonic Aftertouch", "MIDI"}},
+            {ChannelAT, {"Channel / MPE Pressure", "MIDI"}},
             {Midi_CC15, {"CC15", "MIDI"}},
         };
 

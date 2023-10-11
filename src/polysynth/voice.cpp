@@ -576,6 +576,26 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
                 rt.source = &(feg.outBlock0);
                 break;
 
+            case ModMatrixConfig::PolyAT:
+                rt.source = &polyphonicAT;
+                break;
+
+            case ModMatrixConfig::ChannelAT:
+                rt.source = &channelPressure;
+                break;
+
+            case ModMatrixConfig::Midi_CC15:
+                rt.source = &midi1CC[21];
+                break;
+
+            case ModMatrixConfig::ModWheel:
+                rt.source = &midi1CC[1];
+                break;
+
+            case ModMatrixConfig::PitchBend:
+                rt.source = &pitchBendWheel;
+                break;
+
             default:
                 break;
             }
