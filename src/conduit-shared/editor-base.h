@@ -250,7 +250,7 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
     }
 
     std::unordered_map<uint32_t,
-                       std::pair<juce::Component *, sst::jucegui::data::ContinunousModulatable *>>
+                       std::pair<juce::Component *, sst::jucegui::data::Continuous *>>
         dataTargets;
     std::unordered_map<uint32_t, std::pair<juce::Component *, sst::jucegui::data::Discrete *>>
         discreteDataTargets;
@@ -266,7 +266,7 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
         idleTimer.reset();
     }
 
-    struct D2QContinuousParam : sst::jucegui::data::ContinunousModulatable
+    struct D2QContinuousParam : sst::jucegui::data::Continuous
     {
         typename T::UICommunicationBundle &uic;
         uint32_t pid;
@@ -295,10 +295,6 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
         float getDefaultValue() const override { return pDesc.defaultVal; }
         float getMin() const override { return pDesc.minVal; }
         float getMax() const override { return pDesc.maxVal; }
-
-        float getModulationValuePM1() const override { return 0; }
-        void setModulationValuePM1(const float &f) override {}
-        bool isModulationBipolar() const override { return false; }
     };
 
     struct D2QDiscreteParam : sst::jucegui::data::Discrete
