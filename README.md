@@ -1,4 +1,13 @@
-# Experimental Conduit Plugin
+# The Conduit Plugins
+
+Conduit is a project with four goals
+
+1. Be a clear example of "clap first" development. It is a clap and everything - formats, standalones, and more - follows. As such it acts as a fulsome test bed for the clap wrapper project.
+2. Be an example and test bed for our library factoring ahead of XT2 and SCXT. The plugins refer well factored reusable libraries for their work
+3. Be a set of awesome small plugins where the activation cost for a new plugin is "low"
+4. work out the mechanics of using juce as a gui but not as a plug-in or dsp layer
+
+## Status
 
 Conduit is still experimental. Things are getting better but lots
 still doesn't work, and a few things only work on Mac. 
