@@ -763,7 +763,6 @@ ModMatrixPanel::ModMatrixRow::ModMatrixRow(
 
     s1 = std::make_unique<jcmp::MenuButton>();
     s1->setLabel("-");
-    s1->setIsInactiveValue(true);
     s1->setOnCallback([w = juce::Component::SafePointer(this)]() {
         if (w)
             w->showSourceMenu(0);
@@ -772,7 +771,6 @@ ModMatrixPanel::ModMatrixRow::ModMatrixRow(
 
     s2 = std::make_unique<jcmp::MenuButton>();
     s2->setLabel("-");
-    s2->setIsInactiveValue(true);
     s2->setOnCallback([w = juce::Component::SafePointer(this)]() {
         if (w)
             w->showSourceMenu(1);
@@ -781,7 +779,6 @@ ModMatrixPanel::ModMatrixRow::ModMatrixRow(
 
     tgt = std::make_unique<jcmp::MenuButton>();
     tgt->setLabel("-");
-    tgt->setIsInactiveValue(true);
     tgt->setOnCallback([w = juce::Component::SafePointer(this)]() {
         if (w)
             w->showTargetMenu();
@@ -959,7 +956,7 @@ StatusPanel::StatusPanel(sst::conduit::polysynth::editor::uicomm_t &p,
 
     mpeButton =
         std::make_unique<jcad::DiscreteToValueReference<jcmp::ToggleButton, bool>>(mpeActive);
-    mpeButton->setLabel("MPE Mode");
+    mpeButton->widget->setLabel("MPE Mode");
     mpeButton->onValueChanged = [w = juce::Component::SafePointer(this)](auto v) {
         if (w)
             w->pushMPEStatus();
