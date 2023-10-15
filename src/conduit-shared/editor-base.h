@@ -29,6 +29,7 @@
 #include "sst/jucegui/components/DiscreteParamEditor.h"
 #include "sst/jucegui/components/GlyphButton.h"
 #include "sst/jucegui/components/WindowPanel.h"
+#include "sst/jucegui/components/MultiSwitch.h"
 #include "debug-helpers.h"
 #include "version.h"
 #include "cmrc/cmrc.hpp"
@@ -249,8 +250,7 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
         }
     }
 
-    std::unordered_map<uint32_t,
-                       std::pair<juce::Component *, sst::jucegui::data::Continuous *>>
+    std::unordered_map<uint32_t, std::pair<juce::Component *, sst::jucegui::data::Continuous *>>
         dataTargets;
     std::unordered_map<uint32_t, std::pair<juce::Component *, sst::jucegui::data::Discrete *>>
         discreteDataTargets;
@@ -414,17 +414,11 @@ Background<Content>::Background(const std::string &pluginName, const std::string
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
     const auto &base = sst::jucegui::style::StyleSheet::getBuiltInStyleSheet(
         sst::jucegui::style::StyleSheet::DARK);
-    base->setColour(jcmp::WindowPanel::Styles::styleClass,
-                    jcmp::WindowPanel::Styles::backgroundgradstart, juce::Colour(60, 60, 70));
-    base->setColour(jcmp::WindowPanel::Styles::styleClass,
-                    jcmp::WindowPanel::Styles::backgroundgradend, juce::Colour(20, 20, 30));
-    base->setColour(jcmp::BaseStyles::styleClass, jcmp::BaseStyles::regionBorder,
-                    juce::Colour(90, 90, 100));
-    base->setColour(jcmp::NamedPanel::Styles::styleClass, jcmp::NamedPanel::Styles::regionLabelCol,
-                    juce::Colour(210, 210, 230));
 
     base->replaceFontsWithTypeface(labelsTypeface);
-
+    base->setFont(jucegui::components::MultiSwitch::Styles::styleClass,
+                  jucegui::components::MultiSwitch::Styles::labelfont,
+                  juce::Font(labelsTypeface).withHeight(11));
     setStyle(base);
 
     auto lbFont = juce::Font(24);
@@ -469,7 +463,6 @@ Background<Content>::Background(const std::string &pluginName, const std::string
         if (w)
             w->buildBurger();
     });
-    gb->setIsInactiveValue(true);
     addAndMakeVisible(*gb);
     menuButton = std::move(gb);
 }
