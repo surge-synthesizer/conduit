@@ -30,6 +30,7 @@
 #include "sst/jucegui/components/GlyphButton.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/MultiSwitch.h"
+#include "sst/jucegui/components/ToolTip.h"
 #include "debug-helpers.h"
 #include "version.h"
 #include "cmrc/cmrc.hpp"
@@ -38,6 +39,7 @@ CMRC_DECLARE(conduit_resources);
 
 namespace sst::conduit::shared
 {
+namespace jcmp = sst::jucegui::components;
 
 static constexpr int headerSize{35};
 static constexpr int footerSize{18};
@@ -95,34 +97,15 @@ template <typename Content> struct EditorBase : juce::Component
 
 template <typename T> struct ToolTipMixIn
 {
-    struct ToolTip : juce::Component
-    {
-        std::string title;
-        std::string value;
-        void paint(juce::Graphics &g)
-        {
-            g.fillAll(juce::Colours::white);
-            g.setColour(juce::Colours::black);
-            g.fillRect(getLocalBounds().reduced(1));
-
-            g.setColour(juce::Colours::white);
-            g.setFont(12);
-            auto b = getLocalBounds().reduced(3, 1).withHeight(getHeight() / 2);
-            g.drawText(title, b, juce::Justification::centredLeft);
-            b = b.translated(0, getHeight() / 2);
-            g.drawText(value, b, juce::Justification::centredLeft);
-        }
-    };
-
     T *asT() { return static_cast<T *>(this); }
 
-    std::unique_ptr<ToolTip> toolTip;
+    std::unique_ptr<jcmp::ToolTip> toolTip;
 
     void guaranteeTooltip()
     {
         if (!toolTip)
         {
-            toolTip = std::make_unique<ToolTip>();
+            toolTip = std::make_unique<jcmp::ToolTip>();
             asT()->addChildComponent(*toolTip);
         }
     }
@@ -171,15 +154,17 @@ template <typename T> struct ToolTipMixIn
         guaranteeTooltip();
 
         auto pd = asT()->uic.getParameterDescription(p);
-        toolTip->title = pd.name;
 
         auto sv = asT()->uic.getParamValueDisplay(p, f);
 
+        std::vector<std::string> ttD;
         if (sv.has_value())
-            toolTip->value = *sv;
+            ttD.push_back(*sv);
         else
-            toolTip->value = "ERROR";
-        toolTip->repaint();
+            ttD.push_back("Error");
+
+        toolTip->setTooltipTitleAndData(pd.name, ttD);
+        toolTip->resetSizeFromData();
     }
     void closeTooltip(uint32_t p)
     {
@@ -401,7 +386,6 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
     std::unordered_map<uint32_t, std::unique_ptr<D2QDiscreteParam>> ownedDataDiscrete;
 };
 
-namespace jcmp = sst::jucegui::components;
 template <typename Content>
 Background<Content>::Background(const std::string &pluginName, const std::string &pluginId,
                                 EditorBase<Content> &e)
