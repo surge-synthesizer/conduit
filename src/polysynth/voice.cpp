@@ -562,60 +562,57 @@ void PolysynthVoice::start(int16_t porti, int16_t channeli, int16_t keyi, int32_
             rt.range = pmd.maxVal - pmd.minVal;
             auto tp = internalMods.find(r.target);
 
-            switch (r.source)
-            {
-            case ModMatrixConfig::LFO1:
-                rt.source = &(lfos[0].lastTarget);
-                break;
+            auto assignMod = [this](const auto &basedOn, auto &to) {
+                switch (basedOn)
+                {
+                case ModMatrixConfig::LFO1:
+                    to = &(lfos[0].lastTarget);
+                    break;
 
-            case ModMatrixConfig::LFO2:
-                rt.source = &(lfos[1].lastTarget);
-                break;
+                case ModMatrixConfig::LFO2:
+                    to = &(lfos[1].lastTarget);
+                    break;
 
-            case ModMatrixConfig::AEG:
-                rt.source = &(aeg.outBlock0);
-                break;
+                case ModMatrixConfig::AEG:
+                    to = &(aeg.outBlock0);
+                    break;
 
-            case ModMatrixConfig::FEG:
-                rt.source = &(feg.outBlock0);
-                break;
+                case ModMatrixConfig::FEG:
+                    to = &(feg.outBlock0);
+                    break;
 
-            case ModMatrixConfig::PolyAT:
-                rt.source = &polyphonicAT;
-                break;
+                case ModMatrixConfig::PolyAT:
+                    to = &polyphonicAT;
+                    break;
 
-            case ModMatrixConfig::ChannelAT:
-                rt.source = &channelPressure;
-                break;
+                case ModMatrixConfig::ChannelAT:
+                    to = &channelPressure;
+                    break;
 
-            case ModMatrixConfig::Midi_CC15:
-                rt.source = &midi1CC[21];
-                break;
+                case ModMatrixConfig::ModWheel:
+                    to = &midi1CC[1];
+                    break;
 
-            case ModMatrixConfig::ModWheel:
-                rt.source = &midi1CC[1];
-                break;
+                case ModMatrixConfig::ReleaseVelocity:
+                    to = &releaseVelocity;
+                    break;
 
-            case ModMatrixConfig::PitchBend:
-                rt.source = &pitchBendWheel;
-                break;
+                case ModMatrixConfig::MPETimbre:
+                    to = &mpeTimbre;
+                    break;
 
-            case ModMatrixConfig::MidiTimbre:
-                rt.source = &midi1CC[74];
-                break;
+                case ModMatrixConfig::MPEPressure:
+                    to = &mpePressure;
+                    break;
 
-            case ModMatrixConfig::ReleaseVelocity:
-                rt.source = &releaseVelocity;
-                break;
-
-            case ModMatrixConfig::MPEPitchBend:
-                rt.source = &mpePitchBend;
-                break;
-
-            default:
-                break;
-            }
-
+                default:
+                    break;
+                }
+            };
+            rt.source = nullptr;
+            rt.via = nullptr;
+            assignMod(r.source, rt.source);
+            assignMod(r.via, rt.via);
             rt.target = &(tp->second);
             rt.depth = &(r.depth);
         }
@@ -794,6 +791,17 @@ void PolysynthVoice::receiveNoteExpression(int expression, double value)
         recalcPitch();
     }
     break;
+    case CLAP_NOTE_EXPRESSION_BRIGHTNESS:
+    {
+        mpeTimbre = value;
+    }
+    break;
+    case CLAP_NOTE_EXPRESSION_PRESSURE:
+    {
+        mpePressure = value;
+    }
+    default:
+        CNDOUT << "Un-handled note expression " << expression << std::endl;
     }
 }
 

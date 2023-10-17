@@ -208,8 +208,10 @@ struct PolysynthVoice
     // After adjusting these, call 'recalcPitch'
     float pitchNoteExpressionValue{0.f}, pitchBendWheel{0.f};
 
-    // In MPE mode we also get mpePitchBend
+    // In MPE MIDI1 mode we also get mpePitchBend from midi.
     float mpePitchBend{0.f};
+
+    float mpeTimbre{0.f}, mpePressure{0.f};
 
     // Finally, please set my sample rate at voice on. Thanks!
     float samplerate{0};
@@ -240,11 +242,17 @@ struct PolysynthVoice
 
     void receiveNoteExpression(int expression, double value);
     void applyPolyphonicAftertouch(int8_t val) { polyphonicAT = 1.f * val / 127.f; }
-    void applyChannelPressure(int8_t val) { channelPressure = 1.f * val / 127.f; }
-    void applyMIDI1CC(int8_t cc, int8_t val)
+    void applyChannelPressure(int8_t val)
+    {
+        channelPressure = 1.f * val / 127.f;
+        mpePressure = channelPressure;
+    }
+    void applyMIDI1CC(uint8_t cc, uint8_t val)
     {
         assert(cc >= 0);
         midi1CC[cc] = 1.f * val / 127.f;
+        if (cc == 74)
+            mpeTimbre = midi1CC[cc];
     }
 
     // Sigh - fix this to a table of course

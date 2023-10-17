@@ -60,12 +60,6 @@ using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 struct EmptyPatchExtension
 {
     static constexpr bool hasExtension{false};
-
-    /*
-     void toXml
-    void fromXml
-     document this if I use it
-     */
 };
 
 template <typename T, typename TConfig>

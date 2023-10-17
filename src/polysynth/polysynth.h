@@ -401,15 +401,12 @@ struct ModMatrixConfig
 
         Velocity = 17000,
         ReleaseVelocity,
-
         ModWheel,
-        PitchBend,
-        MPEPitchBend,
         PolyAT,
         ChannelAT,
-        MidiTimbre,
 
-        Midi_CC15,
+        MPETimbre = 18000,
+        MPEPressure
     };
 
     std::map<Sources, std::pair<std::string, std::string>> sourceNames{
@@ -422,13 +419,10 @@ struct ModMatrixConfig
         {Velocity, {"Velocity", "MIDI"}},
         {ReleaseVelocity, {"Release Velocity", "MIDI"}},
         {ModWheel, {"ModWheel", "MIDI"}},
-        {PitchBend, {"PitchBend", "MIDI"}},
-        {MPEPitchBend, {"MPE PitchBend", "MIDI"}},
         {PolyAT, {"Polyphonic Aftertouch", "MIDI"}},
         {ChannelAT, {"Channel AfterTouch", "MIDI"}},
-        {MidiTimbre, {"Timbre (CC74}", "MIDI"}},
-        {Midi_CC15, {"CC21", "MIDI"}},
-    };
+        {MPETimbre, {"Timbre", "MPE"}},
+        {MPEPressure, {"Pressure", "MPE"}}};
 
     struct EntryDescription
     {

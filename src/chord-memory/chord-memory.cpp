@@ -108,22 +108,29 @@ clap_process_status ConduitChordMemory::process(const clap_process *process) noe
         }
         else if (evt->space_id == CLAP_CORE_EVENT_SPACE_ID)
         {
-            ov->try_push(ov, evt);
             switch (evt->type)
             {
             case CLAP_EVENT_MIDI:
             {
                 auto mevt = reinterpret_cast<const clap_event_midi *>(evt);
-                auto iks = static_cast<int>(std::round(*keyShift));
 
                 auto msg = mevt->data[0] & 0xF0;
+                auto chan = mevt->data[0] & 0x0F;
 
-                if (iks != 0 && (msg = 0x90 || msg == 0x80))
+                if (msg == 0x90 || msg == 0x80)
                 {
+                    handleMIDI1NoteChange(ov, mevt, chan, mevt->data[1], mevt->data[2] / 127.0,
+                                          msg == 0x90);
+                    /*
                     clap_event_midi mextra;
                     memcpy(&mextra, mevt, sizeof(clap_event_midi));
                     mextra.data[1] += iks;
                     ov->try_push(ov, (const clap_event_header *)(&mextra));
+                     */
+                }
+                else
+                {
+                    ov->try_push(ov, evt);
                 }
             }
             break;
@@ -132,19 +139,13 @@ clap_process_status ConduitChordMemory::process(const clap_process *process) noe
             case CLAP_EVENT_NOTE_OFF:
             {
                 auto nevt = reinterpret_cast<const clap_event_note *>(evt);
-                auto iks = static_cast<int>(std::round(*keyShift));
-                if (iks != 0)
-                {
-                    clap_event_note nextra;
-                    memcpy(&nextra, nevt, sizeof(clap_event_note));
-
-                    nextra.key = nevt->key + iks;
-
-                    ov->try_push(ov, (const clap_event_header *)(&nextra));
-                }
+                handleClapNoteChange(ov, nevt, nevt->channel, nevt->key, nevt->velocity,
+                                     evt->type == CLAP_EVENT_NOTE_ON);
             }
             break;
+
             default:
+                ov->try_push(ov, evt);
                 break;
             }
         }
@@ -157,13 +158,67 @@ clap_process_status ConduitChordMemory::process(const clap_process *process) noe
     return CLAP_PROCESS_CONTINUE;
 }
 
-void ConduitChordMemory::handleInboundEvent(const clap_event_header_t *evt)
+void ConduitChordMemory::handleMIDI1NoteChange(const clap_output_events *ov,
+                                               const clap_event_midi *mevt, int16_t channel,
+                                               int16_t key, double vel, bool on)
 {
-    if (handleParamBaseEvents(evt))
+    auto ks = (int)std::round(*keyShift);
+    auto nk = std::clamp(key + ks, 0, 127);
+    if (updateNoteOnOffData(channel, key, on))
     {
-        return;
+        ov->try_push(ov, (const clap_event_header *)mevt);
     }
-
-    // Other events just get dropped right now
+    if (updateNoteOnOffData(channel, nk, on))
+    {
+        clap_event_midi mextra;
+        memcpy(&mextra, mevt, sizeof(clap_event_midi));
+        mextra.data[1] = nk;
+        ov->try_push(ov, (const clap_event_header *)(&mextra));
+    }
 }
+
+void ConduitChordMemory::handleClapNoteChange(const clap_output_events *ov,
+                                              const clap_event_note *nevt, int16_t channel,
+                                              int16_t key, double vel, bool on)
+{
+    auto ks = (int)std::round(*keyShift);
+    auto nk = std::clamp(key + ks, 0, 127);
+    if (updateNoteOnOffData(nevt->channel, nevt->key, on))
+    {
+        ov->try_push(ov, (const clap_event_header *)nevt);
+    }
+    if (updateNoteOnOffData(nevt->channel, nk, on))
+    {
+        clap_event_note mextra;
+        memcpy(&mextra, nevt, sizeof(clap_event_note));
+        mextra.key = nk;
+        ov->try_push(ov, (const clap_event_header *)(&mextra));
+    }
+}
+
+bool ConduitChordMemory::updateNoteOnOffData(int16_t channel, int16_t key, bool isOn)
+{
+    activeNotes[channel][key] += isOn ? 1 : -1;
+    auto an = activeNotes[channel][key];
+    CNDOUT << "After note " << (isOn ? "on" : "off") << " at " << channel << " " << key
+           << " resulting an=" << an << std::endl;
+    return isOn ? an == 1 : an == 0;
+}
+
+bool ConduitChordMemoryConfig::PatchExtension::toXml(TiXmlElement &el)
+{
+    TiXmlElement cn("companionNotes");
+    for (auto i = 0U; i < companionNotes.size(); ++i)
+    {
+        TiXmlElement nt("note");
+        nt.SetAttribute("n", i);
+        nt.SetAttribute("b", companionNotes[i].to_string());
+        cn.InsertEndChild(nt);
+    }
+    el.InsertEndChild(cn);
+    return true;
+}
+
+bool ConduitChordMemoryConfig::PatchExtension::fromXml(TiXmlElement *) { return true; }
+
 } // namespace sst::conduit::chord_memory
