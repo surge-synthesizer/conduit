@@ -22,6 +22,7 @@ target_link_libraries(conduit-impl PUBLIC
         fmt
         tinyxml
         sst::clap_juce_shim_headers
+        ni-midi2
         )
 target_link_libraries(conduit-impl PRIVATE
         sst-jucegui
@@ -50,3 +51,4 @@ add_subdirectory(chord-memory)
 add_subdirectory(ring-modulator)
 add_subdirectory(clap-event-monitor)
 add_subdirectory(mts-to-noteexpression)
+add_subdirectory(midi2-sawsynth)

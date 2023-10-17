@@ -47,11 +47,12 @@
 #include "ring-modulator/ring-modulator.h"
 #include "clap-event-monitor/clap-event-monitor.h"
 #include "mts-to-noteexpression/mts-to-noteexpression.h"
+#include "midi2-sawsynth/midi2-sawsynth.h"
 
 namespace sst::conduit::pluginentry
 {
 
-uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 6; }
+uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 7; }
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
     if (w == 0)
@@ -66,6 +67,8 @@ const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_facto
         return &clap_event_monitor::desc;
     if (w == 5)
         return &mts_to_noteexpression::desc;
+    if (w == 6)
+        return &midi2_sawsynth::desc;
 
     CNDOUT << "Clap Plugin not found at " << w << std::endl;
     return nullptr;
@@ -106,6 +109,11 @@ static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const
         return p->clapPlugin();
     }
 
+    if (strcmp(plugin_id, midi2_sawsynth::desc.id) == 0)
+    {
+        auto p = new midi2_sawsynth::ConduitMIDI2SawSynth(host);
+        return p->clapPlugin();
+    }
     CNDOUT << "No plugin found; returning nullptr" << std::endl;
     return nullptr;
 }
@@ -145,6 +153,12 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
     if (strcmp(plugin_id, mts_to_noteexpression::desc.id) == 0)
     {
         strncpy(info->au_subt, "mtsN", 5);
+        return true;
+    }
+
+    if (strcmp(plugin_id, midi2_sawsynth::desc.id) == 0)
+    {
+        strncpy(info->au_subt, "m2sn", 5);
         return true;
     }
 

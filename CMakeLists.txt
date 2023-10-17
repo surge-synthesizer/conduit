@@ -49,6 +49,8 @@ add_subdirectory(libs/sst/sst-waveshapers)
 add_subdirectory(libs/sst/sst-effects)
 add_subdirectory(libs/sst/sst-voicemanager)
 
+add_subdirectory(libs/ni-midi2 EXCLUDE_FROM_ALL)
+
 add_library(mts-esp-client STATIC libs/MTS-ESP/Client/libMTSClient.cpp)
 target_include_directories(mts-esp-client PUBLIC libs/MTS-ESP/Client)
 

@@ -54,8 +54,8 @@ clap_plugin_descriptor desc = {CLAP_VERSION,
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
     : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(&desc, host),
-      gen((size_t)this), urd(0.f, 1.f), hr_dn(6, true),
-      voiceManager(*this), voices{sst::cpputils::make_array<PolysynthVoice, max_voices>(*this)}
+      gen((size_t)this), urd(0.f, 1.f), hr_dn(6, true), voiceManager(*this),
+      voices{sst::cpputils::make_array<PolysynthVoice, max_voices>(*this)}
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto monoModFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE;
