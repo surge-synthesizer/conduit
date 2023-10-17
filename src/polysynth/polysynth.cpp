@@ -841,7 +841,6 @@ void ConduitPolysynth::handleInboundEvent(const clap_event_header_t *evt)
          * that) streams to do with as you wish. The CLAP_MIDI_EVENT here does the obvious thing.
          */
         auto mevt = reinterpret_cast<const clap_event_midi *>(evt);
-
         sst::voicemanager::applyMidi1Message(voiceManager, mevt->port_index, mevt->data);
         break;
     }
