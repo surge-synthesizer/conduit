@@ -28,6 +28,7 @@
 #include "sst/jucegui/components/Knob.h"
 #include "sst/jucegui/components/MultiSwitch.h"
 #include "sst/jucegui/components/ToggleButton.h"
+#include "sst/jucegui/components/TextPushButton.h"
 #include "sst/jucegui/component-adapters/DiscreteToReference.h"
 
 #include "sst/jucegui/data/Continuous.h"
@@ -66,9 +67,18 @@ struct ConduitMIDI2SawSynthEditor : public jcmp::WindowPanel,
                 editor.noteOnly);
             noteOnly->widget->setLabel("Note Only");
             addAndMakeVisible(*noteOnly->widget);
+
+            textB = std::make_unique<jcmp::TextPushButton>();
+            textB->setLabel("Clear");
+            addAndMakeVisible(*textB);
+            textB->setOnCallback([this]() { editor.clearEvents(); });
         }
-        void resized() override { noteOnly->widget->setBounds(0, 0, 200, 20); }
+        void resized() override {
+            noteOnly->widget->setBounds(0, 0, 200, 20);
+            textB->setBounds(0,22, 200, 20);
+        }
         std::unique_ptr<jcad::DiscreteToValueReference<jcmp::ToggleButton, bool>> noteOnly;
+        std::unique_ptr<jcmp::TextPushButton> textB;
     };
 
     ConduitMIDI2SawSynthEditor(uicomm_t &p) : uic(p)
@@ -121,6 +131,12 @@ struct ConduitMIDI2SawSynthEditor : public jcmp::WindowPanel,
         }
         if (dorp)
             eventPainterWeak->lb->updateContent();
+    }
+
+    void clearEvents()
+    {
+        events.clear();
+        eventPainterWeak->lb->updateContent();
     }
 
     bool includeEvent(const ConduitMIDI2SawSynthConfig::DataCopyForUI::evtCopy &ec)
