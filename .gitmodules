@@ -46,3 +46,6 @@
 [submodule "libs/sst/sst-waveshapers"]
 	path = libs/sst/sst-waveshapers
 	url = https://github.com/surge-synthesizer/sst-waveshapers
+[submodule "libs/ni-midi2"]
+	path = libs/ni-midi2
+	url = https://github.com/midi2-dev/ni-midi2.git
