@@ -235,7 +235,7 @@ struct ConduitMIDI2SawSynthEditor : public jcmp::WindowPanel,
                     else if (midi::is_note_off_message(pk))
                     {
                         oss << "note off "
-                            << " nr=" << midi::get_note_nr(pk)
+                            << " nr=" << (int)midi::get_note_nr(pk)
                             << " pt=" << midi::get_note_pitch(pk).as_float()
                             << " vel=" << midi::get_note_velocity(pk).as_float();
 
@@ -250,7 +250,7 @@ struct ConduitMIDI2SawSynthEditor : public jcmp::WindowPanel,
                     else if (midi::is_poly_pressure_message(pk))
                     {
                         oss << "poly pressure " << midi::get_poly_pressure_value(pk).as_float()
-                            << std::dec << " n=" << midi::get_note_nr(pk) << " "
+                            << std::dec << " n=" << (int)midi::get_note_nr(pk) << " "
                             << " " << std::hex << m2e->data[0] << " " << m2e->data[1] << " "
                             << m2e->data[2] << " " << m2e->data[3] << " ";
                     }
@@ -267,13 +267,13 @@ struct ConduitMIDI2SawSynthEditor : public jcmp::WindowPanel,
                     else if (midi::is_midi2_registered_per_note_controller_message(pk))
                     {
                         oss << "registered per note controller n=" << std::dec
-                            << midi::get_note_nr(pk) << " ct=" << std::hex
+                            << (int)midi::get_note_nr(pk) << " ct=" << std::hex
                             << (int)midi::get_midi2_per_note_controller_index(pk)
                             << " val=" << midi::get_controller_value(pk).as_float() << std::endl;
                     }
                     else if (midi::is_midi2_per_note_pitch_bend_message(pk))
                     {
-                        oss << "note pitch bend n=" << std::dec << midi::get_note_nr(pk)
+                        oss << "note pitch bend n=" << std::dec << (int)midi::get_note_nr(pk)
                             << " val=" << midi::get_controller_value(pk).as_float() << std::endl;
                     }
                     else if (midi::is_midi2_registered_controller_message(pk))
