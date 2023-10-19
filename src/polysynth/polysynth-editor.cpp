@@ -696,7 +696,6 @@ ModMatrixPanel::ModMatrixPanel(sst::conduit::polysynth::editor::uicomm_t &p,
 {
     auto content = std::make_unique<Content>();
 
-    CNDOUT << "Constructing ModMatrix Panel" << std::endl;
     auto v = uic.getAllParamDescriptions();
     for (auto &pd : v)
     {
@@ -717,6 +716,7 @@ ModMatrixPanel::ModMatrixPanel(sst::conduit::polysynth::editor::uicomm_t &p,
         sourceName[pd.first] = pd.second.first;
     }
 
+#if DEBUG_MATRIX_MENUS
     for (const auto &[g, m] : targetMenu)
     {
         CNDOUT << "T -- " << g << std::endl;
@@ -734,6 +734,7 @@ ModMatrixPanel::ModMatrixPanel(sst::conduit::polysynth::editor::uicomm_t &p,
             CNDOUT << "S     |-- " << n << " (" << id << ")" << std::endl;
         }
     }
+#endif
 
     for (auto i = 0U; i < content->modRows.size(); ++i)
     {
@@ -1030,8 +1031,7 @@ std::unique_ptr<juce::Component> ConduitPolysynth::createEditor()
     uiComms.refreshUIValues = true;
     auto innards =
         std::make_unique<sst::conduit::polysynth::editor::ConduitPolysynthEditor>(uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitPolysynth>>(
-        uiComms, desc.name, desc.id);
+    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitPolysynth>>(uiComms);
     editor->setContentComponent(std::move(innards));
 
     return editor;

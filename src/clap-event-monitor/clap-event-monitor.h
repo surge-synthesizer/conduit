@@ -36,8 +36,6 @@
 
 namespace sst::conduit::clap_event_monitor
 {
-
-extern clap_plugin_descriptor desc;
 static constexpr int nParams = 3;
 
 struct ConduitClapEventMonitorConfig
@@ -85,7 +83,7 @@ struct ConduitClapEventMonitorConfig
         }
     };
 
-    static clap_plugin_descriptor *getDescription() { return &desc; }
+    static const clap_plugin_descriptor *getDescription();
 };
 
 struct ConduitClapEventMonitor

@@ -25,21 +25,25 @@
 
 namespace sst::conduit::clap_event_monitor
 {
-const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
-clap_plugin_descriptor desc = {CLAP_VERSION,
-                               "org.surge-synth-team.conduit.clap-event-monitor",
-                               "Conduit Clap Event Monitor",
-                               "Surge Synth Team",
-                               "https://surge-synth-team.org",
-                               "",
-                               "",
-                               sst::conduit::build::FullVersionStr,
-                               "The Conduit ClapEventMonitor is a work in progress",
-                               features};
+const clap_plugin_descriptor *ConduitClapEventMonitorConfig::getDescription()
+{
+    const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
+    static clap_plugin_descriptor desc = {CLAP_VERSION,
+                                          "org.surge-synth-team.conduit.clap-event-monitor",
+                                          "Conduit Clap Event Monitor",
+                                          "Surge Synth Team",
+                                          "https://surge-synth-team.org",
+                                          "",
+                                          "",
+                                          sst::conduit::build::FullVersionStr,
+                                          "The Conduit ClapEventMonitor is a work in progress",
+                                          features};
+    return &desc;
+}
 
 ConduitClapEventMonitor::ConduitClapEventMonitor(const clap_host *host)
     : sst::conduit::shared::ClapBaseClass<ConduitClapEventMonitor, ConduitClapEventMonitorConfig>(
-          &desc, host)
+          host)
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;

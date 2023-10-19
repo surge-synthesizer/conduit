@@ -29,21 +29,25 @@ namespace sst::conduit::ring_modulator
 
 namespace mech = sst::basic_blocks::mechanics;
 
-const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
-clap_plugin_descriptor desc = {CLAP_VERSION,
-                               "org.surge-synth-team.conduit.ring-modulator",
-                               "Conduit Ring Modulator",
-                               "Surge Synth Team",
-                               "https://surge-synth-team.org",
-                               "",
-                               "",
-                               sst::conduit::build::FullVersionStr,
-                               "The Conduit RingModulator is a work in progress",
-                               features};
+const clap_plugin_descriptor *ConduitRingModulatorConfig::getDescription()
+{
+
+    const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
+    static clap_plugin_descriptor desc = {CLAP_VERSION,
+                                          "org.surge-synth-team.conduit.ring-modulator",
+                                          "Conduit Ring Modulator",
+                                          "Surge Synth Team",
+                                          "https://surge-synth-team.org",
+                                          "",
+                                          "",
+                                          sst::conduit::build::FullVersionStr,
+                                          "The Conduit RingModulator is a work in progress",
+                                          features};
+    return &desc;
+}
 
 ConduitRingModulator::ConduitRingModulator(const clap_host *host)
-    : sst::conduit::shared::ClapBaseClass<ConduitRingModulator, ConduitRingModulatorConfig>(&desc,
-                                                                                            host),
+    : sst::conduit::shared::ClapBaseClass<ConduitRingModulator, ConduitRingModulatorConfig>(host),
       hr_up(6, true), hr_scup(6, true), hr_down(6, true)
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;

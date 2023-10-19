@@ -36,7 +36,6 @@
 namespace sst::conduit::chord_memory
 {
 
-extern clap_plugin_descriptor desc;
 static constexpr int nParams = 1;
 
 struct ConduitChordMemoryConfig
@@ -60,7 +59,7 @@ struct ConduitChordMemoryConfig
         std::atomic<bool> isProcessing{false};
     };
 
-    static clap_plugin_descriptor *getDescription() { return &desc; }
+    static const clap_plugin_descriptor *getDescription();
 };
 
 struct ConduitChordMemory

@@ -65,6 +65,17 @@ struct EmptyPatchExtension
 template <typename T, typename TConfig>
 struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 {
+    using config_t = TConfig;
+
+    ClapBaseClass(const clap_host *host)
+        : plugHelper_t(TConfig::getDescription(), host), uiComms(*this)
+    {
+        dbToLinearTable.init();
+        equalTuningTable.init();
+        twoToXTable.init();
+        guaranteeDocumentsPath();
+    }
+
     ClapBaseClass(const clap_plugin_descriptor *desc, const clap_host *host)
         : plugHelper_t(desc, host), uiComms(*this)
     {

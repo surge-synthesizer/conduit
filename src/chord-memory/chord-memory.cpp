@@ -25,20 +25,24 @@
 
 namespace sst::conduit::chord_memory
 {
-const char *features[] = {CLAP_PLUGIN_FEATURE_NOTE_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
-clap_plugin_descriptor desc = {CLAP_VERSION,
-                               "org.surge-synth-team.conduit.chord-memory",
-                               "Conduit Chord Memory",
-                               "Surge Synth Team",
-                               "https://surge-synth-team.org",
-                               "",
-                               "",
-                               sst::conduit::build::FullVersionStr,
-                               "The Conduit Chord Memory is a work in progress",
-                               features};
+const clap_plugin_descriptor *ConduitChordMemoryConfig::getDescription()
+{
+    const char *features[] = {CLAP_PLUGIN_FEATURE_NOTE_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
+    static clap_plugin_descriptor desc = {CLAP_VERSION,
+                                          "org.surge-synth-team.conduit.chord-memory",
+                                          "Conduit Chord Memory",
+                                          "Surge Synth Team",
+                                          "https://surge-synth-team.org",
+                                          "",
+                                          "",
+                                          sst::conduit::build::FullVersionStr,
+                                          "The Conduit Chord Memory is a work in progress",
+                                          features};
+    return &desc;
+}
 
 ConduitChordMemory::ConduitChordMemory(const clap_host *host)
-    : sst::conduit::shared::ClapBaseClass<ConduitChordMemory, ConduitChordMemoryConfig>(&desc, host)
+    : sst::conduit::shared::ClapBaseClass<ConduitChordMemory, ConduitChordMemoryConfig>(host)
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto steppedFlag = autoFlag | CLAP_PARAM_IS_STEPPED;

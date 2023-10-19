@@ -57,7 +57,6 @@ namespace sst::conduit::polysynth
  * This static (defined in the cpp file) allows us to present a name, feature set,
  * url etc... and is consumed by clap-saw-demo-pluginentry.cpp
  */
-extern clap_plugin_descriptor desc;
 static constexpr int nParams{72};
 
 struct ModMatrixConfig;
@@ -94,7 +93,7 @@ struct ConduitPolysynthConfig
         void populateMatrixView(const std::unique_ptr<ModMatrixConfig> &);
     };
 
-    static clap_plugin_descriptor *getDescription() { return &desc; }
+    static const clap_plugin_descriptor *getDescription();
 
     struct SpecializedMessage
     {
@@ -331,6 +330,18 @@ struct ConduitPolysynth
     std::function<void(PolysynthVoice *)> voiceEndCallback;
     void setVoiceEndCallback(std::function<void(PolysynthVoice *)> f) { voiceEndCallback = f; }
 
+    constexpr int32_t voiceCountForInitializationAction(uint16_t port, uint16_t channel,
+                                                        uint16_t key, int32_t noteId)
+    {
+        return 1;
+    }
+    int32_t initializeMultipleVoices(
+        std::array<PolysynthVoice *, VMConfig::maxVoiceCount> &voiceInitWorkingBuffer,
+        uint16_t port, uint16_t channel, uint16_t key, int32_t noteId, float velocity, float retune)
+    {
+        voiceInitWorkingBuffer[0] = initializeVoice(port, channel, key, noteId, velocity, retune);
+        return 1;
+    }
     PolysynthVoice *initializeVoice(uint16_t port, uint16_t channel, uint16_t key, int32_t noteId,
                                     float velocity, float retune);
     void releaseVoice(PolysynthVoice *v, float velocity);

@@ -67,8 +67,7 @@ template <typename Content> struct Background : sst::jucegui::components::Window
 template <typename Content> struct EditorBase : juce::Component
 {
     typename Content::UICommunicationBundle &uic;
-    EditorBase(typename Content::UICommunicationBundle &, const std::string &pluginName,
-               const std::string &pluginId);
+    EditorBase(typename Content::UICommunicationBundle &);
     ~EditorBase() = default;
 
     void setContentComponent(std::unique_ptr<juce::Component> c)
@@ -490,10 +489,10 @@ template <typename Content> void Background<Content>::buildBurger()
 }
 
 template <typename Content>
-EditorBase<Content>::EditorBase(typename Content::UICommunicationBundle &u,
-                                const std::string &pluginName, const std::string &pluginId)
-    : uic(u), pluginName(pluginName), pluginId(pluginId)
+EditorBase<Content>::EditorBase(typename Content::UICommunicationBundle &u) : uic(u)
 {
+    pluginName = Content::config_t::getDescription()->name;
+    pluginId = Content::config_t::getDescription()->id;
     container = std::make_unique<Background<Content>>(pluginName, pluginId, *this);
     addAndMakeVisible(*container);
 }
