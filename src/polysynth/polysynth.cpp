@@ -53,7 +53,7 @@ const clap_plugin_descriptor *ConduitPolysynthConfig::getDescription()
                                           "",
                                           sst::conduit::build::FullVersionStr,
                                           "The Conduit Polysynth is a work in progress",
-                                          features};
+                                          &features[0]};
     return &desc;
 }
 

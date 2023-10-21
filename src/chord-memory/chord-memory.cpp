@@ -27,7 +27,8 @@ namespace sst::conduit::chord_memory
 {
 const clap_plugin_descriptor *ConduitChordMemoryConfig::getDescription()
 {
-    const char *features[] = {CLAP_PLUGIN_FEATURE_NOTE_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
+    static const char *features[] = {CLAP_PLUGIN_FEATURE_NOTE_EFFECT, CLAP_PLUGIN_FEATURE_DELAY,
+                                     nullptr};
     static clap_plugin_descriptor desc = {CLAP_VERSION,
                                           "org.surge-synth-team.conduit.chord-memory",
                                           "Conduit Chord Memory",
@@ -37,7 +38,7 @@ const clap_plugin_descriptor *ConduitChordMemoryConfig::getDescription()
                                           "",
                                           sst::conduit::build::FullVersionStr,
                                           "The Conduit Chord Memory is a work in progress",
-                                          features};
+                                          &features[0]};
     return &desc;
 }
 

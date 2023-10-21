@@ -126,6 +126,7 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
                                clap_plugin_info_as_auv2_t *info)
 {
     auto desc = clap_get_plugin_descriptor(nullptr, index); // we don't use the factory above
+
     auto plugin_id = desc->id;
 
     info->au_type[0] = 0; // use the features to determine the type

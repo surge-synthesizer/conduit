@@ -29,7 +29,8 @@ namespace sst::conduit::mts_to_noteexpression
 {
 const clap_plugin_descriptor *ConduitMTSToNoteExpressionConfig::getDescription()
 {
-    const char *features[] = {CLAP_PLUGIN_FEATURE_NOTE_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
+    static const char *features[] = {CLAP_PLUGIN_FEATURE_NOTE_EFFECT, CLAP_PLUGIN_FEATURE_DELAY,
+                                     nullptr};
     static clap_plugin_descriptor desc = {CLAP_VERSION,
                                           "org.surge-synth-team.conduit.mts-to-noteexpression",
                                           "Conduit MTS to Note Expression Adapter",
@@ -39,7 +40,7 @@ const clap_plugin_descriptor *ConduitMTSToNoteExpressionConfig::getDescription()
                                           "",
                                           sst::conduit::build::FullVersionStr,
                                           "The Conduit ClapEventMonitor is a work in progress",
-                                          features};
+                                          &features[0]};
     return &desc;
 }
 

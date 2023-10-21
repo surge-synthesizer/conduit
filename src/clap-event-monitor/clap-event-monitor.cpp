@@ -27,7 +27,8 @@ namespace sst::conduit::clap_event_monitor
 {
 const clap_plugin_descriptor *ConduitClapEventMonitorConfig::getDescription()
 {
-    const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
+    static const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY,
+                                     nullptr};
     static clap_plugin_descriptor desc = {CLAP_VERSION,
                                           "org.surge-synth-team.conduit.clap-event-monitor",
                                           "Conduit Clap Event Monitor",
@@ -37,7 +38,7 @@ const clap_plugin_descriptor *ConduitClapEventMonitorConfig::getDescription()
                                           "",
                                           sst::conduit::build::FullVersionStr,
                                           "The Conduit ClapEventMonitor is a work in progress",
-                                          features};
+                                          &features[0]};
     return &desc;
 }
 

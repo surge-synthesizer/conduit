@@ -32,8 +32,8 @@ namespace sst::conduit::midi2_sawsynth
 {
 const clap_plugin_descriptor *ConduitMIDI2SawSynthConfig::getDescription()
 {
-    const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER,
-                              nullptr};
+    static const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT,
+                                     CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
     static clap_plugin_descriptor desc = {CLAP_VERSION,
                                           "org.surge-synth-team.conduit.midi2_sawsynth",
                                           "Conduit MIDI2 SawSynth",
@@ -43,7 +43,7 @@ const clap_plugin_descriptor *ConduitMIDI2SawSynthConfig::getDescription()
                                           "",
                                           sst::conduit::build::FullVersionStr,
                                           "The Conduit MIDI2SawSynth is a work in progress",
-                                          features};
+                                          &features[0]};
     return &desc;
 }
 

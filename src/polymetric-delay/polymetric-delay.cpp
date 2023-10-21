@@ -23,17 +23,12 @@
 #include "version.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
 
-struct LogOnCreate
-{
-    LogOnCreate() { CNDOUT << "Created instance of LogOnCreate" << std::endl; }
-};
-LogOnCreate logit;
-
 namespace sst::conduit::polymetric_delay
 {
 const clap_plugin_descriptor *ConduitPolymetricDelayConfig::getDescription()
 {
-    const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
+    static const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY,
+                                     nullptr};
     static clap_plugin_descriptor desc = {CLAP_VERSION,
                                           "org.surge-synth-team.conduit.polymetric-delay",
                                           "Conduit Polymetric Delay",
@@ -43,7 +38,7 @@ const clap_plugin_descriptor *ConduitPolymetricDelayConfig::getDescription()
                                           "",
                                           sst::conduit::build::FullVersionStr,
                                           "The Conduit Polymetric Delay is a work in progress",
-                                          features};
+                                          &features[0]};
     return &desc;
 }
 
