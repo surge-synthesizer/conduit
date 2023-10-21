@@ -27,21 +27,26 @@
 
 namespace sst::conduit::mts_to_noteexpression
 {
-const char *features[] = {CLAP_PLUGIN_FEATURE_NOTE_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
-clap_plugin_descriptor desc = {CLAP_VERSION,
-                               "org.surge-synth-team.conduit.mts-to-noteexpression",
-                               "Conduit MTS to Note Expression Adapter",
-                               "Surge Synth Team",
-                               "https://surge-synth-team.org",
-                               "",
-                               "",
-                               sst::conduit::build::FullVersionStr,
-                               "The Conduit ClapEventMonitor is a work in progress",
-                               features};
+const clap_plugin_descriptor *ConduitMTSToNoteExpressionConfig::getDescription()
+{
+    static const char *features[] = {CLAP_PLUGIN_FEATURE_NOTE_EFFECT, CLAP_PLUGIN_FEATURE_DELAY,
+                                     nullptr};
+    static clap_plugin_descriptor desc = {CLAP_VERSION,
+                                          "org.surge-synth-team.conduit.mts-to-noteexpression",
+                                          "Conduit MTS to Note Expression Adapter",
+                                          "Surge Synth Team",
+                                          "https://surge-synth-team.org",
+                                          "",
+                                          "",
+                                          sst::conduit::build::FullVersionStr,
+                                          "The Conduit ClapEventMonitor is a work in progress",
+                                          &features[0]};
+    return &desc;
+}
 
 ConduitMTSToNoteExpression::ConduitMTSToNoteExpression(const clap_host *host)
     : sst::conduit::shared::ClapBaseClass<ConduitMTSToNoteExpression,
-                                          ConduitMTSToNoteExpressionConfig>(&desc, host)
+                                          ConduitMTSToNoteExpressionConfig>(host)
 {
     mtsClient = MTS_RegisterClient();
 

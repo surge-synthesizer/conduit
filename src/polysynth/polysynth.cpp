@@ -40,20 +40,25 @@
 namespace sst::conduit::polysynth
 {
 
-const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
-clap_plugin_descriptor desc = {CLAP_VERSION,
-                               "org.surge-synth-team.conduit.polysynth",
-                               "Conduit Polysynth",
-                               "Surge Synth Team",
-                               "https://surge-synth-team.org",
-                               "",
-                               "",
-                               sst::conduit::build::FullVersionStr,
-                               "The Conduit Polysynth is a work in progress",
-                               features};
+const clap_plugin_descriptor *ConduitPolysynthConfig::getDescription()
+{
+    static const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT,
+                                     CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
+    static clap_plugin_descriptor desc = {CLAP_VERSION,
+                                          "org.surge-synth-team.conduit.polysynth",
+                                          "Conduit Polysynth",
+                                          "Surge Synth Team",
+                                          "https://surge-synth-team.org",
+                                          "",
+                                          "",
+                                          sst::conduit::build::FullVersionStr,
+                                          "The Conduit Polysynth is a work in progress",
+                                          &features[0]};
+    return &desc;
+}
 
 ConduitPolysynth::ConduitPolysynth(const clap_host *host)
-    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(&desc, host),
+    : sst::conduit::shared::ClapBaseClass<ConduitPolysynth, ConduitPolysynthConfig>(host),
       gen((size_t)this), urd(0.f, 1.f), hr_dn(6, true), voiceManager(*this),
       voices{sst::cpputils::make_array<PolysynthVoice, max_voices>(*this)}
 {

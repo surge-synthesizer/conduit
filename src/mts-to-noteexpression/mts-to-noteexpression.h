@@ -38,8 +38,6 @@ struct MTSClient;
 
 namespace sst::conduit::mts_to_noteexpression
 {
-
-extern clap_plugin_descriptor desc;
 static constexpr int nParams = 2;
 
 struct ConduitMTSToNoteExpressionConfig
@@ -59,7 +57,7 @@ struct ConduitMTSToNoteExpressionConfig
         std::atomic<int32_t> noteRemainingUpdate{0};
     };
 
-    static clap_plugin_descriptor *getDescription() { return &desc; }
+    static const clap_plugin_descriptor *getDescription();
 };
 
 struct ConduitMTSToNoteExpression

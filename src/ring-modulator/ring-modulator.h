@@ -38,7 +38,6 @@
 namespace sst::conduit::ring_modulator
 {
 
-extern clap_plugin_descriptor desc;
 static constexpr int nParams = 4;
 
 struct ConduitRingModulatorConfig
@@ -53,7 +52,7 @@ struct ConduitRingModulatorConfig
         std::atomic<bool> isProcessing{false};
     };
 
-    static clap_plugin_descriptor *getDescription() { return &desc; }
+    static const clap_plugin_descriptor *getDescription();
 };
 
 struct ConduitRingModulator

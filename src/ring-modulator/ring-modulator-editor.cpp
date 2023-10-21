@@ -174,8 +174,7 @@ std::unique_ptr<juce::Component> ConduitRingModulator::createEditor()
     uiComms.refreshUIValues = true;
     auto innards =
         std::make_unique<sst::conduit::ring_modulator::editor::ConduitRingModulatorEditor>(uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitRingModulator>>(
-        uiComms, desc.name, desc.id);
+    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitRingModulator>>(uiComms);
     editor->setContentComponent(std::move(innards));
 
     return editor;

@@ -339,8 +339,7 @@ std::unique_ptr<juce::Component> ConduitPolymetricDelay::createEditor()
     auto innards =
         std::make_unique<sst::conduit::polymetric_delay::editor::ConduitPolymetricDelayEditor>(
             uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitPolymetricDelay>>(
-        uiComms, desc.name, desc.id);
+    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitPolymetricDelay>>(uiComms);
     editor->setContentComponent(std::move(innards));
 
     uiComms.refreshUIValues = true;

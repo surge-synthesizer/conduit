@@ -33,11 +33,10 @@
 #include "sst/cpputils/ring_buffer.h"
 
 #include "conduit-shared/clap-base-class.h"
+#include "sst/voicemanager/voicemanager.h"
 
 namespace sst::conduit::midi2_sawsynth
 {
-
-extern clap_plugin_descriptor desc;
 static constexpr int nParams = 3;
 
 struct ConduitMIDI2SawSynthConfig
@@ -85,7 +84,7 @@ struct ConduitMIDI2SawSynthConfig
         }
     };
 
-    static clap_plugin_descriptor *getDescription() { return &desc; }
+    static const clap_plugin_descriptor *getDescription();
 };
 
 struct ConduitMIDI2SawSynth
@@ -141,9 +140,50 @@ struct ConduitMIDI2SawSynth
 
     typedef std::unordered_map<int, int> PatchPluginExtension;
 
+    struct M2Voice
+    {
+    };
+    struct VMConfig
+    {
+        static constexpr size_t maxVoiceCount{128};
+        using voice_t = M2Voice;
+    };
+
   protected:
     std::unique_ptr<juce::Component> createEditor() override;
     std::atomic<bool> refreshUIValues{false};
+
+  public:
+    using voiceManager_t = sst::voicemanager::VoiceManager<VMConfig, ConduitMIDI2SawSynth>;
+    voiceManager_t voiceManager;
+
+    void setVoiceEndCallback(std::function<void(M2Voice *)> v) {}
+
+    constexpr int32_t voiceCountForInitializationAction(uint16_t port, uint16_t channel,
+                                                        uint16_t key, int32_t noteId)
+    {
+        return 1;
+    }
+    int32_t
+    initializeMultipleVoices(std::array<M2Voice *, VMConfig::maxVoiceCount> &voiceInitWorkingBuffer,
+                             uint16_t port, uint16_t channel, uint16_t key, int32_t noteId,
+                             float velocity, float retune)
+    {
+        voiceInitWorkingBuffer[0] = initializeVoice(port, channel, key, noteId, velocity, retune);
+        return 1;
+    }
+    M2Voice *initializeVoice(uint16_t port, uint16_t channel, uint16_t key, int32_t noteId,
+                             float velocity, float retune)
+    {
+        return nullptr;
+    }
+    void releaseVoice(M2Voice *v, float velocity) {}
+    void retriggerVoiceWithNewNoteID(M2Voice *v, int32_t noteid, float velocity)
+    {
+        CNDOUT << "retriggerVoice" << std::endl;
+    }
+    void setVoiceMIDIPitchBend(M2Voice *v, uint16_t pb14bit) {}
+    void setMIDI1CC(M2Voice *v, int ccid, int val) {}
 
     uint64_t samplePos{0};
 };

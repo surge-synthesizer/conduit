@@ -206,8 +206,8 @@ std::unique_ptr<juce::Component> ConduitMTSToNoteExpression::createEditor()
     uiComms.refreshUIValues = true;
     auto innards = std::make_unique<
         sst::conduit::mts_to_noteexpression::editor::ConduitMTSToNoteExpressionEditor>(uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitMTSToNoteExpression>>(
-        uiComms, desc.name, desc.id);
+    auto editor =
+        std::make_unique<conduit::shared::EditorBase<ConduitMTSToNoteExpression>>(uiComms);
     innards->fixedFace = editor->loadFont("Anonymous_Pro/AnonymousPro-Regular.ttf");
     editor->setContentComponent(std::move(innards));
 

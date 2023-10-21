@@ -45,7 +45,6 @@
 namespace sst::conduit::polymetric_delay
 {
 
-extern clap_plugin_descriptor desc;
 static constexpr int nParams = 45;
 
 struct ConduitPolymetricDelayConfig
@@ -70,7 +69,7 @@ struct ConduitPolymetricDelayConfig
         std::atomic<float> inVu[2], outVu[2], tapVu[4][2];
     };
 
-    static clap_plugin_descriptor *getDescription() { return &desc; }
+    static const clap_plugin_descriptor *getDescription();
 };
 
 struct ConduitPolymetricDelay

@@ -25,21 +25,26 @@
 
 namespace sst::conduit::polymetric_delay
 {
-const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY, nullptr};
-clap_plugin_descriptor desc = {CLAP_VERSION,
-                               "org.surge-synth-team.conduit.polymetric-delay",
-                               "Conduit Polymetric Delay",
-                               "Surge Synth Team",
-                               "https://surge-synth-team.org",
-                               "",
-                               "",
-                               sst::conduit::build::FullVersionStr,
-                               "The Conduit Polymetric Delay is a work in progress",
-                               features};
+const clap_plugin_descriptor *ConduitPolymetricDelayConfig::getDescription()
+{
+    static const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY,
+                                     nullptr};
+    static clap_plugin_descriptor desc = {CLAP_VERSION,
+                                          "org.surge-synth-team.conduit.polymetric-delay",
+                                          "Conduit Polymetric Delay",
+                                          "Surge Synth Team",
+                                          "https://surge-synth-team.org",
+                                          "",
+                                          "",
+                                          sst::conduit::build::FullVersionStr,
+                                          "The Conduit Polymetric Delay is a work in progress",
+                                          &features[0]};
+    return &desc;
+}
 
 ConduitPolymetricDelay::ConduitPolymetricDelay(const clap_host *host)
     : sst::conduit::shared::ClapBaseClass<ConduitPolymetricDelay, ConduitPolymetricDelayConfig>(
-          &desc, host)
+          host)
 {
     auto autoFlag = CLAP_PARAM_IS_AUTOMATABLE;
     auto modFlag = autoFlag | CLAP_PARAM_IS_MODULATABLE;

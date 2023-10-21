@@ -73,9 +73,10 @@ struct ConduitMIDI2SawSynthEditor : public jcmp::WindowPanel,
             addAndMakeVisible(*textB);
             textB->setOnCallback([this]() { editor.clearEvents(); });
         }
-        void resized() override {
+        void resized() override
+        {
             noteOnly->widget->setBounds(0, 0, 200, 20);
-            textB->setBounds(0,22, 200, 20);
+            textB->setBounds(0, 22, 200, 20);
         }
         std::unique_ptr<jcad::DiscreteToValueReference<jcmp::ToggleButton, bool>> noteOnly;
         std::unique_ptr<jcmp::TextPushButton> textB;
@@ -352,8 +353,7 @@ std::unique_ptr<juce::Component> ConduitMIDI2SawSynth::createEditor()
     uiComms.refreshUIValues = true;
     auto innards =
         std::make_unique<sst::conduit::midi2_sawsynth::editor::ConduitMIDI2SawSynthEditor>(uiComms);
-    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitMIDI2SawSynth>>(
-        uiComms, desc.name, desc.id);
+    auto editor = std::make_unique<conduit::shared::EditorBase<ConduitMIDI2SawSynth>>(uiComms);
     innards->fixedFace = editor->loadFont("Anonymous_Pro/AnonymousPro-Regular.ttf");
     editor->setContentComponent(std::move(innards));
 

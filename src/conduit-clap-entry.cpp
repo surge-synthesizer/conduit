@@ -23,8 +23,8 @@
  * This file provides the `clap_plugin_entry` entry point required in the DLL for all
  * clap plugins. It also provides the basic functions for the resulting factory class
  * which generates the plugin. In a single plugin case, this really is just plumbing
- * through to expose polysynth::desc and create a polysynth plugin instance using
- * the helper classes.
+ * through to expose polysynth::ConduitPolysynthConfig::getDescription() and create a polysynth
+ * plugin instance using the helper classes.
  *
  * For more information on this mechanism, see include/clap/entry.h
  */
@@ -55,20 +55,21 @@ namespace sst::conduit::pluginentry
 uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 7; }
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
+    CNDOUT << CNDVAR(w) << std::endl;
     if (w == 0)
-        return &polysynth::desc;
+        return polysynth::ConduitPolysynthConfig::getDescription();
     if (w == 1)
-        return &polymetric_delay::desc;
+        return polymetric_delay::ConduitPolymetricDelayConfig::getDescription();
     if (w == 2)
-        return &chord_memory::desc;
+        return chord_memory::ConduitChordMemoryConfig::getDescription();
     if (w == 3)
-        return &ring_modulator::desc;
+        return ring_modulator::ConduitRingModulatorConfig::getDescription();
     if (w == 4)
-        return &clap_event_monitor::desc;
+        return clap_event_monitor::ConduitClapEventMonitorConfig::getDescription();
     if (w == 5)
-        return &mts_to_noteexpression::desc;
+        return mts_to_noteexpression::ConduitMTSToNoteExpressionConfig::getDescription();
     if (w == 6)
-        return &midi2_sawsynth::desc;
+        return midi2_sawsynth::ConduitMIDI2SawSynthConfig::getDescription();
 
     CNDOUT << "Clap Plugin not found at " << w << std::endl;
     return nullptr;
@@ -77,39 +78,42 @@ const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_facto
 static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_host *host,
                                              const char *plugin_id)
 {
-    if (strcmp(plugin_id, polysynth::desc.id) == 0)
+    if (strcmp(plugin_id, polysynth::ConduitPolysynthConfig::getDescription()->id) == 0)
     {
         auto p = new polysynth::ConduitPolysynth(host);
         return p->clapPlugin();
     }
-    if (strcmp(plugin_id, polymetric_delay::desc.id) == 0)
+    if (strcmp(plugin_id, polymetric_delay::ConduitPolymetricDelayConfig::getDescription()->id) ==
+        0)
     {
         auto p = new polymetric_delay::ConduitPolymetricDelay(host);
         return p->clapPlugin();
     }
-    if (strcmp(plugin_id, chord_memory::desc.id) == 0)
+    if (strcmp(plugin_id, chord_memory::ConduitChordMemoryConfig::getDescription()->id) == 0)
     {
         auto p = new chord_memory::ConduitChordMemory(host);
         return p->clapPlugin();
     }
-    if (strcmp(plugin_id, ring_modulator::desc.id) == 0)
+    if (strcmp(plugin_id, ring_modulator::ConduitRingModulatorConfig::getDescription()->id) == 0)
     {
         auto p = new ring_modulator::ConduitRingModulator(host);
         return p->clapPlugin();
     }
-    if (strcmp(plugin_id, clap_event_monitor::desc.id) == 0)
+    if (strcmp(plugin_id,
+               clap_event_monitor::ConduitClapEventMonitorConfig::getDescription()->id) == 0)
     {
         auto p = new clap_event_monitor::ConduitClapEventMonitor(host);
         return p->clapPlugin();
     }
 
-    if (strcmp(plugin_id, mts_to_noteexpression::desc.id) == 0)
+    if (strcmp(plugin_id,
+               mts_to_noteexpression::ConduitMTSToNoteExpressionConfig::getDescription()->id) == 0)
     {
         auto p = new mts_to_noteexpression::ConduitMTSToNoteExpression(host);
         return p->clapPlugin();
     }
 
-    if (strcmp(plugin_id, midi2_sawsynth::desc.id) == 0)
+    if (strcmp(plugin_id, midi2_sawsynth::ConduitMIDI2SawSynthConfig::getDescription()->id) == 0)
     {
         auto p = new midi2_sawsynth::ConduitMIDI2SawSynth(host);
         return p->clapPlugin();
@@ -122,41 +126,45 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
                                clap_plugin_info_as_auv2_t *info)
 {
     auto desc = clap_get_plugin_descriptor(nullptr, index); // we don't use the factory above
+
     auto plugin_id = desc->id;
 
     info->au_type[0] = 0; // use the features to determine the type
-    if (strcmp(plugin_id, polysynth::desc.id) == 0)
+    if (strcmp(plugin_id, polysynth::ConduitPolysynthConfig::getDescription()->id) == 0)
     {
         strncpy(info->au_subt, "PlyS", 5);
         return true;
     }
-    if (strcmp(plugin_id, polymetric_delay::desc.id) == 0)
+    if (strcmp(plugin_id, polymetric_delay::ConduitPolymetricDelayConfig::getDescription()->id) ==
+        0)
     {
         strncpy(info->au_subt, "dLay", 5);
         return true;
     }
-    if (strcmp(plugin_id, chord_memory::desc.id) == 0)
+    if (strcmp(plugin_id, chord_memory::ConduitChordMemoryConfig::getDescription()->id) == 0)
     {
         strncpy(info->au_subt, "crMm", 5);
         return true;
     }
-    if (strcmp(plugin_id, ring_modulator::desc.id) == 0)
+    if (strcmp(plugin_id, ring_modulator::ConduitRingModulatorConfig::getDescription()->id) == 0)
     {
         strncpy(info->au_subt, "rngM", 5);
         return true;
     }
-    if (strcmp(plugin_id, clap_event_monitor::desc.id) == 0)
+    if (strcmp(plugin_id,
+               clap_event_monitor::ConduitClapEventMonitorConfig::getDescription()->id) == 0)
     {
         strncpy(info->au_subt, "clEv", 5);
         return true;
     }
-    if (strcmp(plugin_id, mts_to_noteexpression::desc.id) == 0)
+    if (strcmp(plugin_id,
+               mts_to_noteexpression::ConduitMTSToNoteExpressionConfig::getDescription()->id) == 0)
     {
         strncpy(info->au_subt, "mtsN", 5);
         return true;
     }
 
-    if (strcmp(plugin_id, midi2_sawsynth::desc.id) == 0)
+    if (strcmp(plugin_id, midi2_sawsynth::ConduitMIDI2SawSynthConfig::getDescription()->id) == 0)
     {
         strncpy(info->au_subt, "m2sn", 5);
         return true;
