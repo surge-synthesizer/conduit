@@ -453,8 +453,8 @@ struct ConduitPolysynthEditor : public jcmp::WindowPanel,
         noisePanel->setBounds(oscWidth / 5 * 3, 2 * oscHeight, oscWidth / 5 * 2, oscHeight);
 
         static constexpr int envWidth{187}, envHeight{3 * oscHeight / 2};
-        aegPanel->setBounds(oscWidth, 0, envWidth, envHeight);
-        fegPanel->setBounds(oscWidth, envHeight, envWidth, envHeight);
+        fegPanel->setBounds(oscWidth, 0, envWidth, envHeight);
+        aegPanel->setBounds(oscWidth, envHeight, envWidth, envHeight);
 
         static constexpr int filterWidth{(int)(oscWidth / 5 * 3.5)};
         static constexpr int filterXPos{envWidth + oscWidth};

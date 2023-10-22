@@ -381,7 +381,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withName("FEG to LPF Depth")
                                     .withGroupName("FEG")
                                     .withFlags(modFlag)
-                                    .withRange(-48, 48)
+                                    .withRange(-127, 127)
                                     .withDefault(0)
                                     .withLinearScaleFormatting("semitones"));
 
@@ -391,7 +391,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withName("FEG to Cutoff Depth")
                                     .withGroupName("FEG")
                                     .withFlags(modFlag)
-                                    .withRange(-48, 48)
+                                    .withRange(-128, 128)
                                     .withDefault(0)
                                     .withLinearScaleFormatting("semitones"));
 
