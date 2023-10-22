@@ -30,6 +30,7 @@
 #include "sst/jucegui/components/HSlider.h"
 #include "sst/jucegui/components/HSliderFilled.h"
 #include "sst/jucegui/components/MultiSwitch.h"
+#include "sst/jucegui/components/VUMeter.h"
 
 #include "sst/jucegui/component-adapters/DiscreteToReference.h"
 #include "sst/jucegui/data/Continuous.h"
@@ -325,12 +326,20 @@ struct StatusPanel : jcmp::NamedPanel
     ConduitPolysynthEditor &ed;
 
     StatusPanel(uicomm_t &p, ConduitPolysynthEditor &e);
+    ~StatusPanel();
+
+    void updateStatus();
 
     struct Content : juce::Component
     {
         StatusPanel *panel{nullptr};
         Content(StatusPanel *p) : panel(p) {}
-        void resized() { panel->mpeButton->widget->setBounds(0, 0, 200, 20); }
+        void resized()
+        {
+            panel->mpeButton->widget->setBounds(0, 0, 200, 20);
+            panel->voiceCountLabel->setBounds(0, 22, 200, 20);
+            panel->vuMeter->setBounds(getWidth() - 30, 0, 30, getHeight());
+        }
     };
 
     void pushMPEStatus()
@@ -347,6 +356,9 @@ struct StatusPanel : jcmp::NamedPanel
     }
     std::unique_ptr<jcad::DiscreteToValueReference<jcmp::ToggleButton, bool>> mpeButton;
     bool mpeActive{false};
+
+    std::unique_ptr<jcmp::VUMeter> vuMeter;
+    std::unique_ptr<jcmp::Label> voiceCountLabel;
 };
 
 struct ModFXPanel : jcmp::NamedPanel
@@ -964,7 +976,26 @@ StatusPanel::StatusPanel(sst::conduit::polysynth::editor::uicomm_t &p,
     };
     content->addAndMakeVisible(*(mpeButton->widget));
 
+    vuMeter = std::make_unique<jcmp::VUMeter>();
+    vuMeter->direction = jcmp::VUMeter::VERTICAL;
+    content->addAndMakeVisible(*vuMeter);
+
+    voiceCountLabel = std::make_unique<jcmp::Label>();
+    voiceCountLabel->setText("Voices: 0");
+    content->addAndMakeVisible(*voiceCountLabel);
+
     setContentAreaComponent(std::move(content));
+
+    ed.comms->addIdleHandler("status", [this]() { updateStatus(); });
+}
+
+StatusPanel::~StatusPanel() { ed.comms->removeIdleHandler("status"); }
+
+void StatusPanel::updateStatus()
+{
+    vuMeter->setLevels(uic.dataCopyForUI.mainVU[0], uic.dataCopyForUI.mainVU[1]);
+    voiceCountLabel->setText("Voices : " + std::to_string(uic.dataCopyForUI.polyphony));
+    repaint();
 }
 
 ModFXPanel::ModFXPanel(sst::conduit::polysynth::editor::uicomm_t &p,
