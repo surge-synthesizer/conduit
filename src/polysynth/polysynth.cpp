@@ -381,7 +381,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withName("FEG to LPF Depth")
                                     .withGroupName("FEG")
                                     .withFlags(modFlag)
-                                    .withRange(-48, 48)
+                                    .withRange(-127, 127)
                                     .withDefault(0)
                                     .withLinearScaleFormatting("semitones"));
 
@@ -391,7 +391,7 @@ ConduitPolysynth::ConduitPolysynth(const clap_host *host)
                                     .withName("FEG to Cutoff Depth")
                                     .withGroupName("FEG")
                                     .withFlags(modFlag)
-                                    .withRange(-48, 48)
+                                    .withRange(-128, 128)
                                     .withDefault(0)
                                     .withLinearScaleFormatting("semitones"));
 
@@ -608,6 +608,7 @@ bool ConduitPolysynth::activate(double sampleRate, uint32_t minFrameCount,
     phaserFX->onSampleRateChanged();
     flangerFX->onSampleRateChanged();
     reverbFX->onSampleRateChanged();
+    mainVU.setSampleRate(sampleRate);
     return true;
 }
 
@@ -743,6 +744,9 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
             {
                 reverbFX->processBlock(output[0], output[1]);
             }
+            mainVU.process<PolysynthVoice::blockSize>(output[0], output[1]);
+            uiComms.dataCopyForUI.mainVU[0] = mainVU.vu_peak[0];
+            uiComms.dataCopyForUI.mainVU[1] = mainVU.vu_peak[1];
         }
         out[0][i] = output[0][blockPos];
         out[1][i] = output[1][blockPos];
@@ -771,6 +775,7 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
         }
     }
 
+    // TODO this should be in the voice manager somehow?
     for (const auto &[portid, channel, key, note_id] : terminatedVoices)
     {
         auto ov = process->out_events;
@@ -953,6 +958,7 @@ void ConduitPolysynth::activateVoice(PolysynthVoice &v, int port_index, int chan
                                      int noteid, double velocity)
 {
     v.start(port_index, channel, key, noteid, velocity);
+    uiComms.dataCopyForUI.polyphony++;
 }
 
 /*

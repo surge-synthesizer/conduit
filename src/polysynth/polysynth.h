@@ -38,7 +38,10 @@
 
 #include <clap/helpers/plugin.hh>
 
+#include "conduit-shared/sse-include.h"
+
 #include "sst/basic-blocks/params/ParamMetadata.h"
+#include "sst/basic-blocks/dsp/VUPeak.h"
 #include "sst/filters/HalfRateFilter.h"
 #include "sst/voicemanager/voicemanager.h"
 
@@ -84,6 +87,8 @@ struct ConduitPolysynthConfig
         std::atomic<uint32_t> updateCount{0};
         std::atomic<bool> isProcessing{false};
         std::atomic<int> polyphony{0};
+
+        std::atomic<float> mainVU[2];
 
         // s1, s2, target, depth
         using modMessage = std::tuple<int32_t, int32_t, int32_t, float>;
@@ -390,6 +395,8 @@ struct ConduitPolysynth
     std::unique_ptr<PhaserFX> phaserFX;
     std::unique_ptr<FlangerFX> flangerFX;
     std::unique_ptr<ReverbFX> reverbFX;
+
+    sst::basic_blocks::dsp::VUPeak mainVU;
 
   private:
     using voiceManager_t = sst::voicemanager::VoiceManager<VMConfig, ConduitPolysynth>;
