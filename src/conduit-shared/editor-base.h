@@ -188,6 +188,7 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
     ~EditorCommunicationsHandler()
     {
         assert(!idleTimer); // hit this and you never called stop or start
+        assert(idleHandlers.empty());
     }
 
     std::unordered_map<std::string, std::function<void()>> idleHandlers;
