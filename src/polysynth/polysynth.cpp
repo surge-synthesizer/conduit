@@ -706,6 +706,21 @@ clap_process_status ConduitPolysynth::process(const clap_process *process) noexc
         nextEvent = ev->get(ev, nextEventIndex);
     }
 
+    if (process->transport)
+    {
+        auto tev = process->transport;
+
+        uiComms.dataCopyForUI.tempo = tev->tempo;
+        uiComms.dataCopyForUI.bar_start = tev->bar_start;
+        uiComms.dataCopyForUI.bar_number = tev->bar_number;
+        uiComms.dataCopyForUI.song_pos_beats = tev->song_pos_beats;
+        uiComms.dataCopyForUI.tsig_num = tev->tsig_num;
+        uiComms.dataCopyForUI.tsig_denom = tev->tsig_denom;
+
+        uiComms.dataCopyForUI.isPlayingOrRecording =
+            (tev->flags & CLAP_TRANSPORT_IS_PLAYING) || (tev->flags & CLAP_TRANSPORT_IS_RECORDING);
+    }
+
     bool modActive = *paramToValue[pmModFXActive] > 0.5;
     bool revActive = *paramToValue[pmRevFXActive] > 0.5;
     bool usePhaser = *paramToValue[pmModFXType] < 0.5;

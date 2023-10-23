@@ -334,11 +334,34 @@ struct StatusPanel : jcmp::NamedPanel
     {
         StatusPanel *panel{nullptr};
         Content(StatusPanel *p) : panel(p) {}
-        void resized()
+        void resized() override
         {
             panel->mpeButton->widget->setBounds(0, 0, 200, 20);
             panel->voiceCountLabel->setBounds(0, 22, 200, 20);
             panel->vuMeter->setBounds(getWidth() - 30, 0, 30, getHeight());
+        }
+
+        void paint(juce::Graphics &g) override
+        {
+            auto lb = getLocalBounds().withTrimmedRight(33);
+            auto bx = lb.withHeight(12);
+            auto ft = juce::Font(9);
+            g.setFont(ft);
+            g.setColour(juce::Colours::white);
+            auto d = [&](auto s) {
+                g.drawText(s, bx, juce::Justification::centredRight);
+                bx = bx.translated(0, bx.getHeight());
+            };
+            d("Debug Info");
+            d(fmt::format("tempo={} play={}", panel->uic.dataCopyForUI.tempo.load(),
+                          panel->uic.dataCopyForUI.isPlayingOrRecording.load()));
+            d(fmt::format("tsig={}/{}", panel->uic.dataCopyForUI.tsig_num.load(),
+                          panel->uic.dataCopyForUI.tsig_denom.load()));
+            d(fmt::format("song pos={}", panel->uic.dataCopyForUI.song_pos_beats.load()));
+            d(fmt::format("bar start={} num={}", panel->uic.dataCopyForUI.bar_start.load(),
+                          panel->uic.dataCopyForUI.bar_number.load())
+
+            );
         }
     };
 
