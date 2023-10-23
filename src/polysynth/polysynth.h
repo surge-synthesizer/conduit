@@ -95,6 +95,14 @@ struct ConduitPolysynthConfig
         std::array<modMessage, 8> modMatrixCopy;
         std::atomic<uint32_t> rescanMatrix{0};
 
+        std::atomic<bool> isPlayingOrRecording;
+        std::atomic<double> tempo;
+        std::atomic<clap_beattime> bar_start;
+        std::atomic<int32_t> bar_number;
+        std::atomic<clap_beattime> song_pos_beats;
+
+        std::atomic<uint16_t> tsig_num, tsig_denom;
+
         void populateMatrixView(const std::unique_ptr<ModMatrixConfig> &);
     };
 
