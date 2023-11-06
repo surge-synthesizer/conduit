@@ -37,7 +37,6 @@
 #include <midi/midi2_channel_voice_message.h>
 #include <midi/channel_voice_message.h>
 #include <midi/universal_packet.h>
-#include "ni-midi-patches.h"
 
 namespace sst::conduit::midi2_sawsynth::editor
 {
