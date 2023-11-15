@@ -48,11 +48,12 @@
 #include "clap-event-monitor/clap-event-monitor.h"
 #include "mts-to-noteexpression/mts-to-noteexpression.h"
 #include "midi2-sawsynth/midi2-sawsynth.h"
+#include "multiout-synth/multiout-synth.h"
 
 namespace sst::conduit::pluginentry
 {
 
-uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 7; }
+uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 8; }
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
     CNDOUT << CNDVAR(w) << std::endl;
@@ -70,6 +71,8 @@ const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_facto
         return mts_to_noteexpression::ConduitMTSToNoteExpressionConfig::getDescription();
     if (w == 6)
         return midi2_sawsynth::ConduitMIDI2SawSynthConfig::getDescription();
+    if (w == 7)
+        return multiout_synth::ConduitMultiOutSynthConfig::getDescription();
 
     CNDOUT << "Clap Plugin not found at " << w << std::endl;
     return nullptr;
@@ -116,6 +119,12 @@ static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const
     if (strcmp(plugin_id, midi2_sawsynth::ConduitMIDI2SawSynthConfig::getDescription()->id) == 0)
     {
         auto p = new midi2_sawsynth::ConduitMIDI2SawSynth(host);
+        return p->clapPlugin();
+    }
+
+    if (strcmp(plugin_id, multiout_synth::ConduitMultiOutSynthConfig::getDescription()->id) == 0)
+    {
+        auto p = new multiout_synth::ConduitMultiOutSynth(host);
         return p->clapPlugin();
     }
     CNDOUT << "No plugin found; returning nullptr" << std::endl;
@@ -170,6 +179,11 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
         return true;
     }
 
+    if (strcmp(plugin_id, multiout_synth::ConduitMultiOutSynthConfig::getDescription()->id) == 0)
+    {
+        strncpy(info->au_subt, "mlOs", 5);
+        return true;
+    }
     return false;
 }
 
