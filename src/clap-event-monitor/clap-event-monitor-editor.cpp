@@ -65,11 +65,17 @@ struct ConduitClapEventMonitorEditor : public jcmp::WindowPanel,
         evtPanel = std::make_unique<jcmp::NamedPanel>("Events");
         addAndMakeVisible(*evtPanel);
 
+        transportPanel = std::make_unique<jcmp::NamedPanel>("Transport");
+        addAndMakeVisible(*transportPanel);
+
         auto ep = std::make_unique<EventPainter>(*this);
         eventPainterWeak = ep.get();
         evtPanel->setContentAreaComponent(std::move(ep));
 
-        setSize(600, 700);
+        auto tp = std::make_unique<TransportPainter>(this);
+        transportPanel->setContentAreaComponent(std::move(tp));
+
+        setSize(800, 700);
     }
 
     ~ConduitClapEventMonitorEditor()
@@ -77,6 +83,8 @@ struct ConduitClapEventMonitorEditor : public jcmp::WindowPanel,
         comms->removeIdleHandler("poll_events");
         comms->stopProcessing();
     }
+
+    ConduitClapEventMonitorConfig::DataCopyForUI::evtCopy transportEvt;
 
     void pullEvents()
     {
@@ -86,13 +94,88 @@ struct ConduitClapEventMonitorEditor : public jcmp::WindowPanel,
             auto ib = uic.dataCopyForUI.eventBuf.pop();
             if (ib.has_value())
             {
-                events.push_front(*ib);
+                if (ib->view()->flags == CLAP_CORE_EVENT_SPACE_ID &&
+                    ib->view()->type == CLAP_EVENT_TRANSPORT)
+                {
+                    transportEvt = *ib;
+                    transportPanel->repaint();
+                }
+                else
+                {
+                    events.push_front(*ib);
+                }
             }
             dorp = true;
         }
         if (dorp)
             eventPainterWeak->lb->updateContent();
     }
+
+    struct TransportPainter : juce::Component
+    {
+        ConduitClapEventMonitorEditor *editor;
+
+        TransportPainter(ConduitClapEventMonitorEditor *ed) : editor(ed) {}
+        const clap_event_transport_t *t()
+        {
+            auto v = editor->transportEvt.view();
+            if (v->space_id == CLAP_CORE_EVENT_SPACE_ID && v->type == CLAP_EVENT_TRANSPORT)
+            {
+                return reinterpret_cast<const clap_event_transport_t *>(v);
+            }
+            return nullptr;
+        }
+        void paint(juce::Graphics &g)
+        {
+            auto tp = t();
+            if (!tp)
+                return;
+
+            auto xp{0}, yp{0};
+            auto pt = [&xp, &yp, &g, this](const std::string lab, auto val) {
+                auto w = getWidth() / 3;
+                auto wl = w * 0.6;
+                g.drawText(lab, xp, yp, wl, 20, juce::Justification::centredLeft);
+                g.drawText(std::to_string(val), xp + wl, yp, w - wl, 20,
+                           juce::Justification::centredLeft);
+                yp += 20;
+                if (yp > getHeight() - 20)
+                {
+                    yp = 0;
+                    xp += w;
+                }
+            };
+            g.setColour(juce::Colours::white);
+            g.setFont(editor->fixedFace);
+
+#define A(x) pt(#x, tp->x)
+#define F(x) pt(#x, (tp->flags & CLAP_TRANSPORT_##x) ? 1 : 0)
+
+            A(song_pos_beats);
+            A(song_pos_seconds);
+            A(tempo);
+            A(tempo_inc);
+            A(loop_start_beats);
+            A(loop_end_beats);
+            A(loop_start_seconds);
+            A(loop_end_seconds);
+            A(bar_start);
+            A(bar_number);
+            A(tsig_num);
+            A(tsig_denom);
+
+            F(HAS_TEMPO);
+            F(HAS_BEATS_TIMELINE);
+            F(HAS_SECONDS_TIMELINE);
+            F(HAS_TIME_SIGNATURE);
+            F(IS_PLAYING);
+            F(IS_RECORDING);
+            F(IS_LOOP_ACTIVE);
+            F(IS_WITHIN_PRE_ROLL);
+
+#undef A
+        }
+    };
 
     struct EventPainter : juce::Component, juce::TableListBoxModel // a bit sloppy but that's OK
     {
@@ -199,7 +282,16 @@ struct ConduitClapEventMonitorEditor : public jcmp::WindowPanel,
             case CLAP_EVENT_TRANSPORT:
                 return "CLAP_EVENT_TRANSPORT";
             case CLAP_EVENT_MIDI:
-                return "CLAP_EVENT_MIDI";
+            {
+                std::ostringstream oss;
+                auto mev = reinterpret_cast<const clap_event_midi_t *>(ev);
+
+                oss << "CLAP_EVENT_MIDI ";
+
+                oss << std::hex << "0x" << (int)mev->data[0] << " 0x" << (int)mev->data[1] << " 0x"
+                    << (int)mev->data[2];
+                return oss.str();
+            }
             case CLAP_EVENT_MIDI_SYSEX:
                 return "CLAP_EVENT_MIDI_SYSEX";
             case CLAP_EVENT_MIDI2:
@@ -214,10 +306,13 @@ struct ConduitClapEventMonitorEditor : public jcmp::WindowPanel,
 
     void resized() override
     {
+        auto spl = 180;
         if (evtPanel)
-            evtPanel->setBounds(getLocalBounds());
+            evtPanel->setBounds(getLocalBounds().withTrimmedTop(spl));
+        if (transportPanel)
+            transportPanel->setBounds(getLocalBounds().withHeight(spl));
     }
-    std::unique_ptr<jcmp::NamedPanel> evtPanel;
+    std::unique_ptr<jcmp::NamedPanel> evtPanel, transportPanel;
     std::deque<ConduitClapEventMonitorConfig::DataCopyForUI::evtCopy> events;
     EventPainter *eventPainterWeak{nullptr};
     juce::Typeface::Ptr fixedFace{nullptr};

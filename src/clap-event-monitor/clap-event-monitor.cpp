@@ -27,7 +27,7 @@ namespace sst::conduit::clap_event_monitor
 {
 const clap_plugin_descriptor *ConduitClapEventMonitorConfig::getDescription()
 {
-    static const char *features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, CLAP_PLUGIN_FEATURE_DELAY,
+    static const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_DELAY,
                                      nullptr};
     static clap_plugin_descriptor desc = {CLAP_VERSION,
                                           "org.surge-synth-team.conduit.clap-event-monitor",
@@ -86,16 +86,10 @@ ConduitClapEventMonitor::~ConduitClapEventMonitor() {}
 bool ConduitClapEventMonitor::audioPortsInfo(uint32_t index, bool isInput,
                                              clap_audio_port_info *info) const noexcept
 {
-    static constexpr uint32_t inId{16}, outId{72};
+    static constexpr uint32_t outId{72};
     if (isInput)
     {
-        info->id = inId;
-        info->in_place_pair = CLAP_INVALID_ID;
-        strncpy(info->name, "main input", sizeof(info->name));
-        info->flags = CLAP_AUDIO_PORT_IS_MAIN;
-        info->channel_count = 2;
-        info->port_type = CLAP_PORT_STEREO;
-        return true;
+        return false;
     }
     else
     {
@@ -127,6 +121,15 @@ clap_process_status ConduitClapEventMonitor::process(const clap_process *process
     auto ov = process->out_events;
     auto sz = ev->size(ev);
 
+    if (samplePos == 0)
+    {
+        uiComms.dataCopyForUI.writeEventTo((const clap_event_header_t *)process->transport);
+    }
+    samplePos += process->frames_count;
+    if (samplePos > sampleRate / 30) // 30 hz transport udpate is probably fine
+    {
+        samplePos = 0;
+    }
     for (auto i = 0U; i < sz; ++i)
     {
         auto et = ev->get(ev, i);

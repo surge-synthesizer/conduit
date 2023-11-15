@@ -108,7 +108,7 @@ struct ConduitClapEventMonitor
     };
 
     bool implementsAudioPorts() const noexcept override { return true; }
-    uint32_t audioPortsCount(bool isInput) const noexcept override { return 1; }
+    uint32_t audioPortsCount(bool isInput) const noexcept override { return isInput ? 0 : 1; }
     bool audioPortsInfo(uint32_t index, bool isInput,
                         clap_audio_port_info *info) const noexcept override;
 
