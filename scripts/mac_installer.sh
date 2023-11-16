@@ -115,7 +115,7 @@ fi
 if [[ -d $INDIR/$AU ]]; then
 	AU_PKG_REF="<pkg-ref id=\"org.surge-synth-team.${PRODUCTFILE}.component.pkg\"/>"
 	AU_CHOICE="<line choice=\"org.surge-synth-team.${PRODUCTFILE}.component.pkg\"/>"
-	AU_CHOICE_DEF="<choice id=\"org.surge-synth-team.${PRODUCTFILE}.component.pkg\" visible=\"true\" start_selected=\"false\" title=\"${PRODUCT} Audio Unit\"><pkg-ref id=\"org.surge-synth-team.${PRODUCTFILE}.component.pkg\"/></choice><pkg-ref id=\"org.surge-synth-team.${PRODUCTFILE}.component.pkg\" version=\"${VERSION}\" onConclusion=\"none\">${PRODUCTFILE}_AU.pkg</pkg-ref>"
+	AU_CHOICE_DEF="<choice id=\"org.surge-synth-team.${PRODUCTFILE}.component.pkg\" visible=\"true\" start_selected=\"true\" title=\"${PRODUCT} Audio Unit\"><pkg-ref id=\"org.surge-synth-team.${PRODUCTFILE}.component.pkg\"/></choice><pkg-ref id=\"org.surge-synth-team.${PRODUCTFILE}.component.pkg\" version=\"${VERSION}\" onConclusion=\"none\">${PRODUCTFILE}_AU.pkg</pkg-ref>"
 fi
 if [[ -d $INDIR/$CLAP ]]; then
 	CLAP_PKG_REF="<pkg-ref id=\"org.surge-synth-team.${PRODUCTFILE}.clap.pkg\"/>"
