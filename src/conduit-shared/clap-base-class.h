@@ -509,10 +509,11 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     virtual void onStateRestored() {}
 
     // Sample Rate Support
-    double sampleRate{0}, sampleRateInv{0}, dsamplerate_inv{0};
+    double sampleRate{0}, sampleRateInv{0}, dsamplerate_inv{0}, samplerate{0};
     void setSampleRate(double sr)
     {
         sampleRate = sr;
+        samplerate = sr;
         sampleRateInv = 1.0 / sr;
         dsamplerate_inv = sampleRateInv; // just an alis
     }
