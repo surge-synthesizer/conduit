@@ -23,6 +23,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <deque>
 
+#include "sst/jucegui/accessibility/Ignored.h"
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
@@ -49,7 +50,7 @@ using uicomm_t = cps_t::UICommunicationBundle;
 
 struct ConduitMIDI2SawSynthEditor;
 
-struct ConduitMIDI2SawSynthEditor : public jcmp::WindowPanel,
+struct ConduitMIDI2SawSynthEditor : public sst::jucegui::accessibility::IgnoredComponent,
                                     shared::ToolTipMixIn<ConduitMIDI2SawSynthEditor>
 {
     uicomm_t &uic;

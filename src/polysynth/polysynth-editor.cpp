@@ -22,6 +22,7 @@
 #include "polysynth.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "sst/jucegui/accessibility/Ignored.h"
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/ToggleButton.h"
 #include "sst/jucegui/components/WindowPanel.h"
@@ -48,9 +49,15 @@ using uicomm_t = cps_t::UICommunicationBundle;
 
 struct ConduitPolysynthEditor;
 
-template <typename editor_t, int lx, int ly> struct GridContentBase : juce::Component
+template <typename editor_t, int lx, int ly>
+struct GridContentBase : sst::jucegui::accessibility::IgnoredComponent
 {
-    GridContentBase() { layout.setControlCellSize(60, 60); }
+    GridContentBase()
+    {
+        layout.setControlCellSize(60, 60);
+        setTitle("Intermediate Layer");
+        setWantsKeyboardFocus(false);
+    }
     ~GridContentBase() {}
     void resized() override
     {
@@ -69,9 +76,11 @@ template <typename editor_t, int lx, int ly> struct GridContentBase : juce::Comp
         addAndMakeVisible(*kb);
         this->layout.addComponent(*kb, x, y);
         e.comms->attachContinuousToParam(kb.get(), p);
+
         knobs[p] = std::move(kb);
 
         auto lb = this->layout.addLabel(label, x, y);
+        lb->setAccessible(false);
         addAndMakeVisible(*lb);
         labels.push_back(std::move(lb));
 
@@ -400,7 +409,7 @@ struct ReverbPanel : jcmp::NamedPanel
     ReverbPanel(uicomm_t &p, ConduitPolysynthEditor &e);
 };
 
-struct ConduitPolysynthEditor : public jcmp::WindowPanel,
+struct ConduitPolysynthEditor : public sst::jucegui::accessibility::IgnoredComponent,
                                 shared::ToolTipMixIn<ConduitPolysynthEditor>
 {
     uicomm_t &uic;

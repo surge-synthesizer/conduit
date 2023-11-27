@@ -22,6 +22,7 @@
 #include "ring-modulator.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "sst/jucegui/accessibility/Ignored.h"
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
@@ -40,7 +41,7 @@ using uicomm_t = cps_t::UICommunicationBundle;
 
 struct ConduitRingModulatorEditor;
 
-struct RMPanel : juce::Component
+struct RMPanel : sst::jucegui::accessibility::IgnoredComponent
 {
     uicomm_t &uic;
 
@@ -64,7 +65,7 @@ struct RMPanel : juce::Component
     std::unique_ptr<jcmp::Label> mixLabel;
 };
 
-struct SourcePanel : juce::Component
+struct SourcePanel : sst::jucegui::accessibility::IgnoredComponent
 {
     uicomm_t &uic;
 
@@ -88,7 +89,7 @@ struct SourcePanel : juce::Component
     std::unique_ptr<jcmp::Label> mixLabel, freqLabel;
 };
 
-struct ConduitRingModulatorEditor : public jcmp::WindowPanel,
+struct ConduitRingModulatorEditor : public sst::jucegui::accessibility::IgnoredComponent,
                                     shared::ToolTipMixIn<ConduitRingModulatorEditor>
 {
     uicomm_t &uic;

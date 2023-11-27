@@ -22,6 +22,7 @@
 #include "chord-memory.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "sst/jucegui/accessibility/Ignored.h"
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
@@ -57,7 +58,7 @@ struct ControlsPanel : juce::Component
     std::unique_ptr<jcmp::DiscreteParamEditor> time;
 };
 
-struct ConduitChordMemoryEditor : public jcmp::WindowPanel,
+struct ConduitChordMemoryEditor : public sst::jucegui::accessibility::IgnoredComponent,
                                   shared::ToolTipMixIn<ConduitChordMemoryEditor>
 {
     uicomm_t &uic;
