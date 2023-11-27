@@ -58,27 +58,13 @@ struct StatusPanel : juce::Component
     {
         {
             std::ostringstream oss;
-            oss << "status: bpm=" << uic.dataCopyForUI.tempo
-                << " play=" << uic.dataCopyForUI.isPlayingOrRecording
-                << " sig=" << uic.dataCopyForUI.tsig_num << "/" << uic.dataCopyForUI.tsig_denom
-                << " pos=" << uic.dataCopyForUI.song_pos_beats
-                << " bs=" << uic.dataCopyForUI.bar_start << " bn=" << uic.dataCopyForUI.bar_number;
 
+            auto bx = getLocalBounds().withHeight(20);
             g.setColour(juce::Colours::white);
             g.setFont(14);
-            g.drawText(oss.str(), getLocalBounds(), juce::Justification::topLeft);
-        }
-
-        {
-            std::ostringstream oss;
-            oss << "converted"
-                << " pos=" << uic.dataCopyForUI.song_pos_beats / CLAP_BEATTIME_FACTOR
-                << " bs=" << uic.dataCopyForUI.bar_start / CLAP_BEATTIME_FACTOR
-                << " bn=" << uic.dataCopyForUI.bar_number;
-
-            g.setColour(juce::Colours::white);
-            g.setFont(14);
-            g.drawText(oss.str(), getLocalBounds().withTrimmedTop(30),
+            g.drawText("Tempo", bx, juce::Justification::topLeft);
+            bx = bx.translated(0, bx.getHeight());
+            g.drawText(fmt::format("{:.1f} bpm", 1.0 * uic.dataCopyForUI.tempo), bx,
                        juce::Justification::topLeft);
         }
     }
@@ -306,7 +292,7 @@ void TapPanel::updateName()
     auto m = mIt->second.second->getValue();
 
     auto name = fmt::format("Tap {} : {} taps per {} beats ({:.2f} beat delay)", tapIdx + 1, n, m,
-                            1.f * n / m);
+                            1.f * m / n);
     if (name != getName())
         setName(name);
 }
