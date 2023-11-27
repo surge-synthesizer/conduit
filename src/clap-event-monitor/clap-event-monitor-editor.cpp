@@ -95,7 +95,7 @@ struct ConduitClapEventMonitorEditor : public sst::jucegui::accessibility::Ignor
             auto ib = uic.dataCopyForUI.eventBuf.pop();
             if (ib.has_value())
             {
-                if (ib->view()->flags == CLAP_CORE_EVENT_SPACE_ID &&
+                if (ib->view()->space_id == CLAP_CORE_EVENT_SPACE_ID &&
                     ib->view()->type == CLAP_EVENT_TRANSPORT)
                 {
                     transportEvt = *ib;
@@ -150,10 +150,13 @@ struct ConduitClapEventMonitorEditor : public sst::jucegui::accessibility::Ignor
             g.setFont(editor->fixedFace);
 
 #define A(x) pt(#x, tp->x)
+#define ASC(x) pt(#x "/CSF", 1.f * tp->x / CLAP_SECTIME_FACTOR)
 #define F(x) pt(#x, (tp->flags & CLAP_TRANSPORT_##x) ? 1 : 0)
 
             A(song_pos_beats);
             A(song_pos_seconds);
+            ASC(song_pos_beats);
+            ASC(song_pos_seconds);
             A(tempo);
             A(tempo_inc);
             A(loop_start_beats);
@@ -161,6 +164,7 @@ struct ConduitClapEventMonitorEditor : public sst::jucegui::accessibility::Ignor
             A(loop_start_seconds);
             A(loop_end_seconds);
             A(bar_start);
+            ASC(bar_start);
             A(bar_number);
             A(tsig_num);
             A(tsig_denom);

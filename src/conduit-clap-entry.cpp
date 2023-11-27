@@ -50,13 +50,14 @@
 #include "midi2-sawsynth/midi2-sawsynth.h"
 #include "multiout-synth/multiout-synth.h"
 
+#include "version.h"
+
 namespace sst::conduit::pluginentry
 {
 
 uint32_t clap_get_plugin_count(const clap_plugin_factory *f) { return 8; }
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
-    CNDOUT << CNDVAR(w) << std::endl;
     if (w == 0)
         return polysynth::ConduitPolysynthConfig::getDescription();
     if (w == 1)
@@ -210,7 +211,14 @@ static const void *get_factory(const char *factory_id)
 }
 
 // clap_init and clap_deinit are required to be fast, but we have nothing we need to do here
-bool clap_init(const char *p) { return true; }
+bool clap_init(const char *p)
+{
+    CNDOUT << "Conduit - clap_init\n";
+    CNDOUT << "    Version: " << sst::conduit::build::FullVersionStr << "\n";
+    CNDOUT << "    Build  : " << sst::conduit::build::BuildDate << " @ "
+           << sst::conduit::build::BuildTime << std::endl;
+    return true;
+}
 void clap_deinit() {}
 
 } // namespace sst::conduit::pluginentry
