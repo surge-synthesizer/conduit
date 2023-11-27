@@ -66,11 +66,13 @@ template <typename Content> struct Background : sst::jucegui::components::Window
 };
 
 template <typename Content>
-struct EditorBase : juce::Component, sst::jucegui::accessibility::FocusDebugger<EditorBase<Content>>
+struct EditorBase : juce::Component
 {
     typename Content::UICommunicationBundle &uic;
     EditorBase(typename Content::UICommunicationBundle &);
     ~EditorBase() = default;
+
+    std::unique_ptr<sst::jucegui::accessibility::FocusDebugger> focusDebugger;
 
     void setContentComponent(std::unique_ptr<juce::Component> c)
     {
@@ -517,7 +519,9 @@ EditorBase<Content>::EditorBase(typename Content::UICommunicationBundle &u) : ui
     container = std::make_unique<Background<Content>>(pluginName, pluginId, *this);
     addAndMakeVisible(*container);
     setFocusContainerType(juce::Component::FocusContainerType::keyboardFocusContainer);
-    this->setDoFocusDebug(false);
+
+    focusDebugger = std::make_unique<sst::jucegui::accessibility::FocusDebugger>(*this);
+    focusDebugger->setDoFocusDebug(false);
 }
 
 template <typename Content>
