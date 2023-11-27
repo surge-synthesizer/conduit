@@ -66,11 +66,13 @@ template <typename Content> struct Background : sst::jucegui::components::Window
 };
 
 template <typename Content>
-struct EditorBase : juce::Component, sst::jucegui::accessibility::FocusDebugger<EditorBase<Content>>
+struct EditorBase : juce::Component
 {
     typename Content::UICommunicationBundle &uic;
     EditorBase(typename Content::UICommunicationBundle &);
     ~EditorBase() = default;
+
+    std::unique_ptr<sst::jucegui::accessibility::FocusDebugger> focusDebugger;
 
     void setContentComponent(std::unique_ptr<juce::Component> c)
     {
@@ -269,6 +271,13 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
 
         float f{0.f};
         float getValue() const override { return f; }
+        std::string getValueAsStringFor(float f) const override
+        {
+            auto so = pDesc.valueToString(f);
+            if (so.has_value())
+                return *so;
+            return Continuous::getValueAsStringFor(f);
+        }
         void setValueFromGUI(const float &fi) override
         {
             using FromUI = typename T::UICommunicationBundle::UIToSynth_Queue_t::value_type;
@@ -510,7 +519,9 @@ EditorBase<Content>::EditorBase(typename Content::UICommunicationBundle &u) : ui
     container = std::make_unique<Background<Content>>(pluginName, pluginId, *this);
     addAndMakeVisible(*container);
     setFocusContainerType(juce::Component::FocusContainerType::keyboardFocusContainer);
-    this->setDoFocusDebug(false);
+
+    focusDebugger = std::make_unique<sst::jucegui::accessibility::FocusDebugger>(*this);
+    focusDebugger->setDoFocusDebug(false);
 }
 
 template <typename Content>
