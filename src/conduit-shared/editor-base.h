@@ -269,6 +269,13 @@ template <typename T, typename TEd> struct EditorCommunicationsHandler
 
         float f{0.f};
         float getValue() const override { return f; }
+        std::string getValueAsStringFor(float f) const override
+        {
+            auto so = pDesc.valueToString(f);
+            if (so.has_value())
+                return *so;
+            return Continuous::getValueAsStringFor(f);
+        }
         void setValueFromGUI(const float &fi) override
         {
             using FromUI = typename T::UICommunicationBundle::UIToSynth_Queue_t::value_type;
