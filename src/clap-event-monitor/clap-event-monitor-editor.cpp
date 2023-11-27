@@ -23,6 +23,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <deque>
 
+#include "sst/jucegui/accessibility/Ignored.h"
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
@@ -40,7 +41,7 @@ using uicomm_t = cps_t::UICommunicationBundle;
 
 struct ConduitClapEventMonitorEditor;
 
-struct ConduitClapEventMonitorEditor : public jcmp::WindowPanel,
+struct ConduitClapEventMonitorEditor : public sst::jucegui::accessibility::IgnoredComponent,
                                        shared::ToolTipMixIn<ConduitClapEventMonitorEditor>
 {
     uicomm_t &uic;

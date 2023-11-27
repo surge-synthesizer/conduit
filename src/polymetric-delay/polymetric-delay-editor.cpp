@@ -25,6 +25,7 @@
 #include <sstream>
 #include <array>
 
+#include "sst/jucegui/accessibility/Ignored.h"
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/ToggleButton.h"
@@ -151,7 +152,7 @@ struct OutputPanel : jcmp::NamedPanel
     };
 };
 
-struct ConduitPolymetricDelayEditor : public jcmp::WindowPanel,
+struct ConduitPolymetricDelayEditor : public sst::jucegui::accessibility::IgnoredComponent,
                                       shared::ToolTipMixIn<ConduitPolymetricDelayEditor>
 {
     uicomm_t &uic;

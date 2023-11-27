@@ -23,6 +23,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <deque>
 
+#include "sst/jucegui/accessibility/Ignored.h"
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/WindowPanel.h"
 #include "sst/jucegui/components/Knob.h"
@@ -49,7 +50,7 @@ using uicomm_t = cps_t::UICommunicationBundle;
 
 struct ConduitMultiOutSynthEditor;
 
-struct ConduitMultiOutSynthEditor : public jcmp::WindowPanel,
+struct ConduitMultiOutSynthEditor : public sst::jucegui::accessibility::IgnoredComponent,
                                     shared::ToolTipMixIn<ConduitMultiOutSynthEditor>
 {
     uicomm_t &uic;

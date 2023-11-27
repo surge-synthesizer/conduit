@@ -25,6 +25,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "sst/jucegui/data/Continuous.h"
 #include "sst/jucegui/data/Discrete.h"
+#include "sst/jucegui/accessibility/FocusDebugger.h"
 #include "sst/jucegui/components/ContinuousParamEditor.h"
 #include "sst/jucegui/components/DiscreteParamEditor.h"
 #include "sst/jucegui/components/GlyphButton.h"
@@ -64,7 +65,8 @@ template <typename Content> struct Background : sst::jucegui::components::Window
     std::unique_ptr<juce::FileChooser> fileChooser;
 };
 
-template <typename Content> struct EditorBase : juce::Component
+template <typename Content>
+struct EditorBase : juce::Component, sst::jucegui::accessibility::FocusDebugger<EditorBase<Content>>
 {
     typename Content::UICommunicationBundle &uic;
     EditorBase(typename Content::UICommunicationBundle &);
@@ -392,6 +394,10 @@ Background<Content>::Background(const std::string &pluginName, const std::string
     : eb(e)
 
 {
+    setTitle(pluginName);
+    setDescription(pluginName);
+    setWantsKeyboardFocus(true);
+
     labelsTypeface = eb.loadFont("Inter/static/Inter-Medium.ttf");
     versionTypeface = eb.loadFont("Anonymous_Pro/AnonymousPro-Regular.ttf");
 
@@ -421,8 +427,11 @@ Background<Content>::Background(const std::string &pluginName, const std::string
     auto nl = std::make_unique<juce::Label>("Plugin Name", pluginName);
     nl->setColour(juce::Label::ColourIds::textColourId, juce::Colour(220, 220, 230));
     nl->setFont(lbFont);
+    nl->setTitle(pluginName);
     addAndMakeVisible(*nl);
     nameLabel = std::move(nl);
+    nameLabel->setAccessible(true);
+    nameLabel->setWantsKeyboardFocus(true);
 
     auto vs = std::string(sst::conduit::build::BuildDate) + " " +
               std::string(sst::conduit::build::BuildTime) + " " + sst::conduit::build::GitHash;
@@ -447,6 +456,10 @@ Background<Content>::Background(const std::string &pluginName, const std::string
         if (w)
             w->buildBurger();
     });
+    gb->setAccessible(true);
+    gb->setTitle("Main Menu");
+    gb->setDescription("Main Menu");
+    gb->setWantsKeyboardFocus(true);
     addAndMakeVisible(*gb);
     menuButton = std::move(gb);
 }
@@ -496,6 +509,8 @@ EditorBase<Content>::EditorBase(typename Content::UICommunicationBundle &u) : ui
     pluginId = Content::config_t::getDescription()->id;
     container = std::make_unique<Background<Content>>(pluginName, pluginId, *this);
     addAndMakeVisible(*container);
+    setFocusContainerType(juce::Component::FocusContainerType::keyboardFocusContainer);
+    this->setDoFocusDebug(false);
 }
 
 template <typename Content>
