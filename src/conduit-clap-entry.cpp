@@ -140,6 +140,7 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
     auto plugin_id = desc->id;
 
     info->au_type[0] = 0; // use the features to determine the type
+
     if (strcmp(plugin_id, polysynth::ConduitPolysynthConfig::getDescription()->id) == 0)
     {
         strncpy(info->au_subt, "PlyS", 5);
@@ -170,8 +171,7 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
     if (strcmp(plugin_id,
                mts_to_noteexpression::ConduitMTSToNoteExpressionConfig::getDescription()->id) == 0)
     {
-        strncpy(info->au_subt, "mtsN", 5);
-        return true;
+        return false; // don't export this synth
     }
 
     if (strcmp(plugin_id, midi2_sawsynth::ConduitMIDI2SawSynthConfig::getDescription()->id) == 0)
