@@ -5,7 +5,13 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "Build for 10.1")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-project(conduit VERSION 0.1.0 LANGUAGES C CXX)
+string(TIMESTAMP DAY_OF_YEAR "%j")
+string(TIMESTAMP YEAR "%Y")
+math(EXPR PART0 "${YEAR}-2023 + 2")
+math(EXPR PART1 "${DAY_OF_YEAR}/2")
+message(STATUS "Using date-driven version while in alpha. 0.${PART0}.${PART1}.0")
+
+project(conduit VERSION 0.${PART0}.${PART1}.0 LANGUAGES C CXX)
 
 if (APPLE)
     enable_language(OBJC)
@@ -105,6 +111,7 @@ if (APPLE)
     add_library(${AUV2_TARGET} MODULE)
     target_sources(${AUV2_TARGET} PRIVATE src/conduit-clap-entry.cpp)
     target_link_libraries(${AUV2_TARGET} PRIVATE conduit-impl)
+    message(STATUS "Adding AUv2 with ${PROJECT_VERSION}")
     target_add_auv2_wrapper(
             TARGET ${AUV2_TARGET}
             OUTPUT_NAME "Conduit"
