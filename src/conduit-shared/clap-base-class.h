@@ -271,7 +271,7 @@ struct ClapBaseClass : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
     void attachParam(clap_id paramId, lag_t &to)
     {
-        auto val = 0;
+        auto val = 0.f;
         auto ptpi = paramToPatchIndex.find(paramId);
         if (ptpi != paramToPatchIndex.end())
         {
