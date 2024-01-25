@@ -344,7 +344,8 @@ struct ConduitPolysynth
     void setVoiceEndCallback(std::function<void(PolysynthVoice *)> f) { voiceEndCallback = f; }
 
     constexpr int32_t voiceCountForInitializationAction(uint16_t port, uint16_t channel,
-                                                        uint16_t key, int32_t noteId)
+                                                        uint16_t key, int32_t noteId,
+                                                        float velocity)
     {
         return 1;
     }
