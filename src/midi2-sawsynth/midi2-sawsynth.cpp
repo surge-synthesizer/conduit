@@ -2,7 +2,7 @@
  * Conduit - a project highlighting CLAP-first development
  *           and exercising the surge synth team libraries.
  *
- * Copyright 2023 Paul Walker and authors in github
+ * Copyright 2023-2024 Paul Walker and authors in github
  *
  * This file you are viewing now is released under the
  * MIT license as described in LICENSE.md
