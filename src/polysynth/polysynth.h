@@ -2,7 +2,7 @@
  * Conduit - a project highlighting CLAP-first development
  *           and exercising the surge synth team libraries.
  *
- * Copyright 2023 Paul Walker and authors in github
+ * Copyright 2023-2024 Paul Walker and authors in github
  *
  * This file you are viewing now is released under the
  * MIT license as described in LICENSE.md
@@ -344,7 +344,8 @@ struct ConduitPolysynth
     void setVoiceEndCallback(std::function<void(PolysynthVoice *)> f) { voiceEndCallback = f; }
 
     constexpr int32_t voiceCountForInitializationAction(uint16_t port, uint16_t channel,
-                                                        uint16_t key, int32_t noteId)
+                                                        uint16_t key, int32_t noteId,
+                                                        float velocity)
     {
         return 1;
     }

@@ -2,7 +2,7 @@
  * Conduit - a project highlighting CLAP-first development
  *           and exercising the surge synth team libraries.
  *
- * Copyright 2023 Paul Walker and authors in github
+ * Copyright 2023-2024 Paul Walker and authors in github
  *
  * This file you are viewing now is released under the
  * MIT license as described in LICENSE.md
@@ -65,8 +65,7 @@ template <typename Content> struct Background : sst::jucegui::components::Window
     std::unique_ptr<juce::FileChooser> fileChooser;
 };
 
-template <typename Content>
-struct EditorBase : juce::Component
+template <typename Content> struct EditorBase : juce::Component
 {
     typename Content::UICommunicationBundle &uic;
     EditorBase(typename Content::UICommunicationBundle &);

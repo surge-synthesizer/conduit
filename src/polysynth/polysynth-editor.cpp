@@ -2,7 +2,7 @@
  * Conduit - a project highlighting CLAP-first development
  *           and exercising the surge synth team libraries.
  *
- * Copyright 2023 Paul Walker and authors in github
+ * Copyright 2023-2024 Paul Walker and authors in github
  *
  * This file you are viewing now is released under the
  * MIT license as described in LICENSE.md
@@ -32,6 +32,8 @@
 #include "sst/jucegui/components/HSliderFilled.h"
 #include "sst/jucegui/components/MultiSwitch.h"
 #include "sst/jucegui/components/VUMeter.h"
+#include "sst/jucegui/components/MenuButton.h"
+#include "sst/jucegui/components/JogUpDownButton.h"
 
 #include "sst/jucegui/component-adapters/DiscreteToReference.h"
 #include "sst/jucegui/data/Continuous.h"
@@ -121,6 +123,18 @@ struct GridContentBase : sst::jucegui::accessibility::IgnoredComponent
                                       const std::string &label)
     {
         return addDiscreteT<jcmp::MultiSwitch>(e, p, x, y, label);
+    }
+
+    jcmp::MenuButtonDiscreteEditor *addParameterMenu(editor_t &e, clap_id p, int x, int y,
+                                                     const std::string &label)
+    {
+        return addDiscreteT<jcmp::MenuButtonDiscreteEditor>(e, p, x, y, label);
+    }
+
+    jcmp::JogUpDownButton *addParameterJogMenu(editor_t &e, clap_id p, int x, int y,
+                                               const std::string &label)
+    {
+        return addDiscreteT<jcmp::JogUpDownButton>(e, p, x, y, label);
     }
 
     sst::jucegui::layouts::LabeledGrid<lx, ly> layout;
