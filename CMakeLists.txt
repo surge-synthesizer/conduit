@@ -29,6 +29,32 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 # use asan as an option (currently mac only)
 option(USE_SANITIZER "Build and link with ASAN" FALSE)
 
+# Compiler specific choices
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    add_compile_options(
+        $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
+        $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
+
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>
+    )
+
+    add_link_options(
+        $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
+        $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
+    )
+endif()
+
+if (MSVC)
+    add_compile_options(
+        # Set source and executable charsets to UTF-8
+        $<$<CXX_COMPILER_ID:MSVC>:/utf-8>
+        # Do *not* use the new, breaking char8_t UTF-8 bits in C++20.
+        $<$<COMPILE_LANGUAGE:CXX>:/Zc:char8_t->
+        # make msvc define __cplulsplus properly
+        $<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>
+    )
+endif()
+
 # Copy on mac (could expand to other platforms)
 option(COPY_AFTER_BUILD "Copy the clap to ~/Library on MACOS, ~/.clap on linux" FALSE)
 
