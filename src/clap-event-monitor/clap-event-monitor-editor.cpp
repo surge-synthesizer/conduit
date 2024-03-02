@@ -274,8 +274,41 @@ struct ConduitClapEventMonitorEditor : public sst::jucegui::accessibility::Ignor
             }
             break;
             case CLAP_EVENT_NOTE_EXPRESSION:
-                return "CLAP_EVENT_NOTE_EXPRESSION";
-
+            {
+                std::ostringstream oss;
+                oss << std::fixed << std::setprecision(3);
+                oss << "CLAP_EVENT_NOTE_EXPRESSION_";
+                auto nexp = reinterpret_cast<const clap_event_note_expression_t *>(ev);
+                switch (nexp->expression_id)
+                {
+                case CLAP_NOTE_EXPRESSION_BRIGHTNESS:
+                    oss << "BRIGHTNESS";
+                    break;
+                case CLAP_NOTE_EXPRESSION_EXPRESSION:
+                    oss << "EXPRESSION";
+                    break;
+                case CLAP_NOTE_EXPRESSION_PAN:
+                    oss << "PAN";
+                    break;
+                case CLAP_NOTE_EXPRESSION_PRESSURE:
+                    oss << "PRESSURE";
+                    break;
+                case CLAP_NOTE_EXPRESSION_TUNING:
+                    oss << "TUNING";
+                    break;
+                case CLAP_NOTE_EXPRESSION_VIBRATO:
+                    oss << "VIBRATO";
+                    break;
+                case CLAP_NOTE_EXPRESSION_VOLUME:
+                    oss << "VOLUME";
+                    break;
+                default:
+                    oss << "UNKNOWN";
+                }
+                oss << " " << nexp->value;
+                return oss.str();
+            }
+            break;
             case CLAP_EVENT_PARAM_VALUE:
                 return "CLAP_EVENT_PARAM_VALUE";
             case CLAP_EVENT_PARAM_MOD:
