@@ -276,6 +276,7 @@ struct ConduitClapEventMonitorEditor : public sst::jucegui::accessibility::Ignor
             case CLAP_EVENT_NOTE_EXPRESSION:
             {
                 std::ostringstream oss;
+                oss << std::fixed << std::setprecision(3);
                 oss << "CLAP_EVENT_NOTE_EXPRESSION_";
                 auto nexp = reinterpret_cast<const clap_event_note_expression_t *>(ev);
                 switch (nexp->expression_id)
