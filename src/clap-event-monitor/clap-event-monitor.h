@@ -58,7 +58,7 @@ struct ConduitClapEventMonitorConfig
             void assign(const clap_event_header_t *e)
             {
                 assert(e->size < maxEventSize);
-                memcpy(data, e, std::max(e->size, maxEventSize));
+                memcpy(data, e, std::min(e->size, maxEventSize));
             }
 
             const clap_event_header_t *view() const
