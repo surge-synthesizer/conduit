@@ -22,7 +22,7 @@ endif()
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Never want shared if not specified")
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
@@ -35,7 +35,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
         $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
 
-        $<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>
+        $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-fno-char8_t>
     )
 
     add_link_options(
@@ -89,6 +89,11 @@ target_include_directories(mts-esp-client PUBLIC libs/MTS-ESP/Client)
 set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
 set(CLAP_WRAPPER_BUILD_AUV2 TRUE CACHE BOOL "It's only logical")
+if (APPLE)
+    # BaconPaul has jack kinda installed
+    set(RTAUDIO_API_JACK FALSE CACHE BOOL "Not on apple")
+endif()
+
 add_subdirectory(libs/clap-wrapper)
 
 set(CONDUIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE STRING "Top level source")
