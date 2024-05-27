@@ -35,7 +35,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         $<$<BOOL:${USE_SANITIZER}>:-fsanitize=address>
         $<$<BOOL:${USE_SANITIZER}>:-fsanitize=undefined>
 
-        $<$<COMPILE_LANGUAGE:CXX>:-fno-char8_t>
+        $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-fno-char8_t>
     )
 
     add_link_options(
