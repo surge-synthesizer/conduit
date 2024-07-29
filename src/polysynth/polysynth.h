@@ -399,6 +399,9 @@ struct ConduitPolysynth
 
     void handleSpecializedFromUI(const FromUI &r);
 
+    void allSoundsOff() {}
+    void allNotesOff() {}
+
     MTSClient *mtsClient{nullptr};
 
     std::unique_ptr<PhaserFX> phaserFX;
